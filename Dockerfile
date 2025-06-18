@@ -13,7 +13,14 @@ COPY backend/ ./backend/
 COPY --from=frontend /app/dist ./static/
 
 # Install Flask + python-osc
-RUN pip install flask python-osc
+RUN pip install \
+            fastapi \
+            uvicorn[standard] \
+            python-multipart \
+            python-osc 
 
 EXPOSE 5000
-CMD ["python", "backend/main.py"]
+ENV FLASK_ENV=production
+ENV PYTHONUNBUFFERED=1
+#HEALTHCHECK CMD curl --fail http://localhost:5000/status || exit 1
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "5000"]

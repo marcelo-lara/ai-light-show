@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "preact": "^10.26.5",
-    "wavesurfer.js": "^7.9.5"
+    "wavesurfer.js": "^7.9.5",
+    "socket.io-client": "^4.7.5"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.1",

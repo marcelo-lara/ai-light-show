@@ -31,7 +31,32 @@
       "movement": 0,
       "reset": 0
     },
-    "presets": []
+    "presets": [],
+    "arm": {
+      "channel": "shutter",
+      "value": 255
+    },
+    "meta": {
+      "channel_types": {
+        "pan": "position_16bit",
+        "tilt": "position_16bit",
+        "shutter": "gate",
+        "color": "wheel",
+        "gobo": "wheel"
+      },
+      "value_mappings": {
+        "color": {
+          "0": "white",
+          "24": "yellow",
+          "48": "magenta"
+        },
+        "gobo": {
+          "0": "open",
+          "32": "spiral",
+          "64": "circle"
+        }
+      }
+    }
   },
   {
     "id": "parcan_l",
@@ -53,7 +78,19 @@
       "strobe": 0,
       "program": 0
     },
-    "presets": []
+    "presets": [],
+    "arm": {
+      "channel": "dim",
+      "value": 255
+    },
+    "meta": {
+      "channel_types": {
+        "dim": "dimmer",
+        "red": "color",
+        "green": "color",
+        "blue": "color"
+      }
+    }
   },
   {
     "id": "parcan_r",
@@ -75,7 +112,19 @@
       "strobe": 0,
       "program": 0
     },
-    "presets": []
+    "presets": [],
+    "arm": {
+      "channel": "dim",
+      "value": 255
+    },
+    "meta": {
+      "channel_types": {
+        "dim": "dimmer",
+        "red": "color",
+        "green": "color",
+        "blue": "color"
+      }
+    }
   },
   {
     "id": "parcan_pl",
@@ -97,7 +146,19 @@
       "strobe": 0,
       "program": 0
     },
-    "presets": []
+    "presets": [],
+    "arm": {
+      "channel": "dim",
+      "value": 255
+    },
+    "meta": {
+      "channel_types": {
+        "dim": "dimmer",
+        "red": "color",
+        "green": "color",
+        "blue": "color"
+      }
+    }
   },
   {
     "id": "parcan_pr",
@@ -119,6 +180,18 @@
       "strobe": 0,
       "program": 0
     },
-    "presets": []
+    "presets": [],
+    "arm": {
+      "channel": "dim",
+      "value": 255
+    },
+    "meta": {
+      "channel_types": {
+        "dim": "dimmer",
+        "red": "color",
+        "green": "color",
+        "blue": "color"
+      }
+    }
   }
 ]

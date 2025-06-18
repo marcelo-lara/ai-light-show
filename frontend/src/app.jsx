@@ -7,7 +7,7 @@ export function App() {
   const [cues, setCues] = useState([]);
   const [currentTime, setCurrentTime] = useState(0);
   const [currentSongFile] = useState('born_slippy.mp3');
-  const SongsFolder = '/songs/';
+  const SongsFolder = '/static/songs/';
 
   const [arrangement, setArrangement] = useState([]);
   const [editMode, setEditMode] = useState(false);
@@ -149,40 +149,77 @@ export function App() {
     return `${minutes}:${seconds}`;
   };
 
-  const dummyFixtures = [
-    {
-      id: "parcan_left",
-      name: "ParCan Left",
-      channels: { dim: 0, red: 0, green: 0, blue: 0, effect: 0 },
-      current_values: { dim: 0, red: 0, green: 0, blue: 0, effect: 0 },
-      presets: [
-        { name: "flash" },
-        { name: "fade-to-black" },
-        { name: "fade-to-blue" }
-      ]
-    },
-    {
-      id: "parcan_right",
-      name: "ParCan Right",
-      channels: { dim: 255, red: 255, green: 0, blue: 0, effect: 0 },
-      current_values: { dim: 255, red: 255, green: 0, blue: 0, effect: 0 },
-      presets: [
-        { name: "flash" },
-        { name: "fade-to-black" },
-        { name: "fade-to-blue" }
-      ]
+  useEffect(() => {
+    if (fixtures.length === 0) return;
+
+    const ws = new WebSocket(`ws://${window.location.host}/ws`);
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "dmx_update") {
+          const universe = data.universe;
+          const updatedFixtures = fixtures.map(fixture => {
+            const newValues = {};
+            for (const [key, dmxChannel] of Object.entries(fixture.channels)) {
+              newValues[key] = universe[dmxChannel] ?? 0;
+            }
+            return { ...fixture, current_values: newValues };
+          });
+          setFixtures(updatedFixtures);
+        }
+      } catch (err) {
+        console.error("WebSocket message error:", err);
+      }
+    };
+
+    ws.onerror = (e) => console.error("WebSocket error:", e);
+    ws.onclose = () => console.log("WebSocket closed");
+
+    return () => ws.close();
+  }, [fixtures.length]);
+
+  const sendDMXUpdate = async (channelMap) => {
+    try {
+      const res = await fetch("/dmx/set", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ values: channelMap }),
+      });
+      const result = await res.json();
+      console.log("DMX updated:", result);
+    } catch (err) {
+      console.error("DMX update failed:", err);
     }
-  ];
+  };
 
   // Fixture Card
   function FixtureCard({ fixture }) {
     const [expanded, setExpanded] = useState(false);
-    const { name, current_values, channels, presets } = fixture;
+    const [values, setValues] = useState({ ...fixture.current_values });
+    const { name, channels, presets } = fixture;
 
-    const previewColor = channels.red !== undefined && channels.green !== undefined && channels.blue !== undefined
-      ? `rgb(${current_values.red}, ${current_values.green}, ${current_values.blue})`
-      : '#000';
-    const previewDim = channels.dim !== undefined ? current_values.dim : 255;
+    const previewColor =
+      channels.red !== undefined && channels.green !== undefined && channels.blue !== undefined
+        ? `rgb(${values.red}, ${values.green}, ${values.blue})`
+        : '#000';
+    const previewDim = channels.dim !== undefined ? values.dim : 255;
+
+    const handleValueChange = (key, val) => {
+      const n = parseInt(val, 10);
+      if (!isNaN(n) && n >= 0 && n <= 255) {
+        setValues((prev) => ({ ...prev, [key]: n }));
+      }
+    };
+
+    const handleValueSubmit = (key, channel, e) => {
+      const val = parseInt(e.target.value, 10);
+      if (!isNaN(val) && val >= 0 && val <= 255) {
+        sendDMXUpdate({ [channel]: val });
+      } else {
+        e.target.value = values[key]; // Reset to old valid value
+      }
+    };
 
     return (
       <div className="border border-white/10 rounded-lg mb-4 bg-white/5 shadow-sm">
@@ -216,7 +253,20 @@ export function App() {
                     <tr key={idx} className="border-t border-white/10">
                       <td className="py-1">{key}</td>
                       <td className="py-1">{dmx}</td>
-                      <td className="py-1">{current_values[key]}</td>
+                      <td className="py-1">
+                        <input
+                          className="bg-black text-white border border-white/20 px-1 rounded w-16"
+                          type="number"
+                          min={0}
+                          max={255}
+                          value={values[key]}
+                          onChange={(e) => handleValueChange(key, e.target.value)}
+                          onBlur={(e) => handleValueSubmit(key, dmx, e)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleValueSubmit(key, dmx, e);
+                          }}
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -241,31 +291,31 @@ export function App() {
     );
   }
 
-  useEffect(() => {
-    const syncFixtureValues = async () => {
-      if (fixtures.length === 0) return;
+  // useEffect(() => {
+  //   const syncFixtureValues = async () => {
+  //     if (fixtures.length === 0) return;
 
-      try {
-        const res = await fetch("/dmx/universe");
-        const data = await res.json();
-        const universe = data.universe;
+  //     try {
+  //       const res = await fetch("/dmx/universe");
+  //       const data = await res.json();
+  //       const universe = data.universe;
 
-        const updatedFixtures = fixtures.map(fixture => {
-          const newValues = {};
-          for (const [key, dmxChannel] of Object.entries(fixture.channels)) {
-            newValues[key] = universe[dmxChannel] ?? 0;
-          }
-          return { ...fixture, current_values: newValues };
-        });
+  //       const updatedFixtures = fixtures.map(fixture => {
+  //         const newValues = {};
+  //         for (const [key, dmxChannel] of Object.entries(fixture.channels)) {
+  //           newValues[key] = universe[dmxChannel] ?? 0;
+  //         }
+  //         return { ...fixture, current_values: newValues };
+  //       });
 
-        setFixtures(updatedFixtures);
-      } catch (err) {
-        console.error("Failed to sync DMX universe:", err);
-      }
-    };
+  //       setFixtures(updatedFixtures);
+  //     } catch (err) {
+  //       console.error("Failed to sync DMX universe:", err);
+  //     }
+  //   };
 
-    syncFixtureValues();
-  }, [fixtures.length]);
+  //   syncFixtureValues();
+  // }, [fixtures.length]);
 
 
   useEffect(() => {
