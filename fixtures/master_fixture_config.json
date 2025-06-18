@@ -1,0 +1,124 @@
+[
+  {
+    "id": "head_el150",
+    "name": "Head EL-150",
+    "type": "moving_head",
+    "channels": {
+      "pan": 1,
+      "pan_fine": 2,
+      "tilt": 3,
+      "tilt_fine": 4,
+      "speed": 5,
+      "dim": 6,
+      "shutter": 7,
+      "color": 8,
+      "gobo": 9,
+      "autoplay": 10,
+      "movement": 11,
+      "reset": 12
+    },
+    "current_values": {
+      "pan": 0,
+      "pan_fine": 0,
+      "tilt": 0,
+      "tilt_fine": 0,
+      "speed": 0,
+      "dim": 0,
+      "shutter": 0,
+      "color": 0,
+      "gobo": 0,
+      "autoplay": 0,
+      "movement": 0,
+      "reset": 0
+    },
+    "presets": []
+  },
+  {
+    "id": "parcan_l",
+    "name": "ParCan L",
+    "type": "rgb",
+    "channels": {
+      "dim": 16,
+      "red": 17,
+      "green": 18,
+      "blue": 19,
+      "strobe": 20,
+      "program": 21
+    },
+    "current_values": {
+      "dim": 0,
+      "red": 0,
+      "green": 0,
+      "blue": 0,
+      "strobe": 0,
+      "program": 0
+    },
+    "presets": []
+  },
+  {
+    "id": "parcan_r",
+    "name": "ParCan R",
+    "type": "rgb",
+    "channels": {
+      "dim": 0,
+      "red": 0,
+      "green": 0,
+      "blue": 0,
+      "strobe": 0,
+      "program": 0
+    },
+    "current_values": {
+      "dim": 0,
+      "red": 0,
+      "green": 0,
+      "blue": 0,
+      "strobe": 0,
+      "program": 0
+    },
+    "presets": []
+  },
+  {
+    "id": "parcan_pl",
+    "name": "Proton L",
+    "type": "rgb",
+    "channels": {
+      "dim": 28,
+      "red": 29,
+      "green": 30,
+      "blue": 31,
+      "strobe": 32,
+      "program": 33
+    },
+    "current_values": {
+      "dim": 0,
+      "red": 0,
+      "green": 0,
+      "blue": 0,
+      "strobe": 0,
+      "program": 0
+    },
+    "presets": []
+  },
+  {
+    "id": "parcan_pr",
+    "name": "Proton R",
+    "type": "rgb",
+    "channels": {
+      "dim": 36,
+      "red": 37,
+      "green": 38,
+      "blue": 39,
+      "strobe": 40,
+      "program": 41
+    },
+    "current_values": {
+      "dim": 0,
+      "red": 0,
+      "green": 0,
+      "blue": 0,
+      "strobe": 0,
+      "program": 0
+    },
+    "presets": []
+  }
+]

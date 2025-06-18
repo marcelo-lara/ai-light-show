@@ -14,6 +14,8 @@ export function App() {
   const [toast, setToast] = useState(null);
   const [currentSection, setCurrentSection] = useState(null);
 
+  const [fixtures, setFixtures] = useState([]);
+
   useEffect(() => {
     const setupWaveSurfer = () => {
       wavesurferRef.current = WaveSurfer.create({
@@ -43,6 +45,22 @@ export function App() {
       window.addEventListener('load', setupWaveSurfer);
       return () => window.removeEventListener('load', setupWaveSurfer);
     }
+  }, []);
+
+  useEffect(() => {
+    const loadFixtures = async () => {
+      try {
+        const res = await fetch("/static/fixtures/master_fixture_config.json");
+        if (!res.ok) throw new Error("Fixture config not found");
+        const data = await res.json();
+        setFixtures(data);
+        console.log("Loaded fixtures:", data);
+      } catch (err) {
+        console.error("Failed to load fixture config:", err);
+      }
+    };
+
+    loadFixtures();
   }, []);
 
   useEffect(() => {
@@ -131,6 +149,124 @@ export function App() {
     return `${minutes}:${seconds}`;
   };
 
+  const dummyFixtures = [
+    {
+      id: "parcan_left",
+      name: "ParCan Left",
+      channels: { dim: 0, red: 0, green: 0, blue: 0, effect: 0 },
+      current_values: { dim: 0, red: 0, green: 0, blue: 0, effect: 0 },
+      presets: [
+        { name: "flash" },
+        { name: "fade-to-black" },
+        { name: "fade-to-blue" }
+      ]
+    },
+    {
+      id: "parcan_right",
+      name: "ParCan Right",
+      channels: { dim: 255, red: 255, green: 0, blue: 0, effect: 0 },
+      current_values: { dim: 255, red: 255, green: 0, blue: 0, effect: 0 },
+      presets: [
+        { name: "flash" },
+        { name: "fade-to-black" },
+        { name: "fade-to-blue" }
+      ]
+    }
+  ];
+
+  // Fixture Card
+  function FixtureCard({ fixture }) {
+    const [expanded, setExpanded] = useState(false);
+    const { name, current_values, channels, presets } = fixture;
+
+    const previewColor = channels.red !== undefined && channels.green !== undefined && channels.blue !== undefined
+      ? `rgb(${current_values.red}, ${current_values.green}, ${current_values.blue})`
+      : '#000';
+    const previewDim = channels.dim !== undefined ? current_values.dim : 255;
+
+    return (
+      <div className="border border-white/10 rounded-lg mb-4 bg-white/5 shadow-sm">
+        <div
+          className="flex items-center justify-between p-3 cursor-pointer"
+          onClick={() => setExpanded(!expanded)}
+        >
+          <div className="flex items-center gap-2">
+            <div
+              className="w-6 h-6 rounded border border-white"
+              style={{ backgroundColor: previewColor, opacity: previewDim / 255 }}
+            ></div>
+            <div className="font-semibold text-white">{name}</div>
+          </div>
+          <div className="text-white">{expanded ? '🔽' : '▶️'}</div>
+        </div>
+
+        {expanded && (
+          <div className="px-4 pb-4 text-sm text-gray-300">
+            <div className="mb-2">
+              <table className="text-xs w-full border-collapse">
+                <thead>
+                  <tr className="text-gray-400">
+                    <th className="text-left py-1">Channel</th>
+                    <th className="text-left py-1">DMX</th>
+                    <th className="text-left py-1">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(channels).map(([key, dmx], idx) => (
+                    <tr key={idx} className="border-t border-white/10">
+                      <td className="py-1">{key}</td>
+                      <td className="py-1">{dmx}</td>
+                      <td className="py-1">{current_values[key]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {presets.length > 0 && (
+              <div className="flex gap-2 flex-wrap mt-2">
+                {presets.map((p, i) => (
+                  <button
+                    key={i}
+                    className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-xs"
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  useEffect(() => {
+    const syncFixtureValues = async () => {
+      if (fixtures.length === 0) return;
+
+      try {
+        const res = await fetch("/dmx/universe");
+        const data = await res.json();
+        const universe = data.universe;
+
+        const updatedFixtures = fixtures.map(fixture => {
+          const newValues = {};
+          for (const [key, dmxChannel] of Object.entries(fixture.channels)) {
+            newValues[key] = universe[dmxChannel] ?? 0;
+          }
+          return { ...fixture, current_values: newValues };
+        });
+
+        setFixtures(updatedFixtures);
+      } catch (err) {
+        console.error("Failed to sync DMX universe:", err);
+      }
+    };
+
+    syncFixtureValues();
+  }, [fixtures.length]);
+
 
   useEffect(() => {
     if (toast) {
@@ -140,67 +276,83 @@ export function App() {
   }, [toast]);
 
   return (
-    <div className="p-6 bg-black text-white min-h-screen">
-      <h1 className="text-3xl font-bold mb-4">🎛️ AI Light Show Designer</h1>
+    <div className="flex flex-row gap-6">
+      {/* Main Panel */}
+      <div className="w-2/3">
+        <div className="p-6 bg-black text-white min-h-screen">
+          <h1 className="text-3xl font-bold mb-4">🎛️ AI Light Show Designer</h1>
 
-      {toast && <div className="mb-4 p-2 bg-green-600 text-white rounded text-center">{toast}</div>}
+          {toast && <div className="mb-4 p-2 bg-green-600 text-white rounded text-center">{toast}</div>}
 
-      {/* Audio Player Card */}
-      <div className="bg-white/10 rounded-2xl p-6 mb-6">
-        <div ref={containerRef} className="mb-4" />
-        <div id="song-controls" class="flex flex-col items-center">
-          <div className="flex items-center gap-4 mb-4">
-            <button onClick={() => wavesurferRef.current?.play()} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">▶️ Start</button>
-            <button onClick={() => wavesurferRef.current?.pause()} className="bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded">⏸️ Pause</button>
-            <button onClick={() => { wavesurferRef.current?.pause(); wavesurferRef.current?.seekTo(0); }} className="bg-gray-700 hover:bg-gray-800 px-4 py-2 rounded">⏹️ Stop</button>
-            <span className="ml-4 text-gray-400">Current Time: {formatTime(currentTime)}</span>
+          {/* Audio Player Card */}
+          <div className="bg-white/10 rounded-2xl p-6 mb-6">
+            <div ref={containerRef} className="mb-4" />
+            <div id="song-controls" class="flex flex-col items-center">
+              <div className="flex items-center gap-4 mb-4">
+                <button onClick={() => wavesurferRef.current?.play()} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">▶️ Start</button>
+                <button onClick={() => wavesurferRef.current?.pause()} className="bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded">⏸️ Pause</button>
+                <button onClick={() => { wavesurferRef.current?.pause(); wavesurferRef.current?.seekTo(0); }} className="bg-gray-700 hover:bg-gray-800 px-4 py-2 rounded">⏹️ Stop</button>
+                <span className="ml-4 text-gray-400">Current Time: {formatTime(currentTime)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Song Cue Controls Card */}
+          <div className="bg-white/10 rounded-2xl p-6 mb-6">
+            <div className="flex items-center gap-4 mb-4">
+              <button onClick={addCue} className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded">🟥 Record Cue</button>
+              <button onClick={downloadCues} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">💾 Download Cues</button>
+              <button onClick={() => setEditMode(!editMode)} className="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded">✏️ {editMode ? 'Exit Edit Mode' : 'Edit Arrangement'}</button>
+            </div>
+
+            <div className="bg-white/10 rounded p-4 text-sm max-h-64 overflow-y-scroll">
+              <h2 className="text-lg mb-2 font-semibold">Cue List</h2>
+              {cues.length === 0 && (<div className="italic text-gray-400">No cues recorded yet.</div>)}
+              <ul className="list-disc pl-5 space-y-1">
+                {cues.map((cue, index) => (
+                  <li key={index}>[{cue.time}s] {cue.action} → {cue.target} → {JSON.stringify(cue.color)}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Song Arrangement Controls Card */}
+          <div className="bg-white/10 rounded-2xl p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <button onClick={saveArrangement} className="bg-green-700 hover:bg-green-800 px-4 py-2 rounded">💾 Save to Server</button>
+              <button onClick={addMarker} className="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">➕ Add Marker</button>
+            </div>
+
+            <div className="bg-white/10 rounded p-4 text-sm">
+              <h2 className="text-lg mb-2 font-semibold">Arrangement</h2>
+              <ul className="space-y-1">
+                {arrangement.map((section, index) => (
+                  <li key={index} className={index === currentSection ? 'bg-green-700 px-2 py-1 rounded' : 'text-gray-300'}>
+                    {editMode ? (
+                      <div className="flex items-center gap-2">
+                        <input className="text-black px-1 rounded" value={section.label} onChange={(e) => updateLabel(index, e.target.value)} />
+                        <button onClick={() => deleteMarker(index)}>❌</button>
+                      </div>
+                    ) : (
+                      <>[{formatTime(section.time)}] {section.label}</>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Song Cue Controls Card */}
-      <div className="bg-white/10 rounded-2xl p-6 mb-6">
-        <div className="flex items-center gap-4 mb-4">
-          <button onClick={addCue} className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded">🟥 Record Cue</button>
-          <button onClick={downloadCues} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">💾 Download Cues</button>
-          <button onClick={() => setEditMode(!editMode)} className="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded">✏️ {editMode ? 'Exit Edit Mode' : 'Edit Arrangement'}</button>
-        </div>
-
-        <div className="bg-white/10 rounded p-4 text-sm max-h-64 overflow-y-scroll">
-          <h2 className="text-lg mb-2 font-semibold">Cue List</h2>
-          {cues.length === 0 && (<div className="italic text-gray-400">No cues recorded yet.</div>)}
-          <ul className="list-disc pl-5 space-y-1">
-            {cues.map((cue, index) => (
-              <li key={index}>[{cue.time}s] {cue.action} → {cue.target} → {JSON.stringify(cue.color)}</li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      {/* Song Arrangement Controls Card */}
-      <div className="bg-white/10 rounded-2xl p-6">
-        <div className="flex items-center gap-4 mb-4">
-          <button onClick={saveArrangement} className="bg-green-700 hover:bg-green-800 px-4 py-2 rounded">💾 Save to Server</button>
-          <button onClick={addMarker} className="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">➕ Add Marker</button>
-        </div>
-
-        <div className="bg-white/10 rounded p-4 text-sm">
-          <h2 className="text-lg mb-2 font-semibold">Arrangement</h2>
-          <ul className="space-y-1">
-            {arrangement.map((section, index) => (
-              <li key={index} className={index === currentSection ? 'bg-green-700 px-2 py-1 rounded' : 'text-gray-300'}>
-                {editMode ? (
-                  <div className="flex items-center gap-2">
-                    <input className="text-black px-1 rounded" value={section.label} onChange={(e) => updateLabel(index, e.target.value)} />
-                    <button onClick={() => deleteMarker(index)}>❌</button>
-                  </div>
-                ) : (
-                  <>[{formatTime(section.time)}] {section.label}</>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
+      {/* Fixture Panel */}
+      <div className="w-1/3 bg-white/10 text-white p-6 rounded-2xl">
+        <h2 className="text-2xl font-bold mb-4">Fixtures</h2>
+        {fixtures.length === 0 ? (
+          <div className="text-sm text-gray-500 italic">No fixtures loaded</div>
+        ) : (
+          fixtures.map((fixture) => (
+            <FixtureCard key={fixture.id} fixture={fixture} />
+          ))
+        )}
       </div>
     </div>
   );

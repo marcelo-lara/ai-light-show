@@ -1,9 +1,12 @@
-from flask import  Flask, jsonify, send_from_directory, request
+from flask import Flask, jsonify, send_from_directory, request
 import os, json
 
 SONGS_DIR = "/app/static/songs"
 
 app = Flask(__name__, static_folder="../static")
+
+# DMX universe (512 channels)
+dmx_universe = [0] * 512
 
 @app.route("/")
 def index():
@@ -32,6 +35,31 @@ def save_arrangement():
         return jsonify(success=True)
     except Exception as e:
         return jsonify(success=False, error=str(e)), 500
+
+@app.route("/dmx/universe", methods=["GET"])
+def get_universe():
+    return jsonify({"universe": dmx_universe})
+
+@app.route("/dmx/set", methods=["POST"])
+def set_dmx_values():
+    data = request.get_json()
+    if "values" not in data or not isinstance(data["values"], dict):
+        return jsonify({"error": "Missing or invalid 'values'"}), 400
+
+    updates = {}
+    for channel_str, value in data["values"].items():
+        try:
+            ch = int(channel_str)
+            val = int(value)
+            if 0 <= ch < 512 and 0 <= val <= 255:
+                dmx_universe[ch] = val
+                updates[ch] = val
+            else:
+                return jsonify({"error": f"Invalid channel or value: {ch}={val}"}), 400
+        except Exception as e:
+            return jsonify({"error": str(e)}), 400
+
+    return jsonify({"updated": updates})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
