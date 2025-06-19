@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import WaveSurfer from 'wavesurfer.js';
+import PresetSelector from "./PresetSelector";
+import { use } from 'react';
 
 export function App() {
   const containerRef = useRef(null);
@@ -7,6 +9,7 @@ export function App() {
   const [cues, setCues] = useState([]);
   const [currentTime, setCurrentTime] = useState(0);
   const [currentSongFile] = useState('born_slippy.mp3');
+  
   const SongsFolder = '/songs/';
 
   const [arrangement, setArrangement] = useState([]);
@@ -16,6 +19,7 @@ export function App() {
   const [currentSection, setCurrentSection] = useState(null);
 
   const [fixtures, setFixtures] = useState([]);
+  const [allPresets, setAllPresets] = useState([]);
 
   useEffect(() => {
     const setupWaveSurfer = () => {
@@ -32,6 +36,7 @@ export function App() {
       const ws = wavesurferRef.current;
       ws.on('ready', () => {
         loadArrangement();
+        loadCues();
       });
 
       ws.on('audioprocess', () => {
@@ -65,12 +70,24 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    fetch("/fixtures/fixture_presets.json")
+      .then((res) => res.json())
+      .then((data) => setAllPresets(data))
+      .catch((err) => console.error("Failed to load presets:", err));
+  }, []);
+
+  useEffect(() => {
     let current = null;
     for (let i = 0; i < arrangement.length; i++) {
       if (currentTime >= arrangement[i].time) current = i;
     }
     setCurrentSection(current);
   }, [currentTime, arrangement]);
+
+  
+  useEffect(() => {
+    console.log("Cues:", cues);
+  }, [cues]);
 
   const updateLabel = (index, label) => {
     const updated = [...arrangement];
@@ -90,6 +107,8 @@ export function App() {
     setArrangement([...arrangement, newMarker]);
   };
 
+
+
   const loadArrangement = async () => {
     const arrangementFile = SongsFolder + currentSongFile + ".arrangement.json";
     try {
@@ -99,9 +118,7 @@ export function App() {
       if (data.arrangement && Array.isArray(data.arrangement)) {
         const arr = [...data.arrangement]
         setArrangement(arr);
-        console.log("Arrangement loaded from file:", arr);
       }
-      console.log("Arrangement loaded:", arrangement);
     } catch (err) {
       console.log("No arrangement file found, using default/empty.");
       setArrangement([]);
@@ -109,39 +126,54 @@ export function App() {
   };
 
   const saveArrangement = () => {
-    const fileName = `${currentSongFile}.arrangement.json`;
+    saveOnServer(currentSongFile + ".arrangement.json", arrangement, "Arrangement saved!");
+  };
+  const saveOnServer = (fileName, data, toastMessage) => {
     fetch(SongsFolder + "save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file: fileName, data: { arrangement } })
+      body: JSON.stringify({ fileName: fileName, data: { data } })
     })
-      .then(res => res.ok ? setToast("Arrangement saved!") : setToast("Failed to save."))
+      .then(res => res.ok ? setToast(toastMessage) : setToast("Failed to save."))
       .catch(err => {
         console.error("Save error:", err);
         setToast("Save failed.");
       });
   };
 
-  const addCue = () => {
-    const time = wavesurferRef.current?.getCurrentTime().toFixed(3);
-    const newCue = {
-      time,
-      action: 'fade_rgb',
-      target: 'par_1',
-      color: [255, 0, 0],
-    };
-    setCues([...cues, newCue]);
+  const saveCues = () => {
+    saveOnServer(currentSongFile + ".cues.json", cues, "Cues saved!");
   };
 
-  const downloadCues = () => {
-    const blob = new Blob([JSON.stringify({ cues }, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${currentSongFile}.cues.json`;
-    a.click();
+
+  const loadCues = async () => {
+    const cuesFile = SongsFolder + currentSongFile + ".cues.json";
+    try {
+      const res = await fetch(cuesFile);
+      if (!res.ok) throw new Error("Not found");
+      const data = await res.json();
+      if (data && Array.isArray(data)) {
+        const arr = [...data]
+        setCues(arr);
+      }
+    } catch (err) {
+      console.warn("Error loading cues:", err);
+      setCues([]);
+    }
+  };
+
+  const addCue = (cue) => {
+    // calculate cue overall event time
+    if (cue.parameters){
+      if (cue.parameters.loop_duration) {
+        cue.duration = parseFloat((cue.parameters.loop_duration).toFixed(3));
+      } else {
+        cue.duration = parseFloat((cue.parameters.fade_duration || 0).toFixed(3));
+      }
+    }
+
+    // add cue
+    setCues([...cues, cue]);
   };
 
   const formatTime = (time) => {
@@ -283,6 +315,22 @@ export function App() {
               </table>
             </div>
 
+            <div className="mb-2">
+              <PresetSelector
+                fixture={fixture}
+                presets={allPresets}
+                onApply={(preset, params) => {
+                  // send to backend or trigger execution
+                  console.log("Apply preset", preset.name, "with", params);
+                }}
+                currentTime={currentTime}
+                onAddCue={(cue) => {
+                  addCue(cue);
+                }}                
+              />
+            </div>
+              
+
             {presets.length > 0 && (
               <div className="flex gap-2 flex-wrap mt-2">
                 {presets.map((p, i) => (
@@ -300,33 +348,6 @@ export function App() {
       </div>
     );
   }
-
-  // useEffect(() => {
-  //   const syncFixtureValues = async () => {
-  //     if (fixtures.length === 0) return;
-
-  //     try {
-  //       const res = await fetch("/dmx/universe");
-  //       const data = await res.json();
-  //       const universe = data.universe;
-
-  //       const updatedFixtures = fixtures.map(fixture => {
-  //         const newValues = {};
-  //         for (const [key, dmxChannel] of Object.entries(fixture.channels)) {
-  //           newValues[key] = universe[dmxChannel] ?? 0;
-  //         }
-  //         return { ...fixture, current_values: newValues };
-  //       });
-
-  //       setFixtures(updatedFixtures);
-  //     } catch (err) {
-  //       console.error("Failed to sync DMX universe:", err);
-  //     }
-  //   };
-
-  //   syncFixtureValues();
-  // }, [fixtures.length]);
-
 
   useEffect(() => {
     if (toast) {
@@ -367,8 +388,7 @@ export function App() {
           {/* Song Cue Controls Card */}
           <div className="bg-white/10 rounded-2xl p-6 mb-6">
             <div className="flex items-center gap-4 mb-4">
-              <button onClick={addCue} className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded">🟥 Record Cue</button>
-              <button onClick={downloadCues} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">💾 Download Cues</button>
+              <button onClick={saveCues} className="bg-green-700 hover:bg-green-800 px-4 py-2 rounded">💾 Save Cue</button>
             </div>
 
             <div className="bg-white/10 rounded p-4 text-sm max-h-64 overflow-y-scroll">
@@ -376,7 +396,7 @@ export function App() {
               {cues.length === 0 && (<div className="italic text-gray-400">No cues recorded yet.</div>)}
               <ul className="list-disc pl-5 space-y-1">
                 {cues.map((cue, index) => (
-                  <li key={index}>[{cue.time}s] {cue.action} → {cue.target} → {JSON.stringify(cue.color)}</li>
+                  <li key={index}>[{cue.time}s] → {cue.duration} {cue.fixture} → {cue.preset}</li>
                 ))}
               </ul>
             </div>
@@ -385,9 +405,9 @@ export function App() {
           {/* Song Arrangement Controls Card */}
           <div className="bg-white/10 rounded-2xl p-6">
             <div className="flex items-center gap-4 mb-4">
-              <button onClick={saveArrangement} className="bg-green-700 hover:bg-green-800 px-4 py-2 rounded">💾 Save to Server</button>
+              <button onClick={saveArrangement} className="bg-green-700 hover:bg-green-800 px-4 py-2 rounded">💾 Save</button>
               <button onClick={addMarker} className="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">➕ Add Marker</button>
-              <button onClick={() => setEditMode(!editMode)} className="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded">✏️ {editMode ? 'Exit Edit Mode' : 'Edit Arrangement'}</button>
+              <button onClick={() => setEditMode(!editMode)} className="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded">✏️ {editMode ? 'Exit Edit Mode' : 'Edit'}</button>
             </div>
 
             <div className="bg-white/10 rounded p-4 text-sm">

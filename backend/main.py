@@ -2,10 +2,12 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-import asyncio
+from pathlib import Path
 import json
 from backend.dmx_state import set_channel, get_universe, send_artnet
 from fastapi import WebSocket, WebSocketDisconnect
+
+SONGS_DIR = Path("/app/static/songs")
 
 app = FastAPI()
 
@@ -37,6 +39,25 @@ async def set_dmx_values(request: Request):
     send_artnet()
     await broadcast({"type": "dmx_update", "universe": get_universe()})
     return {"updated": updates}
+
+@app.post("/songs/save")
+async def save_song_data(request: Request):
+    payload = await request.json()
+    file = payload.get("fileName")
+    data = payload.get("data")
+
+    if not file or not data:
+        print("ERROR: Missing file or data in request payload")
+        print(f"    fileName: {file}")
+        print(f"    data: {data}")
+        return {"status": "error", "message": "Missing file or data"}
+
+    file_path = SONGS_DIR / file
+    try:
+        file_path.write_text(json.dumps(data, indent=2))
+        return {"status": "ok", "message": f"{file} saved."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @app.get("/test/artnet")
 def test_artnet_send():
