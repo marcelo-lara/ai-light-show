@@ -7,10 +7,11 @@ export function App() {
   const [cues, setCues] = useState([]);
   const [currentTime, setCurrentTime] = useState(0);
   const [currentSongFile] = useState('born_slippy.mp3');
-  const SongsFolder = '/static/songs/';
+  const SongsFolder = '/songs/';
 
   const [arrangement, setArrangement] = useState([]);
   const [editMode, setEditMode] = useState(false);
+  const [expandedMap, setExpandedMap] = useState({});
   const [toast, setToast] = useState(null);
   const [currentSection, setCurrentSection] = useState(null);
 
@@ -50,7 +51,7 @@ export function App() {
   useEffect(() => {
     const loadFixtures = async () => {
       try {
-        const res = await fetch("/static/fixtures/master_fixture_config.json");
+        const res = await fetch("/fixtures/master_fixture_config.json");
         if (!res.ok) throw new Error("Fixture config not found");
         const data = await res.json();
         setFixtures(data);
@@ -195,7 +196,7 @@ export function App() {
 
   // Fixture Card
   function FixtureCard({ fixture }) {
-    const [expanded, setExpanded] = useState(false);
+    const expanded = expandedMap[fixture.id] || false;
     const [values, setValues] = useState({ ...fixture.current_values });
     const { name, channels, presets } = fixture;
 
@@ -205,19 +206,11 @@ export function App() {
         : '#000';
     const previewDim = channels.dim !== undefined ? values.dim : 255;
 
-    const handleValueChange = (key, val) => {
+    const handleValueChange = (key, dmx, val) => {
+      console.log(`Setting [${dmx}]${key} -> ${val}`);
       const n = parseInt(val, 10);
       if (!isNaN(n) && n >= 0 && n <= 255) {
         setValues((prev) => ({ ...prev, [key]: n }));
-      }
-    };
-
-    const handleValueSubmit = (key, channel, e) => {
-      const val = parseInt(e.target.value, 10);
-      if (!isNaN(val) && val >= 0 && val <= 255) {
-        sendDMXUpdate({ [channel]: val });
-      } else {
-        e.target.value = values[key]; // Reset to old valid value
       }
     };
 
@@ -225,7 +218,7 @@ export function App() {
       <div className="border border-white/10 rounded-lg mb-4 bg-white/5 shadow-sm">
         <div
           className="flex items-center justify-between p-3 cursor-pointer"
-          onClick={() => setExpanded(!expanded)}
+          onClick={() => toggleExpanded(fixture.id)}
         >
           <div className="flex items-center gap-2">
             <div
@@ -249,26 +242,43 @@ export function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {Object.entries(channels).map(([key, dmx], idx) => (
+                {Object.entries(channels).map(([key, dmx], idx) => {
+                  const val = values[key] ?? 0;
+                  const sliderRef = useRef(null);
+
+                  useEffect(() => {
+                    const el = sliderRef.current;
+                    if (!el) return;
+
+                    const handleInput = (e) => {
+                      const newVal = parseInt(e.target.value);
+                      handleValueChange(key, dmx, newVal);
+                      sendDMXUpdate({ [dmx]: newVal });
+                    };
+
+                    el.addEventListener("input", handleInput);
+                    return () => el.removeEventListener("input", handleInput);
+                  }, [key, dmx]);                  
+                  return (
                     <tr key={idx} className="border-t border-white/10">
                       <td className="py-1">{key}</td>
                       <td className="py-1">{dmx}</td>
                       <td className="py-1">
-                        <input
-                          className="bg-black text-white border border-white/20 px-1 rounded w-16"
-                          type="number"
-                          min={0}
-                          max={255}
-                          value={values[key]}
-                          onChange={(e) => handleValueChange(key, e.target.value)}
-                          onBlur={(e) => handleValueSubmit(key, dmx, e)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleValueSubmit(key, dmx, e);
-                          }}
-                        />
+                        <div className="flex items-center gap-2">
+                          <input
+                            ref={sliderRef}
+                            type="range"
+                            min={0}
+                            max={255}
+                            value={val}
+                            className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                          />
+                          <span className="w-8 text-xs text-right text-gray-300">{val}</span>
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                  );
+                })}
                 </tbody>
               </table>
             </div>
@@ -325,6 +335,13 @@ export function App() {
     }
   }, [toast]);
 
+  const toggleExpanded = (fixtureId) => {
+    setExpandedMap((prev) => ({
+      ...prev,
+      [fixtureId]: !prev[fixtureId],
+    }));
+  };
+
   return (
     <div className="flex flex-row gap-6">
       {/* Main Panel */}
@@ -352,7 +369,6 @@ export function App() {
             <div className="flex items-center gap-4 mb-4">
               <button onClick={addCue} className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded">🟥 Record Cue</button>
               <button onClick={downloadCues} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">💾 Download Cues</button>
-              <button onClick={() => setEditMode(!editMode)} className="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded">✏️ {editMode ? 'Exit Edit Mode' : 'Edit Arrangement'}</button>
             </div>
 
             <div className="bg-white/10 rounded p-4 text-sm max-h-64 overflow-y-scroll">
@@ -371,6 +387,7 @@ export function App() {
             <div className="flex items-center gap-4 mb-4">
               <button onClick={saveArrangement} className="bg-green-700 hover:bg-green-800 px-4 py-2 rounded">💾 Save to Server</button>
               <button onClick={addMarker} className="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">➕ Add Marker</button>
+              <button onClick={() => setEditMode(!editMode)} className="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded">✏️ {editMode ? 'Exit Edit Mode' : 'Edit Arrangement'}</button>
             </div>
 
             <div className="bg-white/10 rounded p-4 text-sm">
