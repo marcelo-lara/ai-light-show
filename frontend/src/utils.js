@@ -4,11 +4,13 @@ export const formatTime = (time) => {
   return `${minutes}:${seconds}`;
 };
 
-export const saveToServer = (fileName, data, toastMessage) => {
-fetch(SongsFolder + "save", {
+export const saveToServer = (fileName, data, toastMessage, setToast) => {
+  const SongsFolder = '/songs/';
+
+  fetch(SongsFolder + "save", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fileName: fileName, data: { data } })
+    body: JSON.stringify({ fileName: fileName, data: data })
     })
     .then(res => res.ok ? setToast(toastMessage) : setToast("Failed to save."))
     .catch(err => {

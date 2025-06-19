@@ -36,8 +36,6 @@ export function App() {
 
       const ws = wavesurferRef.current;
       ws.on('ready', () => {
-        loadArrangement();
-        loadCues();
       });
 
       ws.on('audioprocess', () => {
@@ -109,45 +107,27 @@ export function App() {
   };
 
   ///////////////////////////////////////////////////////
-  const loadArrangement = async () => {
-    const arrangementFile = SongsFolder + currentSongFile + ".arrangement.json";
-    try {
-      const res = await fetch(arrangementFile);
-      if (!res.ok) throw new Error("Not found");
-      const data = await res.json();
-      if (data.arrangement && Array.isArray(data.arrangement)) {
-        const arr = [...data.arrangement]
-        setArrangement(arr);
-      }
-    } catch (err) {
-      console.log("No arrangement file found, using default/empty.");
-      setArrangement([]);
-    }
-  };
-
+  useEffect(() => {
+    fetch(SongsFolder + currentSongFile + ".arrangement.json")
+      .then((res) => res.json())
+      .then((data) => setArrangement(data))
+      .catch((err) => console.error("Failed to load arrangement:", err));
+  }, []);
+    
   const saveArrangement = () => {
-    saveToServer(currentSongFile + ".arrangement.json", arrangement, "Arrangement saved!");
+    saveToServer(currentSongFile + ".arrangement.json", arrangement, "Arrangement saved!", setToast);
   };
 
   ///////////////////////////////////////////////////////
-  const loadCues = async () => {
-    const cuesFile = SongsFolder + currentSongFile + ".cues.json";
-    try {
-      const res = await fetch(cuesFile);
-      if (!res.ok) throw new Error("Not found");
-      const data = await res.json();
-      if (data && Array.isArray(data)) {
-        const arr = [...data]
-        setCues(arr);
-      }
-    } catch (err) {
-      console.warn("Error loading cues:", err);
-      setCues([]);
-    }
-  };
+  useEffect(() => {
+    fetch(SongsFolder + currentSongFile + ".cues.json")
+      .then((res) => res.json())
+      .then((data) => setCues(data))
+      .catch((err) => console.error("Failed to load presets:", err));
+  }, []);
 
   const saveCues = () => {
-    saveToServer(currentSongFile + ".cues.json", cues, "Cues saved!");
+    saveToServer(currentSongFile + ".cues.json", cues, "Cues saved!", setToast);
   };
 
   const addCue = (cue) => {
