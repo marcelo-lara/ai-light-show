@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { formatTime, saveToServer } from "./utils";
 import WaveSurfer from 'wavesurfer.js';
 import PresetSelector from "./PresetSelector";
 import { use } from 'react';
@@ -107,8 +108,7 @@ export function App() {
     setArrangement([...arrangement, newMarker]);
   };
 
-
-
+  ///////////////////////////////////////////////////////
   const loadArrangement = async () => {
     const arrangementFile = SongsFolder + currentSongFile + ".arrangement.json";
     try {
@@ -126,26 +126,10 @@ export function App() {
   };
 
   const saveArrangement = () => {
-    saveOnServer(currentSongFile + ".arrangement.json", arrangement, "Arrangement saved!");
-  };
-  const saveOnServer = (fileName, data, toastMessage) => {
-    fetch(SongsFolder + "save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fileName: fileName, data: { data } })
-    })
-      .then(res => res.ok ? setToast(toastMessage) : setToast("Failed to save."))
-      .catch(err => {
-        console.error("Save error:", err);
-        setToast("Save failed.");
-      });
+    saveToServer(currentSongFile + ".arrangement.json", arrangement, "Arrangement saved!");
   };
 
-  const saveCues = () => {
-    saveOnServer(currentSongFile + ".cues.json", cues, "Cues saved!");
-  };
-
-
+  ///////////////////////////////////////////////////////
   const loadCues = async () => {
     const cuesFile = SongsFolder + currentSongFile + ".cues.json";
     try {
@@ -162,6 +146,10 @@ export function App() {
     }
   };
 
+  const saveCues = () => {
+    saveToServer(currentSongFile + ".cues.json", cues, "Cues saved!");
+  };
+
   const addCue = (cue) => {
     // calculate cue overall event time
     if (cue.parameters){
@@ -174,12 +162,6 @@ export function App() {
 
     // add cue
     setCues([...cues, cue]);
-  };
-
-  const formatTime = (time) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = (time % 60).toFixed(3).padStart(6, '0');
-    return `${minutes}:${seconds}`;
   };
 
   useEffect(() => {
