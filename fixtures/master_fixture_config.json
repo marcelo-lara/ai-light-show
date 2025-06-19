@@ -40,7 +40,7 @@
       "channel_types": {
         "pan": "position_16bit",
         "tilt": "position_16bit",
-        "shutter": "gate",
+        "shutter": "strobe",
         "color": "wheel",
         "gobo": "wheel"
       },
@@ -97,12 +97,12 @@
     "name": "ParCan R",
     "type": "rgb",
     "channels": {
-      "dim": 0,
-      "red": 0,
-      "green": 0,
-      "blue": 0,
-      "strobe": 0,
-      "program": 0
+      "dim": 22,
+      "red": 23,
+      "green": 24,
+      "blue": 25,
+      "strobe": 26,
+      "program": 27
     },
     "current_values": {
       "dim": 0,

@@ -36,6 +36,10 @@ async def serve_index():
 
 # --- DMX State ---
 dmx_universe = [0] * 512
+
+dmx_universe[15]= 255  # Set channel 16 to full brightness for testing
+dmx_universe[18]= 255  # Set channel 19 to full brightness for testing
+
 active_connections = set()
 
 @app.get("/dmx/universe")
@@ -50,6 +54,9 @@ async def set_dmx_values(request: Request):
     for ch_str, val in values.items():
         try:
             ch = int(ch_str)
+            if ch < 20:
+                print(f"Skipping channel {ch} below 20")
+                continue  # Skip channels below 20
             val = int(val)
             if 0 <= ch < 512 and 0 <= val <= 255:
                 dmx_universe[ch] = val
@@ -96,27 +103,40 @@ async def broadcast(message: dict):
 # --- ArtNet -----------------------
 
 ARTNET_PORT = 6454
-ARTNET_IP = "255.255.255.255"  # or set to a specific node IP if needed
+#ARTNET_IP = "192.168.1.221"  # or set to a specific node IP if needed
+ARTNET_IP = "127.0.0.1"  # or set to a specific node IP if needed
 ARTNET_UNIVERSE = 0  # usually 0 unless you're using multiple universes
+MAX_FPS = 60  # Limit to 30 FPS for Art-Net updates
 
-def build_artnet_packet(data):
-    # Art-Net header
-    packet = bytearray()
-    packet.extend(b'Art-Net\x00')          # ID
-    packet.extend((0x00, 0x50))            # OpCode ArtDMX
-    packet.extend((0x00, 0x0e))            # Protocol version
-    packet.extend((0x00, 0x00))            # Sequence + Physical
-    packet.extend((ARTNET_UNIVERSE & 0xFF, (ARTNET_UNIVERSE >> 8) & 0xFF))  # Universe low/high
-    packet.extend((0x02, 0x00))            # Length high/low (512 bytes)
-    packet.extend(bytes(data[:512]))       # DMX data
-    return packet
+from time import perf_counter
+last_artnet_send = 0
 
 def send_artnet(data):
-    packet = build_artnet_packet(data)
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    sock.sendto(packet, (ARTNET_IP, ARTNET_PORT))
-    sock.close()
+    global last_artnet_send
+    now = perf_counter()
+    if now - last_artnet_send < (1.0 / MAX_FPS):
+        return
+    last_artnet_send = now
+
+    # Fill full buffer
+    full_data = data[:512] + [0] * (512 - len(data[:512]))
+    packet = bytearray()
+    packet.extend(b'Art-Net\x00')
+    packet.extend((0x00, 0x50))  # OpCode
+    packet.extend((0x00, 0x0e))  # Protocol version
+    packet.extend((0x00, 0x00))  # Seq, Phys
+    packet.extend((ARTNET_UNIVERSE & 0xFF, (ARTNET_UNIVERSE >> 8) & 0xFF))
+    packet.extend((0x02, 0x00))  # Length: 512 bytes
+    packet.extend(bytes(full_data))
+
+    # Send
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.sendto(packet, (ARTNET_IP, ARTNET_PORT))
+        sock.close()
+    except Exception as e:
+        print(f"❌ Art-Net send error: {e}")
 
 # --- ArtNet Playback ---
 timeline = []           # Sorted by time
@@ -126,13 +146,13 @@ async def timeline_executor():
     global dmx_universe, timeline
     last_sent = 0
     while True:
-        now = time.monotonic() - start_time
-        for cue in timeline:
-            if last_sent < cue["time"] <= now:
-                for ch, val in cue["values"].items():
-                    dmx_universe[ch] = val
-                send_artnet(dmx_universe)
-                await broadcast({"type": "dmx_update", "universe": dmx_universe})
-        last_sent = now
+        # now = time.monotonic() - start_time
+        # for cue in timeline:
+        #     if last_sent < cue["time"] <= now:
+        #         for ch, val in cue["values"].items():
+        #             dmx_universe[ch] = val
+        #         send_artnet(dmx_universe)
+        #         await broadcast({"type": "dmx_update", "universe": dmx_universe})
+        # last_sent = now
         await asyncio.sleep(0.01)  # ~100 FPS update rate
 
