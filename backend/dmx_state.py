@@ -7,7 +7,7 @@ import socket
 DMX_CHANNELS = 512
 MAX_FPS = 60
 ARTNET_PORT = 6454
-ARTNET_IP = "127.0.0.1"
+ARTNET_IP = "192.168.1.221" # real 192.168.1.221
 ARTNET_UNIVERSE = 0
 
 # --- DMX State ---
@@ -42,14 +42,14 @@ def send_artnet():
     packet.extend((0x02, 0x00))                            # Data length = 512
     packet.extend(bytes(full_data))
 
-    # Debug: show only changes
-    diffs = [(i + 1, v) for i, (v, old) in enumerate(zip(full_data, last_packet)) if v != old]
-    if diffs:
-        print("🎚️ Changed DMX channels:")
-        for ch, val in diffs:
-            print(f"  CH {ch:03d}: {val}")
-    else:
-        print("🟰 No DMX changes")
+    # # Debug: show only changes
+    # diffs = [(i + 1, v) for i, (v, old) in enumerate(zip(full_data, last_packet)) if v != old]
+    # if diffs:
+    #     print("🎚️ Changed DMX channels:")
+    #     for ch, val in diffs:
+    #         print(f"  CH {ch:03d}: {val}")
+    # else:
+    #     print("🟰 No DMX changes")
     last_packet = full_data.copy()
 
     try:

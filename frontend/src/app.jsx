@@ -157,7 +157,7 @@ export function App() {
           const updatedFixtures = fixtures.map(fixture => {
             const newValues = {};
             for (const [key, dmxChannel] of Object.entries(fixture.channels)) {
-              newValues[key] = universe[dmxChannel] ?? 0;
+              newValues[key] = universe[dmxChannel-1] ?? 0;
             }
             return { ...fixture, current_values: newValues };
           });
@@ -358,7 +358,7 @@ export function App() {
               {cues.length === 0 && (<div className="italic text-gray-400">No cues recorded yet.</div>)}
               <ul className="list-disc pl-5 space-y-1">
                 {cues.map((cue, index) => (
-                  <li key={index}>[{cue.time}s] → {cue.duration} {cue.fixture} → {cue.preset}</li>
+                  <li key={index}>[{cue.time}s] {cue.fixture} → {cue.preset} ({cue.duration})</li>
                 ))}
               </ul>
             </div>
