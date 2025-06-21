@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { formatTime, saveToServer } from "./utils";
 import WaveSurfer from 'wavesurfer.js';
 import PresetSelector from "./PresetSelector";
-import { use } from 'react';
 
 export function App() {
   const containerRef = useRef(null);
