@@ -20,7 +20,7 @@ RUN pip install \
             python-osc 
 
 EXPOSE 5000
-ENV FLASK_ENV=production
+#ENV FLASK_ENV=production
 ENV PYTHONUNBUFFERED=1
 #HEALTHCHECK CMD curl --fail http://localhost:5000/status || exit 1
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "5000"]
