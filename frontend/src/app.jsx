@@ -143,6 +143,25 @@ export function App() {
     saveToServer(currentSongFile + ".cues.json", cues, "Cues saved!", setToast);
   };
 
+  const renderCues = async (fileName) => {
+    try {
+      const res = await fetch("/renderSong", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName: currentSongFile }),
+      });
+      const result = await res.json();
+      if (result.status === "ok") {
+        setToast("Song rendered successfully");
+      } else {
+        setToast("Failed to render song");
+      }
+    } catch (err) {
+      console.error("Request failed:", err);
+      setToast("Error rendering song");
+    }
+  };
+
   const addCue = (cue) => {
     // calculate cue overall event time
     if (cue.parameters){
@@ -257,6 +276,7 @@ export function App() {
           <div className="bg-white/10 rounded-2xl p-6 mb-6">
             <div className="flex items-center gap-4 mb-4">
               <button onClick={saveCues} className="bg-green-700 hover:bg-green-800 px-4 py-2 rounded">💾 Save Cue</button>
+              <button onClick={renderCues} className="bg-gray-700 hover:bg-green-800 px-4 py-2 rounded">⚙️ Render Cue</button>
             </div>
 
             <div className="bg-white/10 rounded p-4 text-sm max-h-64 overflow-y-scroll">

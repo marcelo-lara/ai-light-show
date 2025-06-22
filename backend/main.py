@@ -12,6 +12,11 @@ from fastapi import WebSocket, WebSocketDisconnect
 
 SONGS_DIR = Path("/app/static/songs")
 
+# ArtNet Fixture Config and Presets
+fixture_config = []
+fixture_presets = []
+current_song = None
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     asyncio.create_task(timeline_executor())
@@ -76,6 +81,47 @@ def test_artnet_send():
 
 clients = []
 
+# Global variables to hold fixture config and presets
+
+@app.post("/renderSong")
+async def render_song(request: Request):
+    global timeline, fixture_config, fixture_presets, current_song
+    payload = await request.json()
+    current_song = payload.get("fileName")
+    if not current_song:
+        return {"error": "Missing 'file' in request"}
+
+    # try:
+    with open(f"/app/static/songs/{current_song}.cues.json") as f:
+        cues = json.load(f)
+    timeline = render_timeline(cues, fixture_config, fixture_presets)
+    print(f"✅ Loaded {len(cues)} cues and rendered {len(timeline)} timeline events.")
+    return {"status": "ok", "cues": cues, "fixture_count": len(fixture_config)}
+
+    # except Exception as e:
+    #     print(f"❌ Error loading song: {e}")
+    #     return {"error": str(e)}
+
+def load_fixtures_config():
+    global fixture_config, fixture_presets
+    try:
+        with open("/app/static/fixtures/master_fixture_config.json") as f:
+            fixture_config = json.load(f)
+        with open("/app/static/fixtures/fixture_presets.json") as f:
+            fixture_presets = json.load(f)
+        print(f"✅ Loaded fixture config with {len(fixture_config)} fixtures and {len(fixture_presets)} presets.")            
+    except Exception as e:
+        print("❌ load_fixtures_config error: ", e)
+
+
+def load_song_files(song_file):
+    cue_path = SONGS_DIR / f"{song_file}.cues.json"
+    try:
+        with open(cue_path) as f:
+            cues = json.load(f)
+
+    except Exception as e:
+        return {"error": str(e)}
 
 ## WebSocket endpoint for real-time updates
 @app.websocket("/ws")
@@ -156,6 +202,9 @@ app.mount("/", StaticFiles(directory="static", html=True), name="static")
 async def timeline_executor():
     global last_sent
     print("🌀 Timeline executor started")
+
+    load_fixtures_config()
+
     while True:
         if is_playing:
             now = time.monotonic() - start_monotonic
@@ -182,7 +231,7 @@ def render_timeline(cues, fixture_config, fixture_presets):
                 return p
         return None
 
-    def interpolate_steps(start_values, end_values, duration, fps=20):
+    def interpolate_steps(start_values, end_values, duration, fps=120):
         steps = []
         interval = 1.0 / fps
         total_steps = int(duration / interval)
@@ -196,12 +245,12 @@ def render_timeline(cues, fixture_config, fixture_presets):
         return steps
 
     for cue in cues:
-        start_time = cue["start_time"]
-        fixture = find_fixture(cue["fixture_id"])
+        start_time = cue["time"]
+        fixture = find_fixture(cue["fixture"])
         if not fixture:
             continue
 
-        preset = find_preset(cue["preset_name"], fixture["type"])
+        preset = find_preset(cue["preset"], fixture["type"])
         if not preset:
             continue
 
@@ -238,5 +287,10 @@ def render_timeline(cues, fixture_config, fixture_presets):
                     break
             else:
                 break
+    
+    # save the timeline to a file for debugging
+    with open(f"/app/static/songs/{current_song}.timeline.json", "w") as f:
+        json.dump(sorted(timeline, key=lambda ev: ev["time"]), f, indent=2)
+    print(f"✅ Rendered {len(timeline)} timeline events from {len(cues)} cues.")
 
     return sorted(timeline, key=lambda ev: ev["time"])
