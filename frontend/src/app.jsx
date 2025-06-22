@@ -8,6 +8,8 @@ export function App() {
   const containerRef = useRef(null);
   const wavesurferRef = useRef(null);
   const [cues, setCues] = useState([]);
+  const wsRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(false);  
   const [currentTime, setCurrentTime] = useState(0);
   const [currentSongFile] = useState('born_slippy.mp3');
   
@@ -35,12 +37,36 @@ export function App() {
 
       const ws = wavesurferRef.current;
       ws.on('ready', () => {
+        console.log("ready ->", ws.isPlaying());
+      });
+      ws.on('finish', () => {
+        setIsPlaying(false);
+        console.log("finish ->", ws.isPlaying());
+      });
+      ws.on('pause', () => {
+        setIsPlaying(false);
+        const time = ws.getCurrentTime();
+        setCurrentTime(time);
+      });
+
+      ws.on('play', () => {
+        const time = ws.getCurrentTime();
+        console.log("play -> time:", time);
+        setIsPlaying(true);
       });
 
       ws.on('audioprocess', () => {
         const time = ws.getCurrentTime();
+        console.log("audioprocess -> time:", time);
         setCurrentTime(time);
       });
+
+      ws.on('seeking', () => {
+        const time = ws.getCurrentTime();
+        console.log("seeking -> time:", time);
+        setCurrentTime(time);
+      });
+
     };
 
     if (document.readyState === 'complete') {
@@ -135,6 +161,12 @@ export function App() {
     if (fixtures.length === 0) return;
 
     const ws = new WebSocket(`ws://${window.location.host}/ws`);
+    wsRef.current = ws;
+    
+    ws.onopen = () => {
+      console.log("🎵 WebSocket connected");
+      ws.send(JSON.stringify({ isPlaying, currentTime }));
+    };
 
     ws.onmessage = (event) => {
       try {
@@ -161,6 +193,21 @@ export function App() {
 
     return () => ws.close();
   }, [fixtures.length]);
+
+  // Send update when play/pause changes
+  useEffect(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ isPlaying, currentTime }));
+    }
+  }, [isPlaying]);
+
+  // Send current time updates too
+
+  // useEffect(() => {
+  //   if (wsRef.current?.readyState === WebSocket.OPEN) {
+  //     wsRef.current.send(JSON.stringify({ isPlaying, currentTime }));
+  //   }
+  // }, [currentTime]);
 
   const sendDMXUpdate = async (channelMap) => {
     try {
@@ -195,13 +242,13 @@ export function App() {
 
           {/* Audio Player Card */}
           <div className="bg-white/10 rounded-2xl p-6 mb-6">
-            <div ref={containerRef} className="mb-4" />
+            <div ref={containerRef} className="mb-4"/>
             <div id="song-controls" class="flex flex-col items-center">
               <div className="flex items-center gap-4 mb-4">
                 <button onClick={() => wavesurferRef.current?.play()} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">▶️ Start</button>
                 <button onClick={() => wavesurferRef.current?.pause()} className="bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded">⏸️ Pause</button>
                 <button onClick={() => { wavesurferRef.current?.pause(); wavesurferRef.current?.seekTo(0); }} className="bg-gray-700 hover:bg-gray-800 px-4 py-2 rounded">⏹️ Stop</button>
-                <span className="ml-4 text-gray-400">Current Time: {formatTime(currentTime)}</span>
+                <span className="ml-4 w-6 text-gray-400">{formatTime(currentTime)}</span>
               </div>
             </div>
           </div>

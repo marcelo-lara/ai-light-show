@@ -133,7 +133,8 @@ Stored in `public/songs/songname.mp3.cues.json`
 
 ```
 frontend/
-  └─ app.jsx, FixtureCard.jsx
+  ├─ app.jsx
+  └─ FixtureCard.jsx
 backend/
   ├─ main.py
   ├─ dmx_state.py

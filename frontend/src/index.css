@@ -20,6 +20,7 @@
 #app {
   max-width: 1280px;
   margin: 0 auto;
+  width: 100%;
 
   /* prevent select */
   -webkit-user-select: none; /* Safari */
