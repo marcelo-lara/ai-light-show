@@ -57,7 +57,6 @@ export function App() {
 
       ws.on('audioprocess', () => {
         const time = ws.getCurrentTime();
-        console.log("audioprocess -> time:", time);
         setCurrentTime(time);
       });
 
