@@ -29,7 +29,7 @@ def execute_timeline(time):
             dmx_universe = entry["dmx_universe"]
             break
 
-    print(f"[{timefound:.3f}] Executing timeline at {time:.3f}s: {'.'.join(str(v) for v in dmx_universe[:35])}")
+    print(f"[{timefound:.3f}] {time:.3f}s -> {'.'.join(f'{v:3d}' for v in dmx_universe[:30])}")
     # Send Art-Net packet 
     send_artnet(dmx_universe)
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { formatTime, saveToServer } from "./utils";
+import { formatTime, saveToServer, SongsFolder } from "./utils";
 import FixtureCard from './FixtureCard';
+import SongArrangement from './SongArrangement';
 import WaveSurfer from 'wavesurfer.js';
 
 
@@ -13,13 +14,7 @@ export function App() {
   const [currentTime, setCurrentTime] = useState(0);
   const [currentSongFile] = useState('born_slippy.mp3');
   
-  const SongsFolder = '/songs/';
-
-  const [arrangement, setArrangement] = useState([]);
-  const [editMode, setEditMode] = useState(false);
-
   const [toast, setToast] = useState(null);
-  const [currentSection, setCurrentSection] = useState(null);
 
   const [fixtures, setFixtures] = useState([]);
 
@@ -92,49 +87,14 @@ export function App() {
     loadFixtures();
   }, []);
 
-  useEffect(() => {
-    let current = null;
-    for (let i = 0; i < arrangement.length; i++) {
-      if (currentTime >= arrangement[i].time) current = i;
-    }
-    setCurrentSection(current);
-  }, [currentTime, arrangement]);
-
-  const updateLabel = (index, label) => {
-    const updated = [...arrangement];
-    updated[index].label = label;
-    setArrangement(updated);
-  };
-
-  const deleteMarker = (index) => {
-    const updated = [...arrangement];
-    updated.splice(index, 1);
-    setArrangement(updated);
-  };
-
-  const addMarker = () => {
-    const time = parseFloat(currentTime.toFixed(3));
-    const newMarker = { time, label: `Section ${arrangement.length + 1}` };
-    setArrangement([...arrangement, newMarker]);
-  };
 
   ///////////////////////////////////////////////////////
-  useEffect(() => {
-    fetch(SongsFolder + currentSongFile + ".arrangement.json")
-      .then((res) => res.json())
-      .then((data) => setArrangement(data))
-      .catch((err) => console.error("Failed to load arrangement:", err));
-  }, []);
-    
-  const saveArrangement = () => {
-    saveToServer(currentSongFile + ".arrangement.json", arrangement, "Arrangement saved!", setToast);
-  };
 
-  ///////////////////////////////////////////////////////
+  // Load cues from server
   useEffect(() => {
     fetch(SongsFolder + currentSongFile + ".cues.json")
       .then((res) => res.json())
-      .then((data) => setCues(data))
+      .then((data) => setCues(Array.isArray(data) ? data.sort((a, b) => (a.time ?? 0) - (b.time ?? 0)) : []))
       .catch((err) => console.error("Failed to load Cues:", err));
   }, []);
 
@@ -171,8 +131,9 @@ export function App() {
       }
     }
 
-    // add cue
-    setCues([...cues, cue]);
+    // add cue and place in time
+    const newCues = [...cues, cue].sort((a, b) => (a.time ?? 0) - (b.time ?? 0));
+    setCues(newCues);
   };
 
   useEffect(() => {
@@ -219,27 +180,7 @@ export function App() {
     }
   }, [isPlaying]);
 
-  // Send current time updates too
 
-  // useEffect(() => {
-  //   if (wsRef.current?.readyState === WebSocket.OPEN) {
-  //     wsRef.current.send(JSON.stringify({ isPlaying, currentTime }));
-  //   }
-  // }, [currentTime]);
-
-  const sendDMXUpdate = async (channelMap) => {
-    try {
-      const res = await fetch("/dmx/set", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ values: channelMap }),
-      });
-      const result = await res.json();
-      console.log("sendDMX update", result);
-    } catch (err) {
-      console.error("DMX update failed:", err);
-    }
-  };
 
   // UI toast effect ----------------------------------------
   useEffect(() => {
@@ -263,8 +204,10 @@ export function App() {
             <div ref={containerRef} className="mb-4"/>
             <div id="song-controls" class="flex flex-col items-center">
               <div className="flex items-center gap-4 mb-4">
-                <button onClick={() => wavesurferRef.current?.play()} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">▶️ Start</button>
-                <button onClick={() => wavesurferRef.current?.pause()} className="bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded">⏸️ Pause</button>
+                {isPlaying ? 
+                  (<button onClick={() => wavesurferRef.current?.pause()} className="bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded">⏸️ Pause</button>) : 
+                  (<button onClick={() => wavesurferRef.current?.play()} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">▶️ Start</button>)
+                }
                 <button onClick={() => { wavesurferRef.current?.pause(); wavesurferRef.current?.seekTo(0); }} className="bg-gray-700 hover:bg-gray-800 px-4 py-2 rounded">⏹️ Stop</button>
                 <span className="ml-4 w-6 text-gray-400">{formatTime(currentTime)}</span>
               </div>
@@ -291,32 +234,16 @@ export function App() {
 
           {/* Song Arrangement Controls Card */}
           <div className="bg-white/10 rounded-2xl p-6">
-            <div className="flex items-center gap-4 mb-4">
-              <button onClick={saveArrangement} className="bg-green-700 hover:bg-green-800 px-4 py-2 rounded">💾 Save</button>
-              <button onClick={addMarker} className="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">➕ Add Marker</button>
-              <button onClick={() => setEditMode(!editMode)} className="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded">✏️ {editMode ? 'Exit Edit Mode' : 'Edit'}</button>
-            </div>
-
-            <div className="bg-white/10 rounded p-4 text-sm">
-              <h2 className="text-lg mb-2 font-semibold">Arrangement</h2>
-              <ul className="space-y-1">
-                {arrangement.map((section, index) => (
-                  <li key={index} className={index === currentSection ? 'bg-green-700 px-2 py-1 rounded' : 'text-gray-300'}>
-                    {editMode ? (
-                      <div className="flex items-center gap-2">
-                        <input className="text-black px-1 rounded" value={section.label} onChange={(e) => updateLabel(index, e.target.value)} />
-                        <button onClick={() => deleteMarker(index)}>❌</button>
-                      </div>
-                    ) : (
-                      <>[{formatTime(section.time)}] {section.label}</>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <SongArrangement
+              currentTime={currentTime}
+              currentSongFile={currentSongFile}
+              setToast={setToast}
+            />
           </div>
+
         </div>
       </div>
+
       {/* Fixture Panel */}
       <div className="w-1/3 bg-white/10 text-white p-6 rounded-2xl">
         <h2 className="text-2xl font-bold mb-4">Fixtures</h2>
@@ -328,7 +255,6 @@ export function App() {
               key={fixture.id} 
               fixture={fixture}
               currentTime={currentTime}
-              sendDMXUpdate={sendDMXUpdate}
               addCue={addCue}
               />
           ))

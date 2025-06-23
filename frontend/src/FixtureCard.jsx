@@ -3,7 +3,7 @@
 import PresetSelector from "./PresetSelector";
 import { useState, useEffect, useRef } from "preact/hooks";
 
-export default function FixtureCard({ fixture, currentTime, addCue, sendDMXUpdate }) {
+export default function FixtureCard({ fixture, currentTime, addCue }) {
   const [values, setValues] = useState({ ...fixture.current_values });
   const { name, channels, presets } = fixture;
   const [expandedMap, setExpandedMap] = useState({});
@@ -31,12 +31,82 @@ export default function FixtureCard({ fixture, currentTime, addCue, sendDMXUpdat
       : '#000';
   const previewDim = channels.dim !== undefined ? values.dim : 255;
 
-  const handleValueChange = (key, dmx, val) => {
-    const n = parseInt(val, 10);
-    if (!isNaN(n) && n >= 0 && n <= 255) {
-      setValues((prev) => ({ ...prev, [key]: n }));
+  const sendDMXUpdate = async (channelMap) => {
+    try {
+      const res = await fetch("/dmx/set", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ values: channelMap }),
+      });
+      const result = await res.json();
+      console.log("sendDMX update", result);
+    } catch (err) {
+      console.error("DMX update failed:", err);
     }
-  };
+  };  
+
+  function DmxChannels({ channels, values, sendDMXUpdate }) {
+    const handleValueChange = (key, dmx, val) => {
+      const n = parseInt(val, 10);
+      if (!isNaN(n) && n >= 0 && n <= 255) {
+        setValues((prev) => ({ ...prev, [key]: n }));
+      }
+    };
+    
+    return (
+      <div className="mb-2">
+        <table className="text-xs w-full border-collapse">
+          <thead>
+            <tr className="text-gray-400">
+              <th className="text-left py-1">Channel</th>
+              <th className="text-left py-1">DMX</th>
+              <th className="text-left py-1">Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(channels).map(([key, dmx], idx) => {
+              const val = values[key] ?? 0;
+              const sliderRef = useRef(null);
+
+              useEffect(() => {
+                const el = sliderRef.current;
+                if (!el) return;
+
+                const handleInput = (e) => {
+                  const newVal = parseInt(e.target.value);
+                  handleValueChange(key, dmx, newVal);
+                  sendDMXUpdate({ [dmx]: newVal });
+                };
+
+                el.addEventListener("input", handleInput);
+                return () => el.removeEventListener("input", handleInput);
+              }, [key, dmx]);
+
+              return (
+                <tr key={idx} className="border-t border-white/10">
+                  <td className="py-1">{key}</td>
+                  <td className="py-1">{dmx}</td>
+                  <td className="py-1">
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={sliderRef}
+                        type="range"
+                        min={0}
+                        max={255}
+                        value={val}
+                        className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                      />
+                      <span className="w-8 text-xs text-right text-gray-300">{val}</span>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
 
   return (
     <div className="border border-white/10 rounded-lg mb-4 bg-white/5 shadow-sm">
@@ -56,57 +126,7 @@ export default function FixtureCard({ fixture, currentTime, addCue, sendDMXUpdat
 
       {expanded && (
         <div className="px-4 pb-4 text-sm text-gray-300">
-          <div className="mb-2">
-            <table className="text-xs w-full border-collapse">
-              <thead>
-                <tr className="text-gray-400">
-                  <th className="text-left py-1">Channel</th>
-                  <th className="text-left py-1">DMX</th>
-                  <th className="text-left py-1">Value</th>
-                </tr>
-              </thead>
-              <tbody>
-              {Object.entries(channels).map(([key, dmx], idx) => {
-                const val = values[key] ?? 0;
-                const sliderRef = useRef(null);
-
-                useEffect(() => {
-                  const el = sliderRef.current;
-                  if (!el) return;
-
-                  const handleInput = (e) => {
-                    const newVal = parseInt(e.target.value);
-                    handleValueChange(key, dmx, newVal);
-                    sendDMXUpdate({ [dmx]: newVal });
-                  };
-
-                  el.addEventListener("input", handleInput);
-                  return () => el.removeEventListener("input", handleInput);
-                }, [key, dmx]);                  
-                return (
-                  <tr key={idx} className="border-t border-white/10">
-                    <td className="py-1">{key}</td>
-                    <td className="py-1">{dmx}</td>
-                    <td className="py-1">
-                      <div className="flex items-center gap-2">
-                        <input
-                          ref={sliderRef}
-                          type="range"
-                          min={0}
-                          max={255}
-                          value={val}
-                          className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                        />
-                        <span className="w-8 text-xs text-right text-gray-300">{val}</span>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              </tbody>
-            </table>
-          </div>
-
+          
           <div className="mb-2">
             <PresetSelector
               fixture={fixture}
@@ -135,6 +155,13 @@ export default function FixtureCard({ fixture, currentTime, addCue, sendDMXUpdat
               ))}
             </div>
           )}
+
+          <DmxChannels
+            channels={channels}
+            values={values}
+            sendDMXUpdate={sendDMXUpdate}
+          />
+
         </div>
       )}
     </div>

@@ -1,3 +1,5 @@
+export const SongsFolder = '/songs/';
+
 export const formatTime = (time) => {
   const minutes = Math.floor(time / 60);
   const seconds = (time % 60).toFixed(3).padStart(6, '0');
