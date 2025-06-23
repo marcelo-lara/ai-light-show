@@ -6,34 +6,25 @@ SONGS_DIR = "/app/static/songs"
 # --- Show Timeline ---
 emty_packet = [0] * DMX_CHANNELS
 song_length = 60  # seconds
-show_timeline = []
+show_timeline: dict[float, list[int]] = {}
 
-def get_empty_timeline(_length = song_length ):
-    global show_timeline
-    show_timeline = [
-        {
-            "time": round(time, 1), 
-            "dmx_universe": emty_packet.copy()
-        } for time in [t * 0.1 for t in range(_length * FPS)]
-    ]
-    return show_timeline
-
-def execute_timeline(time):
+def execute_timeline(current_time):
     global dmx_universe, show_timeline
-    timefound = -1.0  # Default to -1 if no entry found
+    timefound = -1.0
 
-    # Find the latest timeline entry before the given time
-    for entry in reversed(show_timeline):
-        if entry["time"] <= time:
-            timefound = entry["time"]
-            dmx_universe = entry["dmx_universe"]
-            break
+    # Find the latest timestamp <= current_time
+    available_times = [t for t in show_timeline if t <= current_time]
+    if not available_times:
+        print(f"[{current_time:.3f}] No available timeline frames for {current_time:.3f}s")
+        return current_time  # Nothing to send
 
-    print(f"[{timefound:.3f}] {time:.3f}s -> {'.'.join(f'{v:3d}' for v in dmx_universe[:30])}")
-    # Send Art-Net packet 
+    timefound = max(available_times)
+    dmx_universe = show_timeline[timefound]
+
+    print(f"[{timefound:.3f}] {current_time:.3f}s -> {'.'.join(f'{v:3d}' for v in dmx_universe[:30])}")
+
     send_artnet(dmx_universe)
-
-    return time
+    return timefound
 
 def load_song_cues(song_file):
     cue_path = f"{SONGS_DIR}/{song_file}.cues.json"
@@ -47,57 +38,41 @@ def load_song_cues(song_file):
 def render_timeline(fixture_config, fixture_presets, current_song, cues=None, fps=120):
     global show_timeline
 
-    # Load cues if not passed in
     if cues is None:
         cues = load_song_cues(current_song)
         if "error load_song_cues:" in cues:
             print(cues["error load_song_cues:"])
-            return []
+            return {}
 
-    # Generate raw timeline events
-    interpolated = pre_render_timeline(cues, fixture_config, fixture_presets, current_song, fps)
+    timeline = pre_render_timeline(cues, fixture_config, fixture_presets, current_song, fps)
+    show_timeline = {}
 
-    # Merge events by time
-    merged = {}
-    for ev in interpolated:
-        t = ev["time"]
-        vals = ev["values"]
-        if t not in merged:
-            merged[t] = {}
-        merged[t].update(vals)
-
-    # Sort and build show_timeline
-    show_timeline = []
     last_frame = [0] * 512
-    for t in sorted(merged.keys()):
+    for t in sorted(timeline.keys()):
         frame = last_frame.copy()
-        for ch, v in merged[t].items():
+        for ch, v in timeline[t].items():
             if 0 <= ch < 512:
-                frame[ch-1] = v
-        show_timeline.append({
-            "time": t,
-            "dmx_universe": frame
-        })
+                frame[ch - 1] = v  # DMX channels are 1-based in mapping
+        show_timeline[t] = frame
         last_frame = frame
 
-    # Debug output
+    # Debug log output
     with open(f"/app/static/songs/{current_song}.timeline.log", "w") as f:
         f.write(f"// Timeline for {current_song}\n")
         f.write(f"// Rendered from {len(cues)} cues\n")
-        f.write(f"// Total events: {len(show_timeline)}\n")
+        f.write(f"// Total frames: {len(show_timeline)}\n")
         f.write(f"// FPS: {fps}\n")
         f.write(f"// Length: {len(show_timeline) / fps:.2f} seconds\n")
         f.write(f"time  | " + " ".join(f"{i:03d}" for i in range(1, 36)) + "\n")
-        for ev in show_timeline[:100]:
-            t = ev["time"]
-            d = ev["dmx_universe"]
+        for t in sorted(show_timeline.keys())[:100]:
+            d = show_timeline[t]
             f.write(f"{t:.3f} | {'.'.join(f'{v:03d}' for v in d[:35])}\n")
 
     print(f"✅ Rendered {len(show_timeline)} frames -> {len(show_timeline)/fps}s")
     return show_timeline
 
 def pre_render_timeline(cues, fixture_config, fixture_presets, current_song, fps=120):
-    timeline = []
+    timeline = {}  # key: time (float) → value: merged channel values dict
 
     def find_fixture(fid):
         return next((f for f in fixture_config if f["id"] == fid), None)
@@ -134,19 +109,14 @@ def pre_render_timeline(cues, fixture_config, fixture_presets, current_song, fps
         ch_map = fixture["channels"]
         overrides = cue.get("parameters", {})
 
-        # determine preset mode
-        print(f"  mode: {preset['mode']}")
-
         loop_duration_sec = overrides.get("loop_duration", 1000) / 1000.0
         step_offset = 0.0
 
-        # Calculate total duration for one full preset cycle
         cycle_duration = 0.0
         for step in preset["steps"]:
             if step["type"] == "fade":
                 cycle_duration += overrides.get("fade_duration", step["duration"]) / 1000.0
         print(f"  - Cycle duration: {cycle_duration:.3f}s")
-
 
         while step_offset < loop_duration_sec:
             t = start_time + step_offset
@@ -155,10 +125,11 @@ def pre_render_timeline(cues, fixture_config, fixture_presets, current_song, fps
 
                 if step_type == "set":
                     values = {ch_map[k]: v for k, v in step["values"].items() if k in ch_map}
-                    timeline.append({"time": round(t, 4), "values": values})
+                    t_rounded = round(t, 4)
+                    timeline.setdefault(t_rounded, {}).update(values)
                     for ch, v in values.items():
-                        channel_last_values[ch] = (round(t, 4), v)
-                    print(f"  - [set] values at {t:.3f}s: {values}")
+                        channel_last_values[ch] = (t_rounded, v)
+                    print(f"  - [set] values at {t_rounded:.3f}s: {values}")
 
                 elif step_type == "fade":
                     duration = overrides.get("fade_duration", step["duration"]) / 1000.0
@@ -170,7 +141,7 @@ def pre_render_timeline(cues, fixture_config, fixture_presets, current_song, fps
                     fade_steps = interpolate_steps(from_vals, to_vals, duration, fps)
                     for offset, fade_vals in fade_steps:
                         t_step = round(t + offset, 4)
-                        timeline.append({"time": t_step, "values": fade_vals})
+                        timeline.setdefault(t_step, {}).update(fade_vals)
                         for ch, v in fade_vals.items():
                             channel_last_values[ch] = (t_step, v)
                     t += duration
@@ -178,10 +149,9 @@ def pre_render_timeline(cues, fixture_config, fixture_presets, current_song, fps
 
             step_offset += cycle_duration
 
-    # 🛡️ Always-arm all fixtures across full duration
-    last_t = max((ev["time"] for ev in timeline), default=0.0)
+    # 🛡️ Always-arm all fixtures across timeline
+    last_t = max(timeline.keys(), default=0.0)
     total_steps = int(last_t * fps)
-    arm_inserts = []
 
     for fixture in fixture_config:
         arm = fixture.get("arm")
@@ -192,13 +162,13 @@ def pre_render_timeline(cues, fixture_config, fixture_presets, current_song, fps
             if arm_ch_num is not None:
                 for i in range(total_steps + 1):
                     t = round(i / fps, 4)
-                    arm_inserts.append({"time": t, "values": {arm_ch_num: arm["value"]}})
+                    timeline.setdefault(t, {})[arm_ch_num] = arm["value"]
 
-    timeline += arm_inserts
-    timeline = sorted(timeline, key=lambda ev: ev["time"])
+    timeline = dict(sorted(timeline.items()))  # sort by time
 
+    # Save as { "0.000": {ch:val, ...}, ... }
     with open(f"/app/static/songs/{current_song}.timeline_events.json", "w") as f:
-        json.dump(timeline, f, indent=2)
+        json.dump({str(t): v for t, v in timeline.items()}, f, indent=2)
 
-    print(f"✅ PreRendered {len(timeline)} timeline events from {len(cues)} cues.")
+    print(f"✅ PreRendered {len(timeline)} timeline frames from {len(cues)} cues.")
     return timeline
