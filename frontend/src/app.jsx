@@ -8,14 +8,18 @@ import WaveSurfer from 'wavesurfer.js';
 export function App() {
   const containerRef = useRef(null);
   const wavesurferRef = useRef(null);
-  const [cues, setCues] = useState([]);
   const wsRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);  
   const [currentTime, setCurrentTime] = useState(0);
   const [currentSongFile] = useState('born_slippy.mp3');
   const [songData, setSongData] = useState();
-    
+
+  const [cues, setCues] = useState([]);
+  const [newCue, setNewCue] = useState({ fixture: "", preset: "", time: 0, duration: 1 });
+  const [editCueId, setEditCueId] = useState(null);
+
   const [toast, setToast] = useState(null);
+  const [wsConnected, setWsConnected] = useState(null);
 
   const [fixtures, setFixtures] = useState([]);
 
@@ -98,50 +102,30 @@ export function App() {
       .catch((err) => console.error("Failed to load SongMetadata:", err));
   }, [currentSongFile]);
 
-  // Load cues from server
-  useEffect(() => {
-    fetch(SongsFolder + currentSongFile + ".cues.json")
-      .then((res) => res.json())
-      .then((data) => setCues(Array.isArray(data) ? data.sort((a, b) => (a.time ?? 0) - (b.time ?? 0)) : []))
-      .catch((err) => console.error("Failed to load Cues:", err));
-  }, [currentSongFile]);
-
-  const saveCues = () => {
-    saveToServer(currentSongFile + ".cues.json", cues, "Cues saved!", setToast);
-  };
-
-  const renderCues = async (fileName) => {
-    try {
-      const res = await fetch("/renderSong", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileName: currentSongFile }),
-      });
-      const result = await res.json();
-      if (result.status === "ok") {
-        setToast("Song rendered successfully");
-      } else {
-        setToast("Failed to render song");
-      }
-    } catch (err) {
-      console.error("Request failed:", err);
-      setToast("Error rendering song");
+  const loadSong = () => {
+    // Push cue changes to backend via WebSocket
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: "loadSong",
+        file: currentSongFile,
+      }));
     }
-  };
+    console.log("request loading song:", currentSongFile);
+   }
+
+   useEffect(() => {
+    if (!wsConnected) return;
+    loadSong();
+  }, [currentSongFile, wsConnected]);
 
   const addCue = (cue) => {
-    // calculate cue overall event time
-    if (cue.parameters){
-      if (cue.parameters.loop_duration) {
-        cue.duration = parseFloat((cue.parameters.loop_duration).toFixed(3));
-      } else {
-        cue.duration = parseFloat((cue.parameters.fade_duration || 0).toFixed(3));
-      }
+    // Push cue changes to backend via WebSocket
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: "addCue",
+        cue: cue
+      }));
     }
-
-    // add cue and place in time
-    const newCues = [...cues, cue].sort((a, b) => (a.time ?? 0) - (b.time ?? 0));
-    setCues(newCues);
   };
 
   useEffect(() => {
@@ -152,14 +136,15 @@ export function App() {
     
     ws.onopen = () => {
       console.log("🎵 WebSocket connected");
+      setWsConnected(true);
       ws.send(JSON.stringify({ isPlaying, currentTime }));
     };
 
     ws.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
-        if (data.type === "dmx_update") {
-          const universe = data.universe;
+        const msg = JSON.parse(event.data);
+        if (msg.type === "dmx_update") {
+          const universe = msg.universe;
           const updatedFixtures = fixtures.map(fixture => {
             const newValues = {};
             for (const [key, dmxChannel] of Object.entries(fixture.channels)) {
@@ -169,6 +154,18 @@ export function App() {
           });
           console.log("Received DMX:", universe);
           setFixtures(updatedFixtures);
+          return;
+        }
+
+        if (msg.type === "cuesUpdated") {
+          console.log("Received cues update:", msg.cues);
+          setCues(msg.cues);
+        }
+
+        if (msg.type === "songLoaded") {
+          console.log("-> songLoaded:")
+          console.log('   cues:', msg.cues);
+          setCues(msg.cues || []);
         }
       } catch (err) {
         console.error("WebSocket message error:", err);
@@ -176,7 +173,10 @@ export function App() {
     };
 
     ws.onerror = (e) => console.error("WebSocket error:", e);
-    ws.onclose = () => console.log("WebSocket closed");
+    ws.onclose = () => {
+      setWsConnected(false);
+      console.log("WebSocket closed")
+    };
 
     return () => ws.close();
   }, [fixtures.length]);
@@ -224,20 +224,40 @@ export function App() {
 
           {/* Song Cue Controls Card */}
           <div className="bg-white/10 rounded-2xl p-6 mb-6">
-            <div className="flex items-center gap-4 mb-4">
-              <button onClick={saveCues} className="bg-green-700 hover:bg-green-800 px-4 py-2 rounded">💾 Save Cue</button>
-              <button onClick={renderCues} className="bg-gray-700 hover:bg-gray-800 px-4 py-2 rounded">⚙️ Render Cue</button>
-            </div>
+            <h2 className="text-xl font-semibold mb-4">🎯 Song Cue Controls</h2>
 
-            <div className="bg-white/10 rounded p-4 text-sm max-h-64 overflow-y-scroll">
-              <h2 className="text-lg mb-2 font-semibold">Cue List</h2>
-              {cues.length === 0 && (<div className="italic text-gray-400">No cues recorded yet.</div>)}
-              <ul className="list-disc pl-5 space-y-1">
-                {cues.map((cue, index) => (
-                  <li key={index}>[{cue.time}s] {cue.fixture} → {cue.preset} ({cue.duration})</li>
+            <table className="text-sm w-full text-white">
+              <thead>
+                <tr className="border-b border-white/20">
+                  <th className="text-left">time</th>
+                  <th className="text-left">Fixture</th>
+                  <th className="text-left">Preset</th>
+                  <th className="text-left">Duration</th>
+                  <th className="text-left">Parameters</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {cues.map((cue, idx) => (
+                  <tr key={`${cue.fixture}-${cue.time}`} className="border-b border-white/10">
+                    <td>{cue.time?.toFixed(2)}</td>
+                    <td>{cue.fixture}</td>
+                    <td>{cue.preset}</td>
+                    <td>{cue.duration?.toFixed(2)}</td>
+                    <td>
+                      {cue.parameters && Object.entries(cue.parameters).map(([k, v]) => (
+                        <span key={k} className="inline-block mr-2">{k}: {v}</span>
+                      ))}
+                    </td>
+                    <td className="flex gap-2">
+                      <button onClick={() => {
+                        wsRef.current?.send(JSON.stringify({ type: "deleteCue", cue: cue }));
+                      }} className="bg-red-600 hover:bg-red-700 px-2 py-1 rounded">🗑️</button>
+                    </td>
+                  </tr>
                 ))}
-              </ul>
-            </div>
+              </tbody>
+            </table>
           </div>
 
           {/* Song Arrangement Controls Card */}

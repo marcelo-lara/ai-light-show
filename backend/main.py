@@ -18,6 +18,10 @@ fixture_config = []
 fixture_presets = []
 current_song = None
 
+# Cue management
+cue_list = []
+current_song_file = None
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     asyncio.create_task(timeline_executor())
@@ -82,20 +86,6 @@ def test_artnet_send():
 
 clients = []
 
-# Global variables to hold fixture config and presets
-
-@app.post("/renderSong")
-async def render_song(request: Request):
-    global timeline, fixture_config, fixture_presets, current_song
-    payload = await request.json()
-    current_song = payload.get("fileName")
-    if not current_song:
-        return {"error": "Missing 'file' in request"}
-
-    render_timeline(fixture_config, fixture_presets, current_song=current_song, fps=120)
-
-    return {"status": "ok", "fixture_count": len(fixture_config)}
-
 def load_fixtures_config():
     global fixture_config, fixture_presets
     try:
@@ -107,6 +97,26 @@ def load_fixtures_config():
     except Exception as e:
         print("❌ load_fixtures_config error: ", e)
 
+def load_cues(song_file):
+    global cue_list
+    cue_path = SONGS_DIR / f"{song_file}.cues.json"
+    try:
+        with open(cue_path) as f:
+            cue_list.clear()
+            cue_list.extend(json.load(f))
+        print(f"🎵 Loaded cues for {song_file} ({len(cue_list)} total)")
+    except Exception as e:
+        print(f"❌ load_cues error: {e}")
+
+def save_cues(song_file, cues):
+    cue_path = SONGS_DIR / f"{song_file}.cues.json"
+    try:
+        cue_path.write_text(json.dumps(cues, indent=2))
+        print(f"💾 Saved cues to {cue_path}")
+    except Exception as e:
+        print(f"❌ save_cues error: {e}")
+    render_timeline(fixture_config, fixture_presets, cues=cues, current_song=song_file)
+
 # 🎵 WebSocket for playback state synchronization 
 timeline = []
 playback_time = 0.0
@@ -116,30 +126,88 @@ is_playing = False
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    global is_playing, playback_time, start_monotonic
+    global is_playing, playback_time, start_monotonic, current_song_file, cue_list
 
     await websocket.accept()
     clients.append(websocket)
     print(f"🧠 Client connected: {websocket.client}")
     try:
         while True:
-            # await websocket.receive_text()  # Placeholder to keep the connection alive
             msg = await websocket.receive_json()
-            if "isPlaying" in msg:
-                is_playing = msg["isPlaying"]
-            if "currentTime" in msg:
-                playback_time = msg["currentTime"]
-                if is_playing:
-                    start_monotonic = time.monotonic() - playback_time
 
-            await websocket.send_json({
-                "status": "ok",
-                "isPlaying": is_playing,
-                "currentTime": playback_time
-            })
-            
-            print(f"[WS] Sync: isPlaying={is_playing}, currentTime={playback_time}")
+            if msg.get("type") == "sync":
+                if "isPlaying" in msg:
+                    is_playing = msg["isPlaying"]
+                if "currentTime" in msg:
+                    playback_time = msg["currentTime"]
+                    if is_playing:
+                        start_monotonic = time.monotonic() - playback_time
 
+                await websocket.send_json({
+                    "type": "syncAck",
+                    "isPlaying": is_playing,
+                    "currentTime": playback_time
+                })
+                print(f"[WS] Sync: isPlaying={is_playing}, currentTime={playback_time}")
+
+            elif msg.get("type") == "loadSong":
+                current_song_file = msg["file"]
+                load_cues(current_song_file)
+                await websocket.send_json({
+                    "type": "songLoaded",
+                    "cues": cue_list
+                })
+
+            elif msg.get("type") == "getCues":
+                print(f"🔍 Fetching cues for {current_song_file}")
+                await websocket.send_json({
+                    "type": "cuesUpdated",
+                    "cues": cue_list
+                })
+
+            elif msg.get("type") == "addCue":
+                cue = msg["cue"]
+
+                if 'duration' not in cue:
+                    if 'parameters' in cue and 'loop_duration' in cue['parameters']:
+                        cue['duration'] = cue['parameters']['loop_duration']
+                    else:
+                        cue['duration'] = cue['parameters']['fade_duration'] if 'fade_duration' in cue['parameters'] else 0
+
+                cue_list.append(cue)
+                cue_list.sort(key=lambda c: (c["fixture"], c["time"]))  # Sort by fixture and time
+           
+                save_cues(current_song_file, cue_list)
+
+                
+                await websocket.send_json({
+                    "type": "cuesUpdated",
+                    "cues": cue_list
+                })
+                print(f"📝 Added new cue: {cue}")
+
+            elif msg.get("type") == "updateCue":
+                updated = msg["cue"]
+                for i, c in enumerate(cue_list):
+                    if c["fixture"] == updated["fixture"] and c["time"] == updated["time"]:
+                        cue_list[i] = updated
+                        print(f"📝 Updated cue: {updated}")
+                        break
+
+                save_cues(current_song_file, cue_list)
+                await websocket.send_json({
+                    "type": "cuesUpdated",
+                    "cues": cue_list
+                })
+
+            elif msg.get("type") == "deleteCue":
+                cue = msg["cue"]
+                cue_list[:] = [c for c in cue_list if not (c["fixture"] == cue["fixture"] and c["time"] == cue["time"])]
+                save_cues(current_song_file, cue_list)
+                await websocket.send_json({
+                    "type": "cuesUpdated",
+                    "cues": cue_list
+                })
 
     except WebSocketDisconnect:
         clients.remove(websocket)
