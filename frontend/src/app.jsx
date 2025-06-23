@@ -13,7 +13,8 @@ export function App() {
   const [isPlaying, setIsPlaying] = useState(false);  
   const [currentTime, setCurrentTime] = useState(0);
   const [currentSongFile] = useState('born_slippy.mp3');
-  
+  const [songData, setSongData] = useState();
+    
   const [toast, setToast] = useState(null);
 
   const [fixtures, setFixtures] = useState([]);
@@ -89,6 +90,13 @@ export function App() {
 
 
   ///////////////////////////////////////////////////////
+  // load song metadata
+  useEffect(() => {
+    fetch(SongsFolder + currentSongFile + ".metadata.json")
+      .then((res) => res.json())
+      .then((data) => setSongData(data))
+      .catch((err) => console.error("Failed to load SongMetadata:", err));
+  }, [currentSongFile]);
 
   // Load cues from server
   useEffect(() => {
@@ -96,7 +104,7 @@ export function App() {
       .then((res) => res.json())
       .then((data) => setCues(Array.isArray(data) ? data.sort((a, b) => (a.time ?? 0) - (b.time ?? 0)) : []))
       .catch((err) => console.error("Failed to load Cues:", err));
-  }, []);
+  }, [currentSongFile]);
 
   const saveCues = () => {
     saveToServer(currentSongFile + ".cues.json", cues, "Cues saved!", setToast);
@@ -191,7 +199,7 @@ export function App() {
   }, [toast]);
 
   return (
-    <div className="flex flex-row gap-6">
+    <div className="flex flex-row gap-2">
       {/* Main Panel */}
       <div className="w-2/3">
         <div className="p-6 bg-black text-white min-h-screen">
@@ -245,7 +253,7 @@ export function App() {
       </div>
 
       {/* Fixture Panel */}
-      <div className="w-1/3 bg-white/10 text-white p-6 rounded-2xl">
+      <div className="w-1/3 text-white p-6">
         <h2 className="text-2xl font-bold mb-4">Fixtures</h2>
         {fixtures.length === 0 ? (
           <div className="text-sm text-gray-500 italic">No fixtures loaded</div>

@@ -22,10 +22,10 @@ This project is a full-stack system for designing and playing synchronized DMX l
 ### Backend (FastAPI)
 
 * Static file server for frontend
-* Art-Net UDP packet sender (40Hz loop)
+* Art-Net UDP packet sender (44Hz loop)
 * DMX state tracking (512-channel universe)
 * Pre-renders cue timeline based on song and fixtures
-* Receives playback time sync over WebSocket (`/ws/player`)
+* Receives playback time sync over WebSocket (`/ws`)
 
 ---
 
@@ -134,10 +134,13 @@ Stored in `public/songs/songname.mp3.cues.json`
 ```
 frontend/
   ├─ app.jsx
-  └─ FixtureCard.jsx
+  ├─ FixtureCard.jsx
+  ├─ PresetSelector.jsx
+  └─ SongArrangement.jsx
 backend/
   ├─ main.py
-  ├─ dmx_state.py
+  ├─ dmx_controller.py
+  ├─ timeline_engine.py
 static/
   ├─ songs/
   ├─ fixtures/master_fixture_config.json
@@ -151,7 +154,6 @@ static/
 * [ ] Group/chaser animation system
 * [ ] Fixture preview rendering
 * [ ] Timeline editor UI
-* [ ] Offline export (cue to binary DMX)
 
 ---
 
@@ -170,10 +172,9 @@ Fixtures defined in /static/fixtures/master_fixture_config.json
 
 Each fixture has channels (e.g., dimmer, red, green, blue), starting DMX address, and type (e.g., rgb, moving_head)
 
-Fixtures may require an "ARM" state:
+Fixtures require an "ARM" state to output light:
 
 rgb: dim must be 255 to see colors
-
 moving_head: shutter must be 255 to output light
 
 Some channels represent discrete options (e.g., Gobos or Color wheels using defined value ranges)
@@ -191,9 +192,9 @@ parameters: e.g., duration, intensity
 
 steps: array of actions
 
-set: directly assign values to channels
+step type "set": directly assign values to channels
 
-fade: interpolate to new values over time
+step type "fade": interpolate to new values over time
 
 Only applies to one fixture at a time
 
@@ -232,7 +233,7 @@ Exposes:
 
 /songs/save: saves arrangement or cues
 
-/ws/player: syncs frontend playback
+/ws: syncs frontend playback
 
 Internal: dmx_state.py handles Art-Net UDP sending and DMX buffer logic
 
