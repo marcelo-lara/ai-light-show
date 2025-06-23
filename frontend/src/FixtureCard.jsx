@@ -3,13 +3,11 @@
 import PresetSelector from "./PresetSelector";
 import { useState, useEffect, useRef } from "preact/hooks";
 
-export default function FixtureCard({ fixture, currentTime, addCue }) {
+export default function FixtureCard({ fixture, currentTime, addCue, allPresets }) {
   const [values, setValues] = useState({ ...fixture.current_values });
   const { name, channels, presets } = fixture;
   const [expandedMap, setExpandedMap] = useState({});
   const expanded = expandedMap[fixture.id] || false;
-
-  const [allPresets, setAllPresets] = useState([]);
 
   const toggleExpanded = (fixtureId) => {
     setExpandedMap((prev) => ({
@@ -17,13 +15,6 @@ export default function FixtureCard({ fixture, currentTime, addCue }) {
       [fixtureId]: !prev[fixtureId],
     }));
   };
-
-  useEffect(() => {
-    fetch("/fixtures/fixture_presets.json")
-      .then((res) => res.json())
-      .then((data) => setAllPresets(data))
-      .catch((err) => console.error("Failed to load presets:", err));
-  }, []);
 
   const previewColor =
     channels.red !== undefined && channels.green !== undefined && channels.blue !== undefined

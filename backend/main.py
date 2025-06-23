@@ -151,11 +151,14 @@ async def websocket_endpoint(websocket: WebSocket):
                 print(f"[WS] Sync: isPlaying={is_playing}, currentTime={playback_time}")
 
             elif msg.get("type") == "loadSong":
+                print(f"🎶 Loading song: {msg['file']}")
                 current_song_file = msg["file"]
                 load_cues(current_song_file)
                 await websocket.send_json({
                     "type": "songLoaded",
-                    "cues": cue_list
+                    "cues": cue_list,
+                    "fixtures": fixture_config,
+                    "presets": fixture_presets,
                 })
 
             elif msg.get("type") == "getCues":
@@ -225,7 +228,7 @@ async def broadcast(message: dict):
 
 ## Static file serving
 app.mount("/songs", StaticFiles(directory="static/songs"), name="songs")
-app.mount("/fixtures", StaticFiles(directory="static/fixtures"), name="fixtures")
+# app.mount("/fixtures", StaticFiles(directory="static/fixtures"), name="fixtures")
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 async def timeline_executor():
