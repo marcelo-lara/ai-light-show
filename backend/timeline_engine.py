@@ -117,7 +117,7 @@ def pre_render_timeline(cues, fixture_config, fixture_presets, current_song, fps
             steps.append((round(i * interval, 4), step_vals))
         return steps
 
-    channel_last_values = {}  # channel_num → (last_time, value)
+    channel_last_values = {}
 
     for cue in cues:
         start_time = cue["time"]
@@ -132,20 +132,27 @@ def pre_render_timeline(cues, fixture_config, fixture_presets, current_song, fps
         ch_map = fixture["channels"]
         overrides = cue.get("parameters", {})
         loop = preset.get("mode") == "loop"
-        loop_duration = overrides.get("loop_duration", 1000) / 1000.0  # ms → sec
 
-        step_offset = 0
-        while True:
+        loop_duration_sec = overrides.get("loop_duration", 1000) / 1000.0
+        step_offset = 0.0
+
+        # Calculate total duration for one full preset cycle
+        cycle_duration = 0.0
+        for step in preset["steps"]:
+            if step["type"] == "fade":
+                cycle_duration += overrides.get("fade_duration", step["duration"]) / 1000.0
+
+        while step_offset < loop_duration_sec:
+            t = start_time + step_offset
             for step in preset["steps"]:
-                t = start_time + step_offset
-                if step["type"] == "set":
+                step_type = step["type"]
+                if step_type == "set":
                     values = {ch_map[k]: v for k, v in step["values"].items() if k in ch_map}
                     timeline.append({"time": round(t, 4), "values": values})
                     for ch, v in values.items():
                         channel_last_values[ch] = (round(t, 4), v)
-
-                elif step["type"] == "fade":
-                    duration = overrides.get("duration", step["duration"]) / 1000.0
+                elif step_type == "fade":
+                    duration = overrides.get("fade_duration", step["duration"]) / 1000.0
                     to_vals = {ch_map[k]: v for k, v in step["values"].items() if k in ch_map}
                     from_vals = {
                         ch: channel_last_values.get(ch, (0.0, 0))[1]
@@ -157,16 +164,10 @@ def pre_render_timeline(cues, fixture_config, fixture_presets, current_song, fps
                         timeline.append({"time": t_step, "values": fade_vals})
                         for ch, v in fade_vals.items():
                             channel_last_values[ch] = (t_step, v)
-                    step_offset += duration
+                    t += duration
+            step_offset += cycle_duration
 
-            if loop:
-                step_offset += loop_duration
-                if step_offset > loop_duration:
-                    break
-            else:
-                break
-
-    # 🛡️ Apply fixture arming across timeline
+    # 🛡️ Always-arm all fixtures across full duration
     last_t = max((ev["time"] for ev in timeline), default=0.0)
     total_steps = int(last_t * fps)
     arm_inserts = []
@@ -183,9 +184,8 @@ def pre_render_timeline(cues, fixture_config, fixture_presets, current_song, fps
                     arm_inserts.append({"time": t, "values": {arm_ch_num: arm["value"]}})
 
     timeline += arm_inserts
-
-    # ✅ Save and return
     timeline = sorted(timeline, key=lambda ev: ev["time"])
+
     with open(f"/app/static/songs/{current_song}.timeline_events.json", "w") as f:
         json.dump(timeline, f, indent=2)
 
