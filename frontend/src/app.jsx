@@ -276,7 +276,7 @@ export function App() {
           <div className="bg-white/10 rounded-2xl p-6 mb-6">
             <div className="flex items-center gap-4 mb-4">
               <button onClick={saveCues} className="bg-green-700 hover:bg-green-800 px-4 py-2 rounded">💾 Save Cue</button>
-              <button onClick={renderCues} className="bg-gray-700 hover:bg-green-800 px-4 py-2 rounded">⚙️ Render Cue</button>
+              <button onClick={renderCues} className="bg-gray-700 hover:bg-gray-800 px-4 py-2 rounded">⚙️ Render Cue</button>
             </div>
 
             <div className="bg-white/10 rounded p-4 text-sm max-h-64 overflow-y-scroll">

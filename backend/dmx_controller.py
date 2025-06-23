@@ -5,7 +5,7 @@ import socket
 
 # --- DMX Constants ---
 DMX_CHANNELS = 512
-MAX_FPS = 60
+FPS = 60
 ARTNET_PORT = 6454
 ARTNET_IP = "192.168.1.221" # real 192.168.1.221
 ARTNET_UNIVERSE = 0
@@ -15,6 +15,7 @@ dmx_universe = [0] * DMX_CHANNELS
 last_artnet_send = 0
 last_packet = [0] * DMX_CHANNELS
 
+# --- DMX Controller Functions ---
 def set_channel(ch: int, val: int) -> bool:
     if 0 <= ch < DMX_CHANNELS and 0 <= val <= 255:
         dmx_universe[ch-1] = val
@@ -24,10 +25,15 @@ def set_channel(ch: int, val: int) -> bool:
 def get_universe():
     return dmx_universe.copy()
 
-def send_artnet():
-    global last_artnet_send, last_packet
+# --- Send ArtNet packet ---
+def send_artnet(_dmx_universe=None):
+    global last_artnet_send, last_packet, dmx_universe
+
+    if _dmx_universe is not None:
+        dmx_universe = _dmx_universe
+
     now = perf_counter()
-    if now - last_artnet_send < (1.0 / MAX_FPS):
+    if now - last_artnet_send < (1.0 / FPS):
         return
     last_artnet_send = now
 

@@ -1,63 +1,161 @@
-# timeline_engine.py
+import json
+from backend.dmx_controller import send_artnet, dmx_universe, DMX_CHANNELS, FPS
 
-def render_timeline(cues, fixture_map, preset_definitions):
+SONGS_DIR = "/app/static/songs"
+
+# --- Show Timeline ---
+emty_packet = [0] * DMX_CHANNELS
+song_length = 60  # seconds
+show_timeline = []
+
+def get_empty_timeline(_length = song_length ):
+    global show_timeline
+    show_timeline = [
+        {
+            "time": round(time, 1), 
+            "dmx_universe": emty_packet.copy()
+        } for time in [t * 0.1 for t in range(_length * FPS)]
+    ]
+    return show_timeline
+
+def execute_timeline(time):
+    global dmx_universe, show_timeline
+    timefound = -1.0  # Default to -1 if no entry found
+
+    # Find the latest timeline entry before the given time
+    for entry in reversed(show_timeline):
+        if entry["time"] <= time:
+            timefound = entry["time"]
+            dmx_universe = entry["dmx_universe"]
+            break
+
+    print(f"[{timefound:.3f}] Executing timeline at {time:.3f}s: {'.'.join(str(v) for v in dmx_universe[:35])}")
+    # Send Art-Net packet 
+    send_artnet(dmx_universe)
+
+    return time
+
+def load_song_cues(song_file):
+    cue_path = f"{SONGS_DIR}/{song_file}.cues.json"
+    try:
+        with open(cue_path) as f:
+            cues = json.load(f)
+        return cues
+    except Exception as e:
+        return {"error load_song_cues:": str(e)}
+    
+def render_timeline(fixture_config, fixture_presets, current_song, cues = None, fps=120):
+    global show_timeline
+
+    # load the song cues if not provided
+    if cues is None:
+        cues = load_song_cues(current_song)
+        if "error load_song_cues:" in cues:
+            print(cues["error load_song_cues:"])
+            return []
+
+    # convert cues to a timeline format
+    _interpolated_timeline = pre_render_timeline(cues, fixture_config, fixture_presets, current_song, fps)
+
+    # Convert the timeline to a format suitable for the DMX controller
+    show_timeline = []
+    for event in _interpolated_timeline:
+        time = event["time"]
+        values = event["values"]
+        dmx_universe = [0] * 512
+        for ch, val in values.items():
+            if 0 <= ch < 512:
+                dmx_universe[ch] = val
+        show_timeline.append({
+            "time": time,
+            "dmx_universe": dmx_universe
+        })
+    
+    show_timeline = sorted(show_timeline, key=lambda ev: ev["time"])
+
+    # Save the timeline to a file for debugging
+    with open(f"/app/static/songs/{current_song}.timeline.json", "w") as f:
+        json.dump(sorted(show_timeline, key=lambda ev: ev["time"]), f, indent=2)
+
+    return show_timeline
+
+def pre_render_timeline(cues, fixture_config, fixture_presets, current_song, fps=120):
     timeline = []
+
+    def find_fixture(fid):
+        for f in fixture_config:
+            if f["id"] == fid:
+                return f
+        return None
+
+    def find_preset(pname, ftype):
+        for p in fixture_presets:
+            if p["name"] == pname and p["type"] == ftype:
+                return p
+        return None
+
+    def interpolate_steps(start_values, end_values, duration, fps):
+        steps = []
+        interval = 1.0 / fps
+        total_steps = int(duration / interval)
+        for i in range(1, total_steps + 1):
+            t = i / total_steps
+            step_vals = {
+                ch: int(start_values[ch] + t * (end_values[ch] - start_values[ch]))
+                for ch in start_values
+            }
+            steps.append((round(i * interval, 4), step_vals))
+        return steps
+
     for cue in cues:
-        fixture = fixture_map.get(cue["fixture"])
-        preset = next((p for p in preset_definitions if p["name"] == cue["preset"]), None)
-        if not fixture or not preset:
+        start_time = cue["time"]
+        fixture = find_fixture(cue["fixture"])
+        if not fixture:
             continue
 
-        base_time = cue["time"]
-        duration = cue.get("duration", 0)
-        params = cue.get("parameters", {})
-        steps = preset.get("steps", [])
+        preset = find_preset(cue["preset"], fixture["type"])
+        if not preset:
+            continue
 
-        time_cursor = base_time
+        ch_map = fixture["channels"]
+        overrides = cue.get("parameters", {})
         loop = preset.get("mode") == "loop"
-        loop_duration = params.get("loop_duration", duration)
-        loop_iterations = max(1, loop_duration // sum(
-            step.get("duration", 0) if isinstance(step.get("duration", 0), int) else params.get(step["duration"], 0)
-            for step in steps
-        ))
+        loop_duration = overrides.get("loop_duration", 1000) / 1000.0  # ms → sec
 
-        for iteration in range(loop_iterations):
-            for step in steps:
-                step_type = step.get("type")
-                values = step.get("values", {})
-                step_duration = step.get("duration", 0)
-                if isinstance(step_duration, str):
-                    step_duration = params.get(step_duration, 0)
+        step_offset = 0
+        while True:
+            for step in preset["steps"]:
+                t = start_time + step_offset
+                if step["type"] == "set":
+                    values = {
+                        ch_map[k]: v for k, v in step["values"].items() if k in ch_map
+                    }
+                    timeline.append({"time": round(t, 4), "values": values})
 
-                if step_type == "set":
-                    timeline.append({
-                        "time": round(time_cursor, 3),
-                        "values": {
-                            fixture["channels"][ch]: val
-                            for ch, val in values.items()
-                            if ch in fixture["channels"]
-                        }
-                    })
-                elif step_type == "fade":
-                    steps_count = max(1, step_duration // 50)
-                    for i in range(steps_count):
-                        progress = (i + 1) / steps_count
-                        interpolated = {
-                            fixture["channels"][ch]: round(progress * val)
-                            for ch, val in values.items()
-                            if ch in fixture["channels"]
-                        }
+                elif step["type"] == "fade":
+                    duration = overrides.get("duration", step["duration"]) / 1000.0
+                    to_vals = {
+                        ch_map[k]: v for k, v in step["values"].items() if k in ch_map
+                    }
+                    from_vals = {ch: 0 for ch in to_vals}
+                    fade_steps = interpolate_steps(from_vals, to_vals, duration, fps)
+                    for offset, fade_vals in fade_steps:
                         timeline.append({
-                            "time": round(time_cursor + i * (step_duration / steps_count), 3),
-                            "values": interpolated
+                            "time": round(t + offset, 4),
+                            "values": fade_vals
                         })
-                    time_cursor += step_duration
-
-            if not loop:
+                    step_offset += duration
+                    
+            if loop:
+                step_offset += loop_duration
+                if step_offset > loop_duration:
+                    break
+            else:
                 break
-            time_cursor = base_time + (iteration + 1) * sum(
-                step.get("duration", 0) if isinstance(step.get("duration", 0), int) else params.get(step["duration"], 0)
-                for step in steps
-            )
+    
+    # save the timeline to a file for debugging
+    with open(f"/app/static/songs/{current_song}.timeline_events.json", "w") as f:
+        json.dump(sorted(timeline, key=lambda ev: ev["time"]), f, indent=2)
+    print(f"✅ Rendered {len(timeline)} timeline events from {len(cues)} cues.")
 
-    return sorted(timeline, key=lambda x: x["time"])
+    return sorted(timeline, key=lambda ev: ev["time"])
