@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 import json
 from backend.dmx_controller import set_channel, get_universe, send_artnet
-from backend.timeline_engine import render_timeline, load_song_cues, execute_timeline
+from backend.timeline_engine import render_timeline, execute_timeline
 from fastapi import WebSocket, WebSocketDisconnect
 
 SONGS_DIR = Path("/app/static/songs")
@@ -21,6 +21,7 @@ current_song = None
 # Cue management
 cue_list = []
 current_song_file = None
+song_metadata = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -117,6 +118,25 @@ def save_cues(song_file, cues):
         print(f"❌ save_cues error: {e}")
     render_timeline(fixture_config, fixture_presets, cues=cues, current_song=song_file)
 
+def load_song_metadata(song_file):
+    global song_metadata
+    metadata_path = SONGS_DIR / f"{song_file}.metadata.json"
+    try:
+        with open(metadata_path) as f:
+            song_metadata = json.load(f)
+        print(f"🎵 Loaded song metadata for {song_file}")
+    except Exception as e:
+        print(f"❌ load_song_metadata error: {e}")
+
+def save_song_metadata(song_file, metadata):
+    metadata_path = SONGS_DIR / f"{song_file}.metadata.json"
+    try:
+        metadata_path.write_text(json.dumps(metadata, indent=2))
+        print(f"💾 Saved metadata to {metadata_path}")
+    except Exception as e:
+        print(f"❌ save_song_metadata error: {e}")
+
+
 # 🎵 WebSocket for playback state synchronization 
 timeline = []
 playback_time = 0.0
@@ -154,11 +174,13 @@ async def websocket_endpoint(websocket: WebSocket):
                 print(f"🎶 Loading song: {msg['file']}")
                 current_song_file = msg["file"]
                 load_cues(current_song_file)
+                load_song_metadata(current_song_file)
                 await websocket.send_json({
                     "type": "songLoaded",
                     "cues": cue_list,
                     "fixtures": fixture_config,
                     "presets": fixture_presets,
+                    "metadata": song_metadata,
                 })
 
             elif msg.get("type") == "getCues":
@@ -179,15 +201,14 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 cue_list.append(cue)
                 cue_list.sort(key=lambda c: (c["fixture"], c["time"]))  # Sort by fixture and time
+                print(f"📝 Added new cue: {cue}")
            
                 save_cues(current_song_file, cue_list)
-
                 
                 await websocket.send_json({
                     "type": "cuesUpdated",
                     "cues": cue_list
                 })
-                print(f"📝 Added new cue: {cue}")
 
             elif msg.get("type") == "updateCue":
                 updated = msg["cue"]
@@ -211,6 +232,11 @@ async def websocket_endpoint(websocket: WebSocket):
                     "type": "cuesUpdated",
                     "cues": cue_list
                 })
+
+            elif msg.get("type") == "saveArrangement":
+                arrangement = msg["arrangement"]
+                song_metadata['arrangement'] = arrangement
+                save_song_metadata(current_song_file, song_metadata)
 
     except WebSocketDisconnect:
         clients.remove(websocket)

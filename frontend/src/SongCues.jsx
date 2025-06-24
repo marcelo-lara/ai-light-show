@@ -2,7 +2,6 @@ import { formatTime, saveToServer, SongsFolder } from "./utils";
 import { useEffect, useRef, useState } from 'preact/hooks';
 
 export default function SongCues({
-    addCue,
     delCue,
     cues
 }) {

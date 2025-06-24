@@ -8,7 +8,11 @@ emty_packet = [0] * DMX_CHANNELS
 song_length = 60  # seconds
 show_timeline: dict[float, list[int]] = {}
 
+# Execute the timeline at a given time
 def execute_timeline(current_time):
+    """ 
+    Execute the DMX timeline at the specified time.
+    """
     global dmx_universe, show_timeline
     timefound = -1.0
 
@@ -26,23 +30,18 @@ def execute_timeline(current_time):
     send_artnet(dmx_universe)
     return timefound
 
-def load_song_cues(song_file):
-    cue_path = f"{SONGS_DIR}/{song_file}.cues.json"
-    try:
-        with open(cue_path) as f:
-            cues = json.load(f)
-        return cues
-    except Exception as e:
-        return {"error load_song_cues:": str(e)}
-    
+# Render the timeline for a song based on its cues
 def render_timeline(fixture_config, fixture_presets, current_song, cues=None, fps=120):
+    """ 
+    Render the timeline for a song based on its cues.
+    This function processes the cues and generates a timeline of DMX frames.
+    It returns a dictionary mapping timestamps to an Artnet packe frame.
+    """
     global show_timeline
 
     if cues is None:
-        cues = load_song_cues(current_song)
-        if "error load_song_cues:" in cues:
-            print(cues["error load_song_cues:"])
-            return {}
+        print(f"❌ empty cues, cannot render timeline for {current_song}")
+        return {}
 
     timeline = pre_render_timeline(cues, fixture_config, fixture_presets, current_song, fps)
     show_timeline = {}
@@ -68,7 +67,7 @@ def render_timeline(fixture_config, fixture_presets, current_song, cues=None, fp
             d = show_timeline[t]
             f.write(f"{t:.3f} | {'.'.join(f'{v:3d}' for v in d[:40])}\n")
 
-    print(f"✅ Rendered {len(show_timeline)} frames -> {len(show_timeline)/fps}s")
+    print(f"✅ Rendered {len(show_timeline)} frames -> {len(show_timeline)/fps:.3f}s")
     return show_timeline
 
 def pre_render_timeline(cues, fixture_config, fixture_presets, current_song, fps=120): 

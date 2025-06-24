@@ -3,90 +3,33 @@ import { formatTime, saveToServer, SongsFolder } from "./utils";
 import FixtureCard from './FixtureCard';
 import SongArrangement from './SongArrangement';
 import SongCues from './SongCues';
-import WaveSurfer from 'wavesurfer.js';
+import AudioPlayer from './AudioPlayer'; 
 
 
 export function App() {
-  const containerRef = useRef(null);
-  const wavesurferRef = useRef(null);
-  const wsRef = useRef(null);
+  const wsRef = useRef(null); // WebSocket reference
   const [isPlaying, setIsPlaying] = useState(false);  
+
   const [currentTime, setCurrentTime] = useState(0);
   const [currentSongFile] = useState('born_slippy.mp3');
   const [songData, setSongData] = useState();
 
+
   const [cues, setCues] = useState([]);
 
   const [toast, setToast] = useState(null);
-  const [wsConnected, setWsConnected] = useState(null);
 
   const [fixtures, setFixtures] = useState([]);
   const [fixturesPresets, setFixturesPresets] = useState([]);
-  
 
+  // Reference to fixtures to avoid stale closure issues
+  const fixturesRef = useRef(fixtures);  
   useEffect(() => {
-    const setupWaveSurfer = () => {
-      wavesurferRef.current = WaveSurfer.create({
-        container: containerRef.current,
-        waveColor: '#555',
-        progressColor: '#1d4ed8',
-        height: 80,
-        responsive: true,
-      });
-
-      wavesurferRef.current.load(SongsFolder + currentSongFile);
-
-      const ws = wavesurferRef.current;
-      ws.on('ready', () => {
-        loadSong();
-        console.log("ready ->", ws.isPlaying());
-      });
-      ws.on('finish', () => {
-        setIsPlaying(false);
-        console.log("finish ->", ws.isPlaying());
-      });
-      ws.on('pause', () => {
-        setIsPlaying(false);
-        const time = ws.getCurrentTime();
-        setCurrentTime(time);
-      });
-
-      ws.on('play', () => {
-        const time = ws.getCurrentTime();
-        console.log("play -> time:", time);
-        setIsPlaying(true);
-      });
-
-      ws.on('audioprocess', () => {
-        const time = ws.getCurrentTime();
-        setCurrentTime(time);
-      });
-
-      ws.on('seeking', () => {
-        const time = ws.getCurrentTime();
-        console.log("seeking -> time:", time);
-        setCurrentTime(time);
-      });
-
-    };
-
-    if (document.readyState === 'complete') {
-      setupWaveSurfer();
-    } else {
-      window.addEventListener('load', setupWaveSurfer);
-      return () => window.removeEventListener('load', setupWaveSurfer);
-    }
-  }, []);
-
+    fixturesRef.current = fixtures;
+  }, [fixtures]);
 
   ///////////////////////////////////////////////////////
   // load song metadata
-  useEffect(() => {
-    fetch(SongsFolder + currentSongFile + ".metadata.json")
-      .then((res) => res.json())
-      .then((data) => setSongData(data))
-      .catch((err) => console.error("Failed to load SongMetadata:", err));
-  }, [currentSongFile]);
 
   const loadSong = () => {
     // Push cue changes to backend via WebSocket
@@ -98,25 +41,24 @@ export function App() {
     }
    }
 
-  const addCue = (cue) => {
-    // Push cue changes to backend via WebSocket
+  const wsSend = (cmd, data) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({
-        type: "addCue",
-        cue: cue
+        type: cmd, ...data
       }));
     }
-  };
+  }
 
-  const delCue = (cue) => {
-    // Push cue changes to backend via WebSocket
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: "deleteCue",
-        cue: cue
-      }));
-    }
-  };
+  const onDmxUpdate = (universe) => {
+    const updatedFixtures = fixturesRef.current.map(fixture => {
+      const newValues = {};
+      for (const [key, dmxChannel] of Object.entries(fixture.channels)) {
+        newValues[key] = universe[dmxChannel-1] ?? 0;
+      }
+      return { ...fixture, current_values: newValues };
+    });
+    setFixtures(updatedFixtures);
+  }
 
   useEffect(() => {
 
@@ -125,7 +67,6 @@ export function App() {
     
     ws.onopen = () => {
       console.log("🎵 WebSocket connected");
-      setWsConnected(true);
       ws.send(JSON.stringify({ isPlaying, currentTime }));
     };
 
@@ -134,15 +75,7 @@ export function App() {
         const msg = JSON.parse(event.data);
         if (msg.type === "dmx_update") {
           const universe = msg.universe;
-          const updatedFixtures = fixtures.map(fixture => {
-            const newValues = {};
-            for (const [key, dmxChannel] of Object.entries(fixture.channels)) {
-              newValues[key] = universe[dmxChannel-1] ?? 0;
-            }
-            return { ...fixture, current_values: newValues };
-          });
-          console.log("Received DMX:", universe);
-          setFixtures(updatedFixtures);
+          onDmxUpdate(universe);
           return;
         }
 
@@ -155,6 +88,7 @@ export function App() {
           setCues(msg.cues || []);
           setFixtures(msg.fixtures || []);
           setFixturesPresets(msg.presets || []);
+          setSongData(msg.metadata || {});
         }
       } catch (err) {
         console.error("WebSocket message error:", err);
@@ -163,7 +97,6 @@ export function App() {
 
     ws.onerror = (e) => console.error("WebSocket error:", e);
     ws.onclose = () => {
-      setWsConnected(false);
       console.log("WebSocket closed")
     };
 
@@ -192,21 +125,25 @@ export function App() {
         <div className="p-6 bg-black text-white min-h-screen">
           <h1 className="text-3xl font-bold mb-4">🎛️ AI Light Show Designer</h1>
 
-          {toast && <div className="mb-4 p-2 bg-green-600 text-white rounded text-center">{toast}</div>}
+          {toast && (
+            <div
+              className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-green-600 text-white px-6 py-3 rounded shadow-lg text-center transition-all duration-300"
+              style={{ minWidth: 240, maxWidth: 400 }}
+            >
+              {toast}
+            </div>
+          )}
 
           {/* Audio Player Card */}
           <div className="bg-white/10 rounded-2xl p-6 mb-6">
-            <div ref={containerRef} className="mb-4"/>
-            <div id="song-controls" class="flex flex-col items-center">
-              <div className="flex items-center gap-4 mb-4">
-                {isPlaying ? 
-                  (<button onClick={() => wavesurferRef.current?.pause()} className="bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded">⏸️ Pause</button>) : 
-                  (<button onClick={() => wavesurferRef.current?.play()} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">▶️ Start</button>)
-                }
-                <button onClick={() => { wavesurferRef.current?.pause(); wavesurferRef.current?.seekTo(0); }} className="bg-gray-700 hover:bg-gray-800 px-4 py-2 rounded">⏹️ Stop</button>
-                <span className="ml-4 w-6 text-gray-400">{formatTime(currentTime)}</span>
-              </div>
-            </div>
+            <AudioPlayer 
+              currentSongFile={currentSongFile} 
+              onReady={loadSong}
+              isPlaying={isPlaying}
+              setIsPlaying={setIsPlaying}
+              currentTime={currentTime}
+              setCurrentTime={setCurrentTime}
+            />
           </div>
 
           {/* Song Cue Controls Card */}
@@ -214,8 +151,7 @@ export function App() {
             <SongCues 
               currentTime={currentTime}
               cues={cues}
-              addCue={addCue}
-              delCue={delCue}
+              delCue={(cue)=>wsSend("deleteCue", {cue: cue})}
             />
           </div>
 
@@ -223,8 +159,8 @@ export function App() {
           <div className="bg-white/10 rounded-2xl p-6">
             <SongArrangement
               currentTime={currentTime}
-              currentSongFile={currentSongFile}
-              setToast={setToast}
+              songData={songData}
+              saveArrangement={(a) => {wsSend("saveArrangement", {arrangement: a})}}
             />
           </div>
 
@@ -243,7 +179,7 @@ export function App() {
               fixture={fixture}
               currentTime={currentTime}
               allPresets={fixturesPresets}
-              addCue={addCue}
+              addCue={(cue)=>wsSend("addCue", {cue: cue})}
               />
           ))
         )}
