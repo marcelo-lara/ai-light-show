@@ -116,7 +116,8 @@ def save_cues(song_file, cues):
         print(f"💾 Saved cues to {cue_path}")
     except Exception as e:
         print(f"❌ save_cues error: {e}")
-    render_timeline(fixture_config, fixture_presets, cues=cues, current_song=song_file)
+    bpm = song_metadata.get("bpm", 100)
+    render_timeline(fixture_config, fixture_presets, cues=cues, current_song=song_file, bpm=bpm)        
 
 def load_song_metadata(song_file):
     global song_metadata

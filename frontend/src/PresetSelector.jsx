@@ -2,7 +2,7 @@
 
 import { useState } from "preact/hooks";
 
-export default function PresetSelector({ fixture, presets, onApply, currentTime, onAddCue }) {
+export default function PresetSelector({ fixture, presets, currentTime, onAddCue }) {
   const [selected, setSelected] = useState(null);
   const [paramValues, setParamValues] = useState({});
 
@@ -18,9 +18,9 @@ export default function PresetSelector({ fixture, presets, onApply, currentTime,
   };
 
   return (
-    <div className="text-sm text-white p-2 border border-white/10 rounded">
-      <h3 className="font-bold mb-2">Presets for {fixture.name}</h3>
-      <ul className="mb-4">
+    <div className="text-sm text-white p-2">
+      <h3 className="font-semibold mb-2">Presets for {fixture.name}</h3>
+      <ul className="mb-4 flex flex-row flex-wrap gap-2">
         {applicablePresets.map(p => (
           <li key={p.name}>
             <button
@@ -33,7 +33,7 @@ export default function PresetSelector({ fixture, presets, onApply, currentTime,
         ))}
       </ul>
       {selected && (
-        <div>
+        <div className="border border-white/10 rounded">
           <h4 className="font-semibold mb-1">Parameters</h4>
           <div className="flex flex-col gap-2 mb-2">
             {Object.entries(selected.parameters || {}).map(([key, defaultVal]) => (
@@ -48,12 +48,6 @@ export default function PresetSelector({ fixture, presets, onApply, currentTime,
               </label>
             ))}
           </div>
-          <button
-            onClick={() => onApply(selected, paramValues)}
-            className="bg-blue-600 text-white px-3 py-1 rounded"
-          >
-            Apply Preset
-          </button>
           <button
             onClick={() =>
               onAddCue({

@@ -1,0 +1,24 @@
+[
+  {
+    "name": "flash wave left to right",
+    "description": "Flash parcans in a wave pattern from left to right",
+    "mode": "single",
+    "parameters": {
+      "duration": 500
+    },
+    "steps": [
+      {
+        "start": 0,
+        "fixtures": [
+            {
+              "fixture": "parcan_l",
+              "preset": "flash",
+              "parameters": {
+                "fade_duration": 500
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]

@@ -34,7 +34,7 @@ def execute_timeline(current_time):
     return timefound
 
 # Render the timeline for a song based on its cues
-def render_timeline(fixture_config, fixture_presets, current_song, cues=None, fps=120):
+def render_timeline(fixture_config, fixture_presets, current_song, cues=None, bpm=120.0, fps=120):
     """ 
     Render the timeline for a song based on its cues.
     This function processes the cues and generates a timeline of DMX frames.
@@ -46,7 +46,7 @@ def render_timeline(fixture_config, fixture_presets, current_song, cues=None, fp
         print(f"❌ empty cues, cannot render timeline for {current_song}")
         return {}
 
-    timeline = pre_render_timeline(cues, fixture_config, fixture_presets)
+    timeline = pre_render_timeline(cues, fixture_config, fixture_presets, bpm, fps)
     show_timeline = {}
 
     last_frame = [0] * 512
@@ -73,8 +73,12 @@ def render_timeline(fixture_config, fixture_presets, current_song, cues=None, fp
     print(f"✅ Rendered {len(show_timeline)} frames -> {len(show_timeline)/fps:.3f}s")
     return show_timeline
 
-def pre_render_timeline(cues, fixture_config, fixture_presets, fps=120): 
+def pre_render_timeline(cues, fixture_config, fixture_presets, bpm=120.0, fps=120): 
     timeline = {}
+    print(f"🔄 PreRendering timeline for {len(cues)} cues at {fps} FPS with BPM {bpm}")
+
+    def beats_to_ms(beats: float, bpm: float) -> float:
+        return (60.0 / bpm) * 1000.0 * beats
 
     def find_fixture(fid):
         return next((f for f in fixture_config if f["id"] == fid), None)
@@ -118,11 +122,12 @@ def pre_render_timeline(cues, fixture_config, fixture_presets, fps=120):
         overrides = cue.get("parameters", {})
         mode = preset.get("mode", "single")
 
-        # Calculate one full cycle duration
+        # Calculate one full cycle duration in seconds
         cycle_duration = 0.0
         for step in preset["steps"]:
             if step["type"] == "fade":
-                cycle_duration += overrides.get("fade_duration", step.get("duration", 0)) / 1000.0
+                fade_beats = overrides.get("fade_beats", step.get("fade_beats", 0))
+                cycle_duration += beats_to_ms(fade_beats, bpm) / 1000.0
 
         step_offset = 0.0
 
@@ -140,7 +145,8 @@ def pre_render_timeline(cues, fixture_config, fixture_presets, fps=120):
                     print(f"  - [set] values at {t:.3f}s: {values}")
 
                 elif step_type == "fade":
-                    duration = overrides.get("fade_duration", step.get("duration", 0)) / 1000.0
+                    fade_beats = overrides.get("fade_beats", step.get("fade_beats", 0))
+                    duration = beats_to_ms(fade_beats, bpm) / 1000.0  # in seconds
                     to_vals = {ch_map[k]: v for k, v in step["values"].items() if k in ch_map}
                     from_vals = {
                         ch: channel_last_values.get(ch, (0.0, 0))[1]
@@ -156,12 +162,12 @@ def pre_render_timeline(cues, fixture_config, fixture_presets, fps=120):
                     print(f"  - [fade] from {from_vals} to {to_vals} over {duration:.3f}s at {t:.3f}s")
 
         if mode == "loop":
-            loop_duration_sec = overrides.get("loop_duration", 1000) / 1000.0
+            loop_beats = overrides.get("loop_beats", preset.get("loop_beats", 0))
+            loop_duration_sec = beats_to_ms(loop_beats, bpm) / 1000.0
             while step_offset < loop_duration_sec:
                 render_steps(start_time + step_offset)
                 step_offset += cycle_duration
-
-        else:  # mode == "single"
+        else:
             render_steps(start_time)
 
     # 🛡️ Always-arm all fixtures across full duration

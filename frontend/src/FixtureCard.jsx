@@ -112,7 +112,7 @@ export default function FixtureCard({ fixture, currentTime, addCue, allPresets }
           ></div>
           <div className="font-semibold text-white">{name}</div>
         </div>
-        <div className="text-white">{expanded ? '🔽' : '▶️'}</div>
+        <div className="text-white">{expanded ? '⌵' : ''}</div>
       </div>
 
       {expanded && (
@@ -122,14 +122,8 @@ export default function FixtureCard({ fixture, currentTime, addCue, allPresets }
             <PresetSelector
               fixture={fixture}
               presets={allPresets}
-              onApply={(preset, params) => {
-                // send to backend or trigger execution
-                console.log("Apply preset", preset.name, "with", params);
-              }}
               currentTime={currentTime}
-              onAddCue={(cue) => {
-                addCue(cue);
-              }}                
+              onAddCue={(cue) => {addCue(cue);}}                
             />
           </div>
             
