@@ -12,6 +12,9 @@ export default function AudioPlayer({
   const wavesurferRef = useRef(null);
 
   useEffect(() => {
+    if (!currentSongFile) {
+      return;
+    }
 
     const setupWaveSurfer = () => {
       wavesurferRef.current = WaveSurfer.create({
@@ -60,7 +63,7 @@ export default function AudioPlayer({
       window.addEventListener('load', setupWaveSurfer);
       return () => window.removeEventListener('load', setupWaveSurfer);
     }
-  }, []);
+  }, [currentSongFile]);
 
 
   return (

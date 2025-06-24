@@ -6,24 +6,29 @@ emty_packet = [0] * DMX_CHANNELS
 song_length = 60  # seconds
 show_timeline: dict[float, list[int]] = {}
 
+skipLog = False
+
 # Execute the timeline at a given time
 def execute_timeline(current_time):
     """ 
     Execute the DMX timeline at the specified time.
     """
-    global dmx_universe, show_timeline
+    global dmx_universe, show_timeline, skipLog
     timefound = -1.0
 
     # Find the latest timestamp <= current_time
     available_times = [t for t in show_timeline if t <= current_time]
     if not available_times:
-        #print(f"[{current_time:.3f}] No available timeline frames for {current_time:.3f}s")
+        if not skipLog:
+            print(f"[{current_time:.3f}] No available timeline frames for {current_time:.3f}s")
+        skipLog = True
         return current_time  # Nothing to send
 
     timefound = max(available_times)
     dmx_universe = show_timeline[timefound]
 
-    #print(f"[{timefound:.3f}] {current_time:.3f}s -> {'.'.join(f'{v:3d}' for v in dmx_universe[:30])}")
+    skipLog = False
+    print(f"[{timefound:.3f}] {current_time:.3f}s -> {'.'.join(f'{v:3d}' for v in dmx_universe[:30])}")
 
     send_artnet(dmx_universe)
     return timefound

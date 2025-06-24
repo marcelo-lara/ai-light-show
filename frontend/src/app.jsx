@@ -4,12 +4,12 @@ import SongArrangement from './SongArrangement';
 import SongCues from './SongCues';
 import AudioPlayer from './AudioPlayer'; 
 
-
 export function App() {
   const wsRef = useRef(null); // WebSocket reference
+  const [wsConnected, setWsConnected] = useState(false);
 
   // Song metadata and playback state
-  const [currentSongFile] = useState('born_slippy.mp3');
+  const [currentSongFile, setCurrentSongFile] = useState(); //'born_slippy.mp3'
   const [songData, setSongData] = useState();
   const [isPlaying, setIsPlaying] = useState(false);  
   const [currentTime, setCurrentTime] = useState(0);
@@ -30,25 +30,7 @@ export function App() {
   }, [fixtures]);
 
   ///////////////////////////////////////////////////////
-  // load song metadata
-
-  const loadSong = () => {
-    wsSend("loadSong", { file: currentSongFile });
-   }
-
-  const onDmxUpdate = (universe) => {
-    const updatedFixtures = fixturesRef.current.map(fixture => {
-      const newValues = {};
-      for (const [key, dmxChannel] of Object.entries(fixture.channels)) {
-        newValues[key] = universe[dmxChannel-1] ?? 0;
-      }
-      return { ...fixture, current_values: newValues };
-    });
-    setFixtures(updatedFixtures);
-  }
-
   // WebSocket connection and message handling
-
   const wsSend = (cmd, data) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({
@@ -58,13 +40,12 @@ export function App() {
   }
 
   useEffect(() => {
-
     const ws = new WebSocket(`ws://${window.location.host}/ws`);
     wsRef.current = ws;
     
     ws.onopen = () => {
       console.log("🎵 WebSocket connected");
-      ws.send(JSON.stringify({ isPlaying, currentTime }));
+      setWsConnected(true);
     };
 
     ws.onmessage = (event) => {
@@ -95,6 +76,7 @@ export function App() {
     ws.onerror = (e) => console.error("WebSocket error:", e);
     ws.onclose = () => {
       console.log("WebSocket closed")
+      setWsConnected(false);
     };
 
     return () => ws.close();
@@ -102,7 +84,7 @@ export function App() {
 
   // Send update when play/pause changes
   useEffect(() => {
-    wsSend("sync", { isPlaying, currentTime });
+    wsSend("sync", {isPlaying, currentTime});
   }, [isPlaying, syncTime]);
 
   // sync timecode with server
@@ -112,6 +94,18 @@ export function App() {
     setSyncTime(sec);
   }, [currentTime]);
 
+  // Handle DMX updates from WebSocket
+  const onDmxUpdate = (universe) => {
+    const updatedFixtures = fixturesRef.current.map(fixture => {
+      const newValues = {};
+      for (const [key, dmxChannel] of Object.entries(fixture.channels)) {
+        newValues[key] = universe[dmxChannel-1] ?? 0;
+      }
+      return { ...fixture, current_values: newValues };
+    });
+    setFixtures(updatedFixtures);
+  }
+
   // UI toast effect ----------------------------------------
   useEffect(() => {
     if (toast) {
@@ -119,6 +113,18 @@ export function App() {
       return () => clearTimeout(timer);
     }
   }, [toast]);
+
+  
+  ///////////////////////////////////////////////////////
+  // load song and fixtures on initial render
+  useEffect(() => {
+    setCurrentSongFile("born_slippy.mp3");
+  }, []);
+
+  useEffect(() => {
+    if (!currentSongFile) return;
+    wsSend("loadSong", { file: currentSongFile });
+  }, [currentSongFile, wsConnected]);
 
   return (
     <div className="flex flex-row gap-2">
@@ -140,7 +146,7 @@ export function App() {
           <div className="bg-white/10 rounded-2xl p-6 mb-6">
             <AudioPlayer 
               currentSongFile={currentSongFile} 
-              onReady={loadSong}
+              onReady={()=>{}}
               isPlaying={isPlaying}
               setIsPlaying={setIsPlaying}
               currentTime={currentTime}
