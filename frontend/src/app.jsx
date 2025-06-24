@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { formatTime, saveToServer, SongsFolder } from "./utils";
 import FixtureCard from './FixtureCard';
 import SongArrangement from './SongArrangement';
 import SongCues from './SongCues';
@@ -8,19 +7,21 @@ import AudioPlayer from './AudioPlayer';
 
 export function App() {
   const wsRef = useRef(null); // WebSocket reference
-  const [isPlaying, setIsPlaying] = useState(false);  
 
-  const [currentTime, setCurrentTime] = useState(0);
+  // Song metadata and playback state
   const [currentSongFile] = useState('born_slippy.mp3');
   const [songData, setSongData] = useState();
+  const [isPlaying, setIsPlaying] = useState(false);  
+  const [currentTime, setCurrentTime] = useState(0);
+  const [syncTime, setSyncTime] = useState(0);
 
-
-  const [cues, setCues] = useState([]);
-
-  const [toast, setToast] = useState(null);
-
+  // DMX fixtures, presets, and cues
   const [fixtures, setFixtures] = useState([]);
   const [fixturesPresets, setFixturesPresets] = useState([]);
+  const [cues, setCues] = useState([]);
+
+  // UI toast notification state
+  const [toast, setToast] = useState(null);
 
   // Reference to fixtures to avoid stale closure issues
   const fixturesRef = useRef(fixtures);  
@@ -32,22 +33,8 @@ export function App() {
   // load song metadata
 
   const loadSong = () => {
-    // Push cue changes to backend via WebSocket
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: "loadSong",
-        file: currentSongFile,
-      }));
-    }
+    wsSend("loadSong", { file: currentSongFile });
    }
-
-  const wsSend = (cmd, data) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: cmd, ...data
-      }));
-    }
-  }
 
   const onDmxUpdate = (universe) => {
     const updatedFixtures = fixturesRef.current.map(fixture => {
@@ -58,6 +45,16 @@ export function App() {
       return { ...fixture, current_values: newValues };
     });
     setFixtures(updatedFixtures);
+  }
+
+  // WebSocket connection and message handling
+
+  const wsSend = (cmd, data) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: cmd, ...data
+      }));
+    }
   }
 
   useEffect(() => {
@@ -105,10 +102,15 @@ export function App() {
 
   // Send update when play/pause changes
   useEffect(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ isPlaying, currentTime }));
-    }
-  }, [isPlaying]);
+    wsSend("sync", { isPlaying, currentTime });
+  }, [isPlaying, syncTime]);
+
+  // sync timecode with server
+  useEffect(() => {
+    const sec = Math.floor(currentTime);
+    if (sec === syncTime) return; 
+    setSyncTime(sec);
+  }, [currentTime]);
 
   // UI toast effect ----------------------------------------
   useEffect(() => {

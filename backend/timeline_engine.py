@@ -1,8 +1,6 @@
 import json
 from backend.dmx_controller import send_artnet, dmx_universe, DMX_CHANNELS, FPS
 
-SONGS_DIR = "/app/static/songs"
-
 # --- Show Timeline ---
 emty_packet = [0] * DMX_CHANNELS
 song_length = 60  # seconds
@@ -19,13 +17,13 @@ def execute_timeline(current_time):
     # Find the latest timestamp <= current_time
     available_times = [t for t in show_timeline if t <= current_time]
     if not available_times:
-        print(f"[{current_time:.3f}] No available timeline frames for {current_time:.3f}s")
+        #print(f"[{current_time:.3f}] No available timeline frames for {current_time:.3f}s")
         return current_time  # Nothing to send
 
     timefound = max(available_times)
     dmx_universe = show_timeline[timefound]
 
-    print(f"[{timefound:.3f}] {current_time:.3f}s -> {'.'.join(f'{v:3d}' for v in dmx_universe[:30])}")
+    #print(f"[{timefound:.3f}] {current_time:.3f}s -> {'.'.join(f'{v:3d}' for v in dmx_universe[:30])}")
 
     send_artnet(dmx_universe)
     return timefound
@@ -43,7 +41,7 @@ def render_timeline(fixture_config, fixture_presets, current_song, cues=None, fp
         print(f"❌ empty cues, cannot render timeline for {current_song}")
         return {}
 
-    timeline = pre_render_timeline(cues, fixture_config, fixture_presets, current_song, fps)
+    timeline = pre_render_timeline(cues, fixture_config, fixture_presets)
     show_timeline = {}
 
     last_frame = [0] * 512
@@ -70,7 +68,7 @@ def render_timeline(fixture_config, fixture_presets, current_song, cues=None, fp
     print(f"✅ Rendered {len(show_timeline)} frames -> {len(show_timeline)/fps:.3f}s")
     return show_timeline
 
-def pre_render_timeline(cues, fixture_config, fixture_presets, current_song, fps=120): 
+def pre_render_timeline(cues, fixture_config, fixture_presets, fps=120): 
     timeline = {}
 
     def find_fixture(fid):
