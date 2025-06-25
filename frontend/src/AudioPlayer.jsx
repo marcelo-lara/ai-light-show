@@ -26,7 +26,7 @@ export default function AudioPlayer({
         progressColor: '#1d4ed8',
         height: 80,
         responsive: true,
-        minPxPerSec: 100,
+        minPxPerSec: 10,
         autoScroll: true,
         dragToSeek: true,
         scrollParent: true, // Ensure scrollbar is always visible

@@ -26,7 +26,6 @@ return (
                   <th className="text-left">time</th>
                   <th className="text-left">Fixture</th>
                   <th className="text-left">Preset</th>
-                  <th className="text-left">Duration</th>
                   <th className="text-left">Parameters</th>
                   <th></th>
                 </tr>
@@ -37,8 +36,7 @@ return (
                     <td onClick={() => setCurrentTime(cue.time)}>{cue.time?.toFixed(2)}</td>
                     <td>{cue.fixture}</td>
                     <td>{cue.preset}</td>
-                    <td>{cue.duration?.toFixed(2)}</td>
-                    <td>
+                    <td className="truncate">
                       {cue.parameters && Object.entries(cue.parameters).map(([k, v]) => (
                         <span key={k} className="inline-block mr-2">{k}: {v}</span>
                       ))}

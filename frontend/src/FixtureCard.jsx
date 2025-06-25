@@ -100,7 +100,7 @@ export default function FixtureCard({ fixture, currentTime, addCue, allPresets }
   }
 
   return (
-    <div className="border border-white/10 rounded-lg mb-4 bg-white/5 shadow-sm">
+    <div className="border border-white/10 mb-4 bg-white/5 shadow-sm">
       <div
         className="flex items-center justify-between p-3 cursor-pointer"
         onClick={() => toggleExpanded(fixture.id)}
