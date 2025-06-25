@@ -16,6 +16,9 @@ export function App() {
   const [currentTime, setCurrentTime] = useState(0);
   const [syncTime, setSyncTime] = useState(0);
 
+  // Song Analysis state
+  const [analysisResult, setAnalysisResult] = useState({});
+
   // DMX fixtures, presets, and cues
   const [fixtures, setFixtures] = useState([]);
   const [fixturesPresets, setFixturesPresets] = useState([]);
@@ -62,6 +65,11 @@ export function App() {
         if (msg.type === "cuesUpdated") {
           console.log("Received cues update:", msg.cues);
           setCues(msg.cues);
+        }
+
+        if (msg.type === "analyzeResult") {
+          setAnalysisResult(msg);
+          setToast("Song analysis complete!");
         }
 
         if (msg.type === "songLoaded") {
@@ -154,6 +162,8 @@ export function App() {
               setIsPlaying={setIsPlaying}
               currentTime={currentTime}
               setCurrentTime={setCurrentTime}
+              analyzeSong={()=>{setAnalysisResult(undefined); wsSend("analyzeSong", {songFile: currentSongFile})}}
+              analysisResult={analysisResult}
             />
           </div>
 

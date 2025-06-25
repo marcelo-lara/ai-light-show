@@ -10,10 +10,12 @@ export default function AudioPlayer({
   currentSongFile, onReady,
   isPlaying, setIsPlaying,
   currentTime, setCurrentTime, 
+  analyzeSong, analysisResult
  }) {
   const containerRef = useRef(null);
   const wavesurferRef = useRef(null);
   const [showSpectrogram] = useState(false);
+  const [songBeats, setSongBeats] = useState([]);
 
 
   useEffect(() => {
@@ -108,6 +110,16 @@ export default function AudioPlayer({
     }
   }, [currentTime]);
 
+  const handleAnalyzeSong = () => {
+      analyzeSong(currentSongFile);
+  }
+
+  useEffect(() => {
+    console.log("Analysis result updated:", analysisResult);
+    if (!analysisResult || analysisResult.status !== "ok") return;
+    setSongBeats(analysisResult.beats || []);
+  }, [analysisResult]);
+  
   return (
     <>
       <div ref={containerRef} className="mb-4"/>
@@ -118,6 +130,7 @@ export default function AudioPlayer({
             (<button onClick={() => wavesurferRef.current?.play()} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">▶️ Start</button>)
           }
           <button onClick={() => { wavesurferRef.current?.pause(); wavesurferRef.current?.seekTo(0); }} className="bg-gray-700 hover:bg-gray-800 px-4 py-2 rounded">⏹️ Stop</button>
+          <button onClick={() => handleAnalyzeSong()} className={`px-4 py-2 rounded ${!analysisResult ? 'bg-gray-900 text-gray-400 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600'}`} disabled={!analysisResult}>🔍 Analyze</button>
           <span className="ml-4 w-6 text-gray-400">{formatTime(currentTime)}</span>
         </div>
       </div>

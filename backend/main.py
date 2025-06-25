@@ -10,6 +10,7 @@ import json
 from backend.dmx_controller import set_channel, get_universe, send_artnet
 from backend.timeline_engine import render_timeline, execute_timeline
 from backend.chaser_utils import expand_chaser_template, load_chaser_templates, get_chasers
+from backend.beat_detect import get_song_beats
 from fastapi import WebSocket, WebSocketDisconnect
 
 SONGS_DIR = Path("/app/static/songs")
@@ -288,6 +289,32 @@ async def websocket_endpoint(websocket: WebSocket):
                     "type": "cuesUpdated",
                     "cues": cue_list
                 })
+
+            elif msg.get("type") == "analyzeSong":
+                song_file = msg["songFile"]
+                song_path = SONGS_DIR / song_file
+
+                try:
+                    print(f"🎵 Analyzing {song_file}")
+                    beats = get_song_beats(str(song_path))
+                    print(f"   - {len(beats)} beats detected")
+
+                    await websocket.send_json({
+                        "type": "analyzeResult",
+                        "status": "ok",
+                        "beats": beats
+                    })
+
+                except Exception as e:
+                    await websocket.send_json({
+                        "type": "analyzeResult",
+                        "status": "error",
+                        "message": str(e)
+                    })
+
+            else:
+                print(f"❓ Unknown message type: {msg.get('type')}")
+                await websocket.send_json({"type": "error", "message": "Unknown message type"})
 
     except WebSocketDisconnect:
         clients.remove(websocket)
