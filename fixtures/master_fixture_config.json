@@ -165,12 +165,12 @@
     "name": "Proton R",
     "type": "rgb",
     "channels": {
-      "dim": 36,
-      "red": 37,
-      "green": 38,
-      "blue": 39,
-      "strobe": 40,
-      "program": 41
+      "dim": 35,
+      "red": 36,
+      "green": 37,
+      "blue": 38,
+      "strobe": 39,
+      "program": 40
     },
     "current_values": {
       "dim": 0,
