@@ -3,6 +3,7 @@ import FixtureCard from './FixtureCard';
 import SongArrangement from './SongArrangement';
 import SongCues from './SongCues';
 import AudioPlayer from './AudioPlayer'; 
+import Chasers from './Chasers';
 
 export function App() {
   const wsRef = useRef(null); // WebSocket reference
@@ -19,6 +20,7 @@ export function App() {
   const [fixtures, setFixtures] = useState([]);
   const [fixturesPresets, setFixturesPresets] = useState([]);
   const [cues, setCues] = useState([]);
+  const [chasers, setChasers] = useState([]);
 
   // UI toast notification state
   const [toast, setToast] = useState(null);
@@ -67,6 +69,7 @@ export function App() {
           setFixtures(msg.fixtures || []);
           setFixturesPresets(msg.presets || []);
           setSongData(msg.metadata || {});
+          setChasers(msg.chasers || []);
         }
       } catch (err) {
         console.error("WebSocket message error:", err);
@@ -193,6 +196,13 @@ export function App() {
               />
           ))
         )}
+
+        <Chasers
+          currentTime={currentTime}
+          chasers={chasers}
+          insertChaser={(chaserData) => wsSend("insertChaser", chaserData)}
+        />
+
       </div>
     </div>
   );

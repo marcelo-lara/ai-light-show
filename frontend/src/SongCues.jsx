@@ -9,6 +9,8 @@ export default function SongCues({
     updateCues
 }) {
 
+const renderedChasers = new Set();
+
 const handleCueTimeChage = (cue) => {
   cue.time = currentTime;
   const updatedCues = cues.map((item) => (item === cue ? { ...cue } : item));
@@ -26,16 +28,31 @@ return (
                   <th className="text-left">time</th>
                   <th className="text-left">Fixture</th>
                   <th className="text-left">Preset</th>
+                  <th className="text-left">Chaser</th>
                   <th className="text-left">Parameters</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 {cues.sort((a, b) => a.time - b.time).map((cue, idx) => (
+                  <>
                   <tr key={`${cue.fixture}-${cue.time}`} className="border-b border-white/10">
                     <td onClick={() => setCurrentTime(cue.time)}>{cue.time?.toFixed(2)}</td>
                     <td>{cue.fixture}</td>
                     <td>{cue.preset}</td>
+                    <td>
+                      {cue.chaser_id && !renderedChasers.has(cue.chaser_id) && (
+                        <>
+                        {cue.chaser}
+                          <button
+                            onClick={() => delCue({ chaser_id: cue.chaser_id })}
+                            className="bg-gray-600 hover:bg-gray-700 px-2 py-1 rounded"
+                          >
+                            🗑️
+                          </button>
+                        </>
+                      )}
+                    </td>
                     <td className="truncate">
                       {cue.parameters && Object.entries(cue.parameters).map(([k, v]) => (
                         <span key={k} className="inline-block mr-2">{k}: {v}</span>
@@ -46,6 +63,7 @@ return (
                       <button onClick={() => delCue(cue)} className="bg-red-600 hover:bg-red-700 px-2 py-1 rounded">🗑️</button>
                     </td>
                   </tr>
+                  </>
                 ))}
               </tbody>
             </table>

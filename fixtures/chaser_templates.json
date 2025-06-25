@@ -1,0 +1,12 @@
+[
+  {
+    "name": "ltr_flash_3",
+    "description": "Left-to-right flash chaser over 3 PAR cans",
+    "preset": "flash",
+    "fixture_ids": ["parcan_l", "parcan_r", "parcan_pr"],
+    "parameters": {
+      "fade_beats": 0.5,
+      "beat_spacing": 0.25
+    }
+  }
+]

@@ -9,6 +9,7 @@ from pathlib import Path
 import json
 from backend.dmx_controller import set_channel, get_universe, send_artnet
 from backend.timeline_engine import render_timeline, execute_timeline
+from backend.chaser_utils import expand_chaser_template, load_chaser_templates, get_chasers
 from fastapi import WebSocket, WebSocketDisconnect
 
 SONGS_DIR = Path("/app/static/songs")
@@ -94,6 +95,8 @@ def load_fixtures_config():
             fixture_config = json.load(f)
         with open("/app/static/fixtures/fixture_presets.json") as f:
             fixture_presets = json.load(f)
+
+        load_chaser_templates()  # Load chaser templates on startup
         print(f"✅ Loaded fixture config with {len(fixture_config)} fixtures and {len(fixture_presets)} presets.")            
     except Exception as e:
         print("❌ load_fixtures_config error: ", e)
@@ -182,6 +185,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     "fixtures": fixture_config,
                     "presets": fixture_presets,
                     "metadata": song_metadata,
+                    "chasers": get_chasers()
                 })
                 render_timeline(fixture_config, fixture_presets, cues=cue_list, current_song=current_song_file, bpm=song_metadata['bpm'])
 
@@ -241,7 +245,16 @@ async def websocket_endpoint(websocket: WebSocket):
 
             elif msg.get("type") == "deleteCue":
                 cue = msg["cue"]
-                cue_list[:] = [c for c in cue_list if not (c["fixture"] == cue["fixture"] and c["time"] == cue["time"])]
+
+                if "chaser_id" in cue:
+                    cid = cue["chaser_id"]
+                    cue_list[:] = [c for c in cue_list if c.get("chaser_id") != cid]
+                    print(f"🗑️ Deleted chaser group '{cid}'")
+                else:
+                    cue_list[:] = [c for c in cue_list if not (
+                        c["fixture"] == cue["fixture"] and c["time"] == cue["time"]
+                    )]
+
                 save_cues(current_song_file, cue_list)
                 await websocket.send_json({
                     "type": "cuesUpdated",
@@ -252,6 +265,29 @@ async def websocket_endpoint(websocket: WebSocket):
                 arrangement = msg["arrangement"]
                 song_metadata['arrangement'] = arrangement
                 save_song_metadata(current_song_file, song_metadata)
+
+            elif msg.get("type") == "insertChaser":
+                chaser_name = msg["chaser"]
+                insert_time = msg["time"]
+                user_params = msg.get("parameters", {})
+                chaser_id = msg.get("chaser_id")
+
+                bpm = song_metadata.get("bpm", 120)
+                new_cues = expand_chaser_template(chaser_name, insert_time, bpm)
+
+                for cue in new_cues:
+                    cue["parameters"].update(user_params)
+                    cue["chaser"] = chaser_name
+                    cue["chaser_id"] = chaser_id
+
+                cue_list.extend(new_cues)
+                cue_list.sort(key=lambda c: (c["time"], c["fixture"]))
+                save_cues(current_song_file, cue_list)
+
+                await websocket.send_json({
+                    "type": "cuesUpdated",
+                    "cues": cue_list
+                })
 
     except WebSocketDisconnect:
         clients.remove(websocket)
