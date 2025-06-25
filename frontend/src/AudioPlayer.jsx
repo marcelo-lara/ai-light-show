@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { formatTime, saveToServer, SongsFolder } from "./utils";
 import WaveSurfer from 'wavesurfer.js';
+import Spectrogram from 'wavesurfer.js/dist/plugins/spectrogram.esm.js'
+import ZoomPlugin from 'wavesurfer.js/dist/plugins/zoom.esm.js'
+import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.esm.js'
 
 
 export default function AudioPlayer({ 
@@ -10,11 +13,11 @@ export default function AudioPlayer({
  }) {
   const containerRef = useRef(null);
   const wavesurferRef = useRef(null);
+  const [showSpectrogram] = useState(false);
+
 
   useEffect(() => {
-    if (!currentSongFile) {
-      return;
-    }
+    if (!currentSongFile) return;
 
     const setupWaveSurfer = () => {
       wavesurferRef.current = WaveSurfer.create({
@@ -23,7 +26,42 @@ export default function AudioPlayer({
         progressColor: '#1d4ed8',
         height: 80,
         responsive: true,
+        minPxPerSec: 100,
+        autoScroll: true,
+        dragToSeek: true,
+        scrollParent: true, // Ensure scrollbar is always visible
+        plugins: [TimelinePlugin.create()]
       });
+     
+      // Zoom plugin
+      wavesurferRef.current.registerPlugin(
+        ZoomPlugin.create({
+          // the amount of zoom per wheel step, e.g. 0.5 means a 50% magnification per scroll
+          scale: 0.1,
+          // Optionally, specify the maximum pixels-per-second factor while zooming
+          maxZoom: 500,
+          // Enable zooming with the mouse wheel
+          wheelZoom: true,
+          // Enable scrolling
+          scrollParent: true,
+        }),
+      )
+
+      // Spectrogram plugin
+      if (showSpectrogram) {
+        wavesurferRef.current.registerPlugin(
+          Spectrogram.create({
+            labels: true,
+            height: 200,
+            splitChannels: false,
+            scale: 'mel', // or 'linear', 'logarithmic', 'bark', 'erb'
+            frequencyMax: 10000,
+            frequencyMin: 0,
+            fftSamples: 1024,
+            labelsBackground: 'rgba(0, 0, 0, 0.1)',
+          }),
+        )
+      }
 
       wavesurferRef.current.load(SongsFolder + currentSongFile);
 
@@ -52,7 +90,6 @@ export default function AudioPlayer({
       ws.on('seeking', () => {
         const time = ws.getCurrentTime();
         setCurrentTime(time);
-        console.log("seeking -> time:", time);
       });
 
     };
@@ -65,6 +102,11 @@ export default function AudioPlayer({
     }
   }, [currentSongFile]);
 
+  useEffect(() => {
+    if (wavesurferRef.current && currentTime !== undefined && !isPlaying) {
+      wavesurferRef.current.seekTo(currentTime / wavesurferRef.current.getDuration());
+    }
+  }, [currentTime]);
 
   return (
     <>

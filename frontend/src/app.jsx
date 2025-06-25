@@ -157,9 +157,11 @@ export function App() {
           {/* Song Cue Controls Card */}
           <div className="bg-white/10 rounded-2xl p-6 mb-6">
             <SongCues 
-              currentTime={currentTime}
               cues={cues}
               delCue={(cue)=>wsSend("deleteCue", {cue: cue})}
+              currentTime={currentTime}
+              setCurrentTime={setCurrentTime}
+              updateCues={(cues)=>wsSend("updateCues", {cues: cues})}
             />
           </div>
 

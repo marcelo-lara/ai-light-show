@@ -183,6 +183,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     "presets": fixture_presets,
                     "metadata": song_metadata,
                 })
+                render_timeline(fixture_config, fixture_presets, cues=cue_list, current_song=current_song_file, bpm=song_metadata['bpm'])
+
 
             elif msg.get("type") == "getCues":
                 print(f"🔍 Fetching cues for {current_song_file}")
@@ -206,6 +208,18 @@ async def websocket_endpoint(websocket: WebSocket):
            
                 save_cues(current_song_file, cue_list)
                 
+                await websocket.send_json({
+                    "type": "cuesUpdated",
+                    "cues": cue_list
+                })
+
+            elif msg.get("type") == "updateCues":
+                cues = msg["cues"]
+                cue_list.clear()
+                cues.sort(key=lambda c: (c["time"], c["fixture"]))  # Sort by time and fixture
+                cue_list.extend(cues)
+                print(f"📝 Updated cues: {len(cues)} cues")
+                save_cues(current_song_file, cue_list)
                 await websocket.send_json({
                     "type": "cuesUpdated",
                     "cues": cue_list

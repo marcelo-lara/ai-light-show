@@ -3,8 +3,18 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 
 export default function SongCues({
     delCue,
-    cues
+    cues,
+    currentTime,
+    setCurrentTime,
+    updateCues
 }) {
+
+const handleCueTimeChage = (cue) => {
+  cue.time = currentTime;
+  const updatedCues = cues.map((item) => (item === cue ? { ...cue } : item));
+  updateCues(updatedCues);
+  console.log("Updating cue time to", cue.time);
+}
 
 return (
         <>
@@ -22,9 +32,9 @@ return (
                 </tr>
               </thead>
               <tbody>
-                {cues.map((cue, idx) => (
+                {cues.sort((a, b) => a.time - b.time).map((cue, idx) => (
                   <tr key={`${cue.fixture}-${cue.time}`} className="border-b border-white/10">
-                    <td>{cue.time?.toFixed(2)}</td>
+                    <td onClick={() => setCurrentTime(cue.time)}>{cue.time?.toFixed(2)}</td>
                     <td>{cue.fixture}</td>
                     <td>{cue.preset}</td>
                     <td>{cue.duration?.toFixed(2)}</td>
@@ -34,6 +44,7 @@ return (
                       ))}
                     </td>
                     <td className="flex gap-2">
+                      <button onClick={() => handleCueTimeChage(cue)} className="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded">⏱️</button>
                       <button onClick={() => delCue(cue)} className="bg-red-600 hover:bg-red-700 px-2 py-1 rounded">🗑️</button>
                     </td>
                   </tr>
