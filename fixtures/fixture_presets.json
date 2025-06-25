@@ -28,6 +28,128 @@
     ]
 },
 {
+    "name": "flash to black",
+    "description": "Set RGB to max brightness, then fade to black",
+    "type": "rgb",
+    "mode": "single",
+    "parameters": {
+        "fade_beats": 0.25,
+        "start_brightness": 0.5
+    },
+    "steps": [
+        {
+            "type": "set",
+            "values": {
+                "red": 128,
+                "green": 128,
+                "blue": 128
+            }
+        },
+        {
+            "type": "fade",
+            "values": {
+                "red": 0,
+                "green": 0,
+                "blue": 0
+            },
+            "duration": 0.25
+        }
+    ]
+},
+{
+    "name": "blue echo",
+    "description": "Flash blue channel every 1 beat at descending brightness",
+    "type": "rgb",
+    "mode": "single",
+    "parameters": {
+        "fade_beats": 0.25,
+        "start_brightness": 0.5,
+        "decrease_interval": 40
+    },
+    "steps": [
+        {
+            "type": "set",
+            "values": {
+                "green": 255
+            }
+        },
+        {
+            "type": "fade",
+            "values": {
+                "green": 0
+            },
+            "duration": 0.5
+        },
+        {
+            "type": "fade",
+            "values": {
+                "green": 0
+            },
+            "duration": 0.5
+        },
+        {
+            "type": "set",
+            "values": {
+                "green": 215
+            }
+        },
+        {
+            "type": "fade",
+            "values": {
+                "green": 0
+            },
+            "duration": 0.5
+        },
+        {
+            "type": "fade",
+            "values": {
+                "green": 0
+            },
+            "duration": 0.5
+        },
+        {
+            "type": "set",
+            "values": {
+                "green": 175
+            }
+        },
+        {
+            "type": "fade",
+            "values": {
+                "green": 0
+            },
+            "duration": 0.5
+        },
+        {
+            "type": "fade",
+            "values": {
+                "green": 0
+            },
+            "duration": 0.5
+        },
+        {
+            "type": "set",
+            "values": {
+                "green": 135
+            }
+        },
+        {
+            "type": "fade",
+            "values": {
+                "green": 0
+            },
+            "duration": 0.5
+        },
+        {
+            "type": "fade",
+            "values": {
+                "green": 0
+            },
+            "duration": 0.5
+        }
+    ]
+},
+{
     "name": "blue breath",
     "description": "Loops fade in and fade out blue channel",
     "type": "rgb",
