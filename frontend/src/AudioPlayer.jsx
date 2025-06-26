@@ -4,6 +4,7 @@ import WaveSurfer from 'wavesurfer.js';
 import Spectrogram from 'wavesurfer.js/dist/plugins/spectrogram.esm.js'
 import ZoomPlugin from 'wavesurfer.js/dist/plugins/zoom.esm.js'
 import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.esm.js'
+import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js'
 
 
 export default function AudioPlayer({ 
@@ -18,6 +19,7 @@ export default function AudioPlayer({
   const [songBeats, setSongBeats] = useState([]);
   const [generateCues, setGenerateCues] = useState(false);
 
+  const regions = RegionsPlugin.create()
 
   useEffect(() => {
     if (!currentSongFile) return;
@@ -33,7 +35,7 @@ export default function AudioPlayer({
         autoScroll: true,
         dragToSeek: true,
         scrollParent: true, // Ensure scrollbar is always visible
-        plugins: [TimelinePlugin.create()]
+        plugins: [TimelinePlugin.create(), regions]
       });
      
       // Zoom plugin

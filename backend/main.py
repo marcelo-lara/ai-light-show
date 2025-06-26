@@ -9,11 +9,11 @@ from pathlib import Path
 import json
 from backend.dmx_controller import set_channel, get_universe, send_artnet
 from backend.timeline_engine import render_timeline, execute_timeline
-from backend.chaser_utils import expand_chaser_template, load_chaser_templates, get_chasers
+from backend.chaser_utils import expand_chaser_template, get_chasers
+from backend.fixture_utils import load_fixtures_config
 from backend.beat_detect import get_song_beats
+from backend.config import MASTER_FIXTURE_CONFIG, SONGS_DIR, LOCAL_TEST_SONG_PATH, FIXTURE_PRESETS
 from fastapi import WebSocket, WebSocketDisconnect
-
-SONGS_DIR = Path("/app/static/songs")
 
 # ArtNet Fixture Config and Presets
 fixture_config = []
@@ -88,19 +88,6 @@ def test_artnet_send():
     return {"sent": True}
 
 clients = []
-
-def load_fixtures_config():
-    global fixture_config, fixture_presets
-    try:
-        with open("/app/static/fixtures/master_fixture_config.json") as f:
-            fixture_config = json.load(f)
-        with open("/app/static/fixtures/fixture_presets.json") as f:
-            fixture_presets = json.load(f)
-
-        load_chaser_templates()  # Load chaser templates on startup
-        print(f"✅ Loaded fixture config with {len(fixture_config)} fixtures and {len(fixture_presets)} presets.")            
-    except Exception as e:
-        print("❌ load_fixtures_config error: ", e)
 
 def load_cues(song_file):
     global cue_list
@@ -341,14 +328,13 @@ async def broadcast(message: dict):
 
 ## Static file serving
 app.mount("/songs", StaticFiles(directory="static/songs"), name="songs")
-# app.mount("/fixtures", StaticFiles(directory="static/fixtures"), name="fixtures")
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 ## Get song beats, then create flash cues for each beat in the parcans
 def test_beat_sync():
     
     # get song beats
-    song_beats = get_song_beats("/home/darkangel/ai-light-show/songs/born_slippy.mp3")
+    song_beats = get_song_beats(LOCAL_TEST_SONG_PATH)
     fixtures_id = ["parcan_pl", "parcan_l", "parcan_r", "parcan_pr"]
     
     cue_template = {
@@ -361,7 +347,6 @@ def test_beat_sync():
         "duration": 0.25,
         "chaser": "auto",
         "chaser_id": "test_beat_sync_000"
-
     }
     
     # create flash cues for each beat
@@ -382,11 +367,9 @@ def test_beat_sync():
     render_timeline(fixture_config, fixture_presets, cues=cue_list, current_song=current_song, bpm=song_metadata['bpm'])
     return cue_list    
 
-
 async def timeline_executor():
-    global last_sent, is_playing, playback_time
-    print("🌀 Timeline executor started")
-    load_fixtures_config()
+    global last_sent, is_playing, playback_time, fixture_config, fixture_presets, start_monotonic
+    fixture_config, fixture_presets = load_fixtures_config()
 
     while True:
         if is_playing:

@@ -1,6 +1,6 @@
-from pathlib import Path
 import json
-CHASER_TEMPLATE_PATH = Path("/app/static/fixtures/chaser_templates.json")
+
+from backend.config import CHASER_TEMPLATE_PATH
 chasers = None
 
 def beats_to_seconds(beats: float, bpm: float) -> float:
