@@ -1,0 +1,9 @@
+librosa
+fastapi
+uvicorn[standard]
+python-multipart
+python-osc
+librosa
+essentia
+numpy==1.24.3
+soundfile

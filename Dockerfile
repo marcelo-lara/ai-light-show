@@ -1,28 +1,36 @@
 # Stage 1: Build the frontend
 FROM node:18 AS frontend
 WORKDIR /app
+
+# Copy only package.json and package-lock.json for caching npm install
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm install
+
+# Copy the rest of the frontend code and build
 COPY frontend/ .
-RUN npm install && npm run build
+RUN npm run build
 
 # Stage 2: Serve frontend + Flask backend
 FROM python:3.10-slim AS backend
+RUN apt-get update && apt-get install -y \
+    libfftw3-dev \
+    libsamplerate0-dev \
+    libtag1-dev \
+    libyaml-cpp-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# Copy backend and static frontend
+# Copy only requirements.txt for caching pip install
+COPY backend/requirements.txt ./
+RUN pip install -r requirements.txt
+
+# Copy the rest of the backend code
 COPY backend/ ./backend/
+
+# Copy static frontend files
 COPY --from=frontend /app/dist ./static/
 
-# Install Flask + python-osc
-RUN pip install \
-            fastapi \
-            uvicorn[standard] \
-            python-multipart \
-            python-osc \
-            librosa \
-            soundfile            
-
 EXPOSE 5000
-#ENV FLASK_ENV=production
 ENV PYTHONUNBUFFERED=1
-#HEALTHCHECK CMD curl --fail http://localhost:5000/status || exit 1
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "5000"]
