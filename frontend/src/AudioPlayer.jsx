@@ -126,23 +126,27 @@ export default function AudioPlayer({
   return (
     <>
       <div ref={containerRef} className="mb-4"/>
-      <div id="song-controls" class="flex flex-col items-center">
-        <div className="flex items-center gap-4 mb-4">
-          {isPlaying ? 
-            (<button onClick={() => wavesurferRef.current?.pause()} className="bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded">⏸️ Pause</button>) : 
-            (<button onClick={() => wavesurferRef.current?.play()} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">▶️ Start</button>)
-          }
-          <button onClick={() => { wavesurferRef.current?.pause(); wavesurferRef.current?.seekTo(0); }} className="bg-gray-700 hover:bg-gray-800 px-4 py-2 rounded">⏹️ Stop</button>
-          <button onClick={() => handleAnalyzeSong()} className={`px-4 py-2 rounded ${!analysisResult ? 'bg-gray-900 text-gray-400 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600'}`} disabled={!analysisResult}>🔍 Analyze</button>
-          <label className="ml-4 flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={generateCues}
-              onChange={e => setGenerateCues(e.target.checked)}
-            />
-            <span className="text-gray-300">Generate Cues</span>
-          </label>
-          <span className="ml-4 w-6 text-gray-400">{formatTime(currentTime)}</span>
+      <div id="song-controls" className="flex flex-col items-center">
+        <div className="flex items-center justify-between w-full mb-4">
+          <div id="playback-controls" className="flex items-center">
+            {isPlaying ? 
+              (<button onClick={() => wavesurferRef.current?.pause()} className="bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded">⏸️ Pause</button>) : 
+              (<button onClick={() => wavesurferRef.current?.play()} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">▶️ Start</button>)
+            }
+            <button onClick={() => { wavesurferRef.current?.pause(); wavesurferRef.current?.seekTo(0); }} className="bg-gray-700 hover:bg-gray-800 px-4 py-2 rounded">⏹️ Stop</button>
+            <span className="ml-4 w-6 text-gray-400">{formatTime(currentTime)}</span>
+          </div>
+          <div id="ai-controls" className="flex items-center">
+            <button onClick={() => handleAnalyzeSong()} className={`px-4 py-2 rounded ${!analysisResult ? 'bg-gray-900 text-gray-400 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600'}`} disabled={!analysisResult}>🔍 Analyze</button>
+            <label className="ml-4 flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={generateCues}
+                onChange={e => setGenerateCues(e.target.checked)}
+              />
+              <span className="text-gray-300">Generate Cues</span>
+            </label>
+          </div>
         </div>
       </div>
     </>

@@ -11,7 +11,7 @@ from backend.dmx_controller import set_channel, get_universe, send_artnet
 from backend.timeline_engine import render_timeline, execute_timeline
 from backend.chaser_utils import expand_chaser_template, get_chasers
 from backend.fixture_utils import load_fixtures_config
-from backend.beat_detect import get_song_beats
+from backend.ai.beat_detect import get_song_beats
 from backend.config import MASTER_FIXTURE_CONFIG, SONGS_DIR, LOCAL_TEST_SONG_PATH, FIXTURE_PRESETS
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -345,8 +345,8 @@ def test_beat_sync():
             "fade_beats": 0.25
         },
         "duration": 0.25,
-        "chaser": "auto",
-        "chaser_id": "test_beat_sync_000"
+        "chaser": "ai",
+        "chaser_id": "ai_generated_000"
     }
     
     # create flash cues for each beat

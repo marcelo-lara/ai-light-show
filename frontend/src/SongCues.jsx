@@ -47,7 +47,7 @@ return (
                           {cue.chaser}
                             <button
                               onClick={() => delCue({ chaser_id: cue.chaser_id })}
-                              className="bg-gray-600 hover:bg-gray-700 px-2 py-1 rounded"
+                              className="bg-gray-600 hover:bg-gray-700 px-2 py-1 ml-1"
                             >
                               🗑️
                             </button>
