@@ -12,6 +12,7 @@ from backend.timeline_engine import render_timeline, execute_timeline
 from backend.chaser_utils import expand_chaser_template, get_chasers
 from backend.fixture_utils import load_fixtures_config
 from backend.ai.beat_detect import get_song_beats
+from backend.ai.essentia_analysis import extract_beats_and_chords
 from backend.config import MASTER_FIXTURE_CONFIG, SONGS_DIR, LOCAL_TEST_SONG_PATH, FIXTURE_PRESETS
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -279,22 +280,26 @@ async def websocket_endpoint(websocket: WebSocket):
 
             elif msg.get("type") == "analyzeSong":
                 song_file = msg["songFile"]
+                model = msg.get("model", ["essentia"])
                 song_path = SONGS_DIR / song_file
 
                 try:
                     print(f"🎵 Analyzing {song_file}")
-                    beats = get_song_beats(str(song_path))
-                    print(f"   - {len(beats)} beats detected")
+                    essentia_result = extract_beats_and_chords(str(song_path))
+                    song_beats = essentia_result.get("beats", [])
+
+                    #beats = get_song_beats(str(song_path))
+                    #print(f"   - {len(beats)} beats detected")
 
                     await websocket.send_json({
                         "type": "analyzeResult",
                         "status": "ok",
-                        "beats": beats
+                        "analysis": essentia_result
                     })
 
                     # test beat sync
                     if msg['renderCues']:
-                        tmp_cue = test_beat_sync()
+                        tmp_cue = test_beat_sync(song_beats)
                         await websocket.send_json({
                             "type": "cuesUpdated",
                             "cues": tmp_cue
@@ -331,10 +336,8 @@ app.mount("/songs", StaticFiles(directory="static/songs"), name="songs")
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 ## Get song beats, then create flash cues for each beat in the parcans
-def test_beat_sync():
+def test_beat_sync(song_beats):
     
-    # get song beats
-    song_beats = get_song_beats(LOCAL_TEST_SONG_PATH)
     fixtures_id = ["parcan_pl", "parcan_l", "parcan_r", "parcan_pr"]
     
     cue_template = {
@@ -342,9 +345,9 @@ def test_beat_sync():
         "fixture": "parcan_l",
         "preset": "flash",
         "parameters": {
-            "fade_beats": 0.25
+            "fade_beats": 1
         },
-        "duration": 0.25,
+        "duration": 1,
         "chaser": "ai",
         "chaser_id": "ai_generated_000"
     }
@@ -358,7 +361,6 @@ def test_beat_sync():
         cue = cue_template.copy()
         cue["time"] = beat
         cue["fixture"] = fixture
-        cue["parameters"]["fade_beats"] = 1  # Set fade duration to 0.25 beats
         cue_list.append(cue)
         curr_fixture_idx += 1
         if curr_fixture_idx >= len(fixtures_id):
