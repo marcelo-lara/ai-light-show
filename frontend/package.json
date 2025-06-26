@@ -11,6 +11,7 @@
   "dependencies": {
     "preact": "^10.26.5",
     "wavesurfer.js": "^7.9.5",
+    "react-toastify": "^11.0.5",
     "socket.io-client": "^4.7.5"
   },
   "devDependencies": {

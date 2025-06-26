@@ -4,6 +4,8 @@ import SongArrangement from './SongArrangement';
 import SongCues from './SongCues';
 import AudioPlayer from './AudioPlayer'; 
 import Chasers from './Chasers';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export function App() {
   const wsRef = useRef(null); // WebSocket reference
@@ -26,7 +28,7 @@ export function App() {
   const [chasers, setChasers] = useState([]);
 
   // UI toast notification state
-  const [toast, setToast] = useState(null);
+  const [toastMessage, setToast] = useState(null);
 
   // Reference to fixtures to avoid stale closure issues
   const fixturesRef = useRef(fixtures);  
@@ -119,11 +121,10 @@ export function App() {
 
   // UI toast effect ----------------------------------------
   useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 3000);
-      return () => clearTimeout(timer);
+    if (toastMessage) {
+      toast.success(toastMessage);
     }
-  }, [toast]);
+  }, [toastMessage]);
 
   
   ///////////////////////////////////////////////////////
@@ -144,14 +145,7 @@ export function App() {
         <div className="p-6 bg-black text-white min-h-screen">
           <h1 className="text-3xl font-bold mb-4">🎛️ AI Light Show Designer</h1>
 
-          {toast && (
-            <div
-              className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-green-600 text-white px-6 py-3 rounded shadow-lg text-center transition-all duration-300"
-              style={{ minWidth: 240, maxWidth: 400 }}
-            >
-              {toast}
-            </div>
-          )}
+          <ToastContainer />
 
           {/* Audio Player Card */}
           <div className="bg-white/10 rounded-2xl p-6 mb-6">
