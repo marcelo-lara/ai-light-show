@@ -162,7 +162,7 @@ export function App() {
               setIsPlaying={setIsPlaying}
               currentTime={currentTime}
               setCurrentTime={setCurrentTime}
-              analyzeSong={()=>{setAnalysisResult(undefined); wsSend("analyzeSong", {songFile: currentSongFile})}}
+              analyzeSong={(data)=>{setAnalysisResult(undefined); wsSend("analyzeSong", data)}}
               analysisResult={analysisResult}
             />
           </div>

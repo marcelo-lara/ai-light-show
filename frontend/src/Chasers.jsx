@@ -52,7 +52,7 @@ export default function Chasers({ currentTime, insertChaser, chasers }) {
             {templates.map(c => (
               <button
                 key={c.name}
-                className={`px-2 py-1 rounded ${selected === c.name ? 'bg-blue-600 text-white' : 'bg-gray-300 text-black'}`}
+                className={`px-2 py-1 rounded font-normal text-xs ${selected === c.name ? 'bg-blue-600 text-white' : 'bg-gray-300 text-black'}`}
                 onClick={() => setSelected(c.name)}
               >
                 {c.name}

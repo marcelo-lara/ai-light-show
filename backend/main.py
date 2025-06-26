@@ -305,6 +305,15 @@ async def websocket_endpoint(websocket: WebSocket):
                         "beats": beats
                     })
 
+                    # test beat sync
+                    if msg['renderCues']:
+                        tmp_cue = test_beat_sync()
+                        await websocket.send_json({
+                            "type": "cuesUpdated",
+                            "cues": tmp_cue
+                        })
+
+
                 except Exception as e:
                     await websocket.send_json({
                         "type": "analyzeResult",
@@ -334,6 +343,45 @@ async def broadcast(message: dict):
 app.mount("/songs", StaticFiles(directory="static/songs"), name="songs")
 # app.mount("/fixtures", StaticFiles(directory="static/fixtures"), name="fixtures")
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
+## Get song beats, then create flash cues for each beat in the parcans
+def test_beat_sync():
+    
+    # get song beats
+    song_beats = get_song_beats("/home/darkangel/ai-light-show/songs/born_slippy.mp3")
+    fixtures_id = ["parcan_pl", "parcan_l", "parcan_r", "parcan_pr"]
+    
+    cue_template = {
+        "time": 0,
+        "fixture": "parcan_l",
+        "preset": "flash",
+        "parameters": {
+            "fade_beats": 0.25
+        },
+        "duration": 0.25,
+        "chaser": "auto",
+        "chaser_id": "test_beat_sync_000"
+
+    }
+    
+    # create flash cues for each beat
+    cue_list.clear()
+    curr_fixture_idx = 0
+    for beat in song_beats:
+        # cycle through fixtures
+        fixture = fixtures_id[curr_fixture_idx]
+        cue = cue_template.copy()
+        cue["time"] = beat
+        cue["fixture"] = fixture
+        cue["parameters"]["fade_beats"] = 1  # Set fade duration to 0.25 beats
+        cue_list.append(cue)
+        curr_fixture_idx += 1
+        if curr_fixture_idx >= len(fixtures_id):
+            curr_fixture_idx = 0
+
+    render_timeline(fixture_config, fixture_presets, cues=cue_list, current_song=current_song, bpm=song_metadata['bpm'])
+    return cue_list    
+
 
 async def timeline_executor():
     global last_sent, is_playing, playback_time
