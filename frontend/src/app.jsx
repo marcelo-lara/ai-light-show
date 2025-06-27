@@ -7,6 +7,7 @@ import SongSelector from './SongSelector';
 import Chasers from './Chasers';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import SongAnalysis from './SongAnalysis';
 
 export function App() {
   const wsRef = useRef(null); // WebSocket reference
@@ -80,7 +81,8 @@ export function App() {
             break;
           }
           case "analyzeResult": {
-            setAnalysisResult(msg);
+            setAnalysisResult(msg.analysis || {});
+            if (msg.metadata)setSongData(msg.metadata);
             setToast("Song analysis complete!");
             break;
           }
@@ -149,8 +151,6 @@ export function App() {
     wsSend("loadSong", { file: currentSongFile });
   }, [currentSongFile, wsConnected]);
 
-  const [isSongsListExpanded, setIsSongsListExpanded] = useState(false);
-
   return (
     <div className="flex flex-row gap-2">
       {/* Main Panel */}
@@ -173,6 +173,14 @@ export function App() {
               analysisResult={analysisResult}
             />
           </div>
+          {analysisResult && ( 
+          <div className="bg-white/10 rounded-2xl p-6 mb-6">
+            <SongAnalysis 
+              analysisResult={analysisResult} 
+              currentTime={currentTime}
+            />
+          </div>
+          )}
 
           {/* Song Cue Controls Card */}
           <div className="bg-white/10 rounded-2xl p-6 mb-6">
@@ -199,26 +207,29 @@ export function App() {
 
       {/* Fixture Panel */}
       <div className="w-1/3 text-white p-6">
-        <h2 className="text-2xl font-bold mb-4">Fixtures</h2>
-        {fixtures.length === 0 ? (
-          <div className="text-sm text-gray-500 italic">No fixtures loaded</div>
-        ) : (
-          fixtures.map((fixture) => (
-            <FixtureCard 
-              key={fixture.id} 
-              fixture={fixture}
-              currentTime={currentTime}
-              allPresets={fixturesPresets}
-              addCue={(cue)=>wsSend("addCue", {cue: cue})}
-              />
-          ))
-        )}
-
-        <Chasers
-          currentTime={currentTime}
-          chasers={chasers}
-          insertChaser={(chaserData) => wsSend("insertChaser", chaserData)}
-        />
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Fixtures</h2>
+          {fixtures.length === 0 ? (
+            <div className="text-sm text-gray-500 italic">No fixtures loaded</div>
+          ) : (
+            fixtures.map((fixture) => (
+              <FixtureCard 
+                key={fixture.id} 
+                fixture={fixture}
+                currentTime={currentTime}
+                allPresets={fixturesPresets}
+                addCue={(cue)=>wsSend("addCue", {cue: cue})}
+                />
+            ))
+          )}
+        </div>
+        <div className="mt-6">
+          <Chasers
+            currentTime={currentTime}
+            chasers={chasers}
+            insertChaser={(chaserData) => wsSend("insertChaser", chaserData)}
+          />
+        </div>
         <div className="mt-6">
           <SongSelector 
             currentSongFile={currentSongFile} 

@@ -284,18 +284,23 @@ async def websocket_endpoint(websocket: WebSocket):
                     results = {}
                     essentia_result = extract_beats_and_chords(str(song_path))
                     song_beats = essentia_result.get("beats", [])
-                    song_metadata['bpm'] = essentia_result.get("bpm", 100)
 
+
+                    # Save analysis core - results
+                    bpm = essentia_result.get("bpm", 100)
+                    results['bpm'] = bpm
                     results['beats'] = song_beats
                     results['regions'] = essentia_result.get("regions_4bars", [])
+                    results['essentia'] = essentia_result
 
-                    song_metadata['analysis'] = essentia_result
+                    song_metadata['bpm'] = bpm
                     save_song_metadata(song_file, song_metadata)
 
                     await websocket.send_json({
                         "type": "analyzeResult",
                         "status": "ok",
-                        "analysis": results
+                        "analysis": results,
+                        "songMetadata": song_metadata
                     })
 
                     # test beat sync

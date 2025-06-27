@@ -6,6 +6,7 @@ emty_packet = [0] * DMX_CHANNELS
 song_length = 60  # seconds
 show_timeline: dict[float, list[int]] = {}
 
+last_timefound = -1.0
 skipLog = False
 
 # Execute the timeline at a given time
@@ -13,7 +14,7 @@ def execute_timeline(current_time):
     """ 
     Execute the DMX timeline at the specified time.
     """
-    global dmx_universe, show_timeline, skipLog
+    global dmx_universe, show_timeline, skipLog, last_timefound
     timefound = -1.0
 
     # Find the latest timestamp <= current_time
@@ -27,6 +28,13 @@ def execute_timeline(current_time):
     timefound = max(available_times)
     dmx_universe = show_timeline[timefound]
 
+    if timefound == last_timefound:
+        if not skipLog:
+            print(f"[{timefound:.3f}] No change in DMX universe for {current_time:.3f}s")
+        skipLog = True
+        return timefound
+    
+    last_timefound = timefound
     skipLog = False
     print(f"[{timefound:.3f}] {current_time:.3f}s -> {'.'.join(f'{v:3d}' for v in dmx_universe[:30])}")
 
