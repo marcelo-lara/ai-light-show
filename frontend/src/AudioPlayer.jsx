@@ -5,6 +5,7 @@ import Spectrogram from 'wavesurfer.js/dist/plugins/spectrogram.esm.js'
 import ZoomPlugin from 'wavesurfer.js/dist/plugins/zoom.esm.js'
 import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.esm.js'
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js'
+import { use } from 'react';
 
 
 export default function AudioPlayer({ 
@@ -17,6 +18,7 @@ export default function AudioPlayer({
   const wavesurferRef = useRef(null);
   const [showSpectrogram] = useState(false);
   const [songBeats, setSongBeats] = useState([]);
+  const [renderBeats, setRenderBeats] = useState(false);
   const [generateCues, setGenerateCues] = useState(false);
 
   const regions = RegionsPlugin.create()
@@ -121,8 +123,42 @@ export default function AudioPlayer({
     console.log("Analysis result updated:", analysisResult);
     if (!analysisResult || analysisResult.status !== "ok") return;
     setSongBeats(analysisResult.beats || []);
+
   }, [analysisResult]);
   
+  useEffect(() => {
+    if (!wavesurferRef.current) return;
+    
+    if (renderBeats) {
+      regions.clearRegions();
+      songBeats.forEach((beat, index) => {
+        regions.addRegion({
+          start: beat,
+          color: 'rgba(255, 255, 255, 0.5)',
+          id: `beat-${index}`,
+        });
+      });
+    }else{
+      // If not rendering beats, clear existing regions
+      regions.clearRegions();
+    }
+
+    // Clear existing regions
+    wavesurferRef.current.clearRegions();
+
+    // Add new regions for each beat
+    songBeats.forEach((beat, index) => {
+      wavesurferRef.current.addRegion({
+        start: beat.start,
+        end: beat.end,
+        color: 'rgb(255, 255, 255)',
+        id: `beat-${index}`,
+        data: { type: 'beat', index }
+      });
+    });
+
+  }, [renderBeats]);
+
   return (
     <>
       <div ref={containerRef} className="mb-4"/>
@@ -145,6 +181,14 @@ export default function AudioPlayer({
                 onChange={e => setGenerateCues(e.target.checked)}
               />
               <span className="text-gray-300">Generate Cues</span>
+            </label>
+            <label className="ml-4 flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={renderBeats}
+                onChange={e => setRenderBeats(e.target.checked)}
+              />
+              <span className="text-gray-300">Show Beats</span>
             </label>
           </div>
         </div>

@@ -176,7 +176,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     "metadata": song_metadata,
                     "chasers": get_chasers()
                 })
-                render_timeline(fixture_config, fixture_presets, cues=cue_list, current_song=current_song_file, bpm=song_metadata['bpm'])
+                bpm = song_metadata.get("bpm", 120)
+                render_timeline(fixture_config, fixture_presets, cues=cue_list, current_song=current_song_file, bpm=bpm)
 
 
             elif msg.get("type") == "getCues":
@@ -285,16 +286,21 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 try:
                     print(f"🎵 Analyzing {song_file}")
+                    results = {}
                     essentia_result = extract_beats_and_chords(str(song_path))
                     song_beats = essentia_result.get("beats", [])
+                    song_metadata['bpm'] = essentia_result.get("bpm", 100)
 
+                    results['beats'] = song_beats
+                    results['regions'] = essentia_result.get("regions_4bars", [])
                     #beats = get_song_beats(str(song_path))
                     #print(f"   - {len(beats)} beats detected")
+
 
                     await websocket.send_json({
                         "type": "analyzeResult",
                         "status": "ok",
-                        "analysis": essentia_result
+                        "analysis": results
                     })
 
                     # test beat sync
@@ -338,7 +344,7 @@ app.mount("/", StaticFiles(directory="static", html=True), name="static")
 ## Get song beats, then create flash cues for each beat in the parcans
 def test_beat_sync(song_beats):
     
-    fixtures_id = ["parcan_pl", "parcan_l", "parcan_r", "parcan_pr"]
+    fixtures_id = ["parcan_pl", "parcan_pr", "parcan_l", "parcan_r"]
     
     cue_template = {
         "time": 0,
