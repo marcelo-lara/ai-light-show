@@ -9,6 +9,9 @@ export default function SongAnalysis({ analysisResult, currentTime, setCurrentTi
     const [maxEnergy, setMaxEnergy] = useState(0);
     const currentRegionRef = useRef(null);
 
+    const [chords, setChords] = useState([]);
+    const [currentChord, setCurrentChord] = useState(false);
+
     const labelColorMap = {
         'A': '#1d4ed8', // Blue
         'B': '#10b981', // Green
@@ -23,6 +26,7 @@ export default function SongAnalysis({ analysisResult, currentTime, setCurrentTi
     useEffect(() => {
       if (analysisResult.regions) {
         setRegions(analysisResult.regions);
+        setChords(analysisResult.chords || []);
       }
     }, [analysisResult]);
 
@@ -49,12 +53,48 @@ export default function SongAnalysis({ analysisResult, currentTime, setCurrentTi
       }
     }, [currentRegion]);
 
-  return (
+    useEffect(() => {
+        let current = null;
+        for (let i = 0; i < chords.length; i++) {
+          if (currentTime >= chords[i].aligned_time) current = i;
+        }
+        setCurrentChord(current);
+    }, [currentTime]);
+
+    return (
     <>
       <h2 className="text-2xl font-bold mb-4">Song Analysis</h2>
       <div>
         <p className="text-sm text-gray-300 mb-2">BPM: <span className="font-bold">{analysisResult.bpm}</span></p>
       </div>
+
+      {/* Chords Section */}
+      <div className="mt-4">
+        <h3 className="text-xl font-bold mb-2">Chords</h3>
+        <div className="overflow-x-auto">
+          <div className="flex items-end space-x-1 px-1 py-2">
+            {chords.map((chord, index) => (
+              <div
+                key={index}
+                className={`flex flex-col items-center transition-all duration-200 ${
+                    index === currentChord ? 'ring-2 ring-gray-400' : ''
+                  }`}
+                onClick={() => setCurrentTime(chord.aligned_time)}
+              >
+                {/* Chord Box */}
+                <div
+                  className="bg-blue-500 text-white text-xs rounded p-1 mb-1"
+                  style={{ minWidth: '20px'}}
+                >
+                  {chord.chord}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      
+
       
       {/* Song Regions */}
       <div className="mt-4">

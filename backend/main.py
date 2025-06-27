@@ -13,7 +13,8 @@ from backend.chaser_utils import expand_chaser_template, get_chasers
 from backend.song_utils import get_songs_list, load_song_metadata, save_song_metadata
 from backend.fixture_utils import load_fixtures_config
 from backend.ai.beat_detect import get_song_beats
-from backend.ai.essentia_analysis import extract_beats_and_chords
+from backend.ai.essentia_analysis import extract_with_essentia
+from backend.ai.essentia_chords import extract_chords_and_align
 from backend.config import MASTER_FIXTURE_CONFIG, SONGS_DIR, LOCAL_TEST_SONG_PATH, FIXTURE_PRESETS
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -282,15 +283,17 @@ async def websocket_endpoint(websocket: WebSocket):
                 try:
                     print(f"🎵 Analyzing {song_file}")
                     results = {}
-                    essentia_result = extract_beats_and_chords(str(song_path))
-                    song_beats = essentia_result.get("beats", [])
+                    essentia_result = extract_with_essentia(str(song_path))
 
+                    essentia_chords_result = extract_chords_and_align(str(song_path))
+                    song_beats = essentia_chords_result.get("beats", [])
+                    results['chords'] = essentia_chords_result.get("chords", [])
 
                     # Save analysis core - results
                     bpm = essentia_result.get("bpm", 100)
                     results['bpm'] = bpm
                     results['beats'] = song_beats
-                    results['regions'] = essentia_result.get("regions_4bars", [])
+                    results['regions'] = essentia_result.get("regions_1bar", [])
                     results['essentia'] = essentia_result
 
                     song_metadata['bpm'] = bpm

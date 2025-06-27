@@ -73,7 +73,7 @@ def cluster_chord_progressions(regions):
     return regions
 
 
-def extract_with_essentia(audio_path: str, output_json_path: str='', bars_1=4, bars_2=2):
+def analyze_with_essentia(audio_path: str, output_json_path: str='', bars_1=4, bars_2=2):
     if output_json_path == '':
         output_json_path = f"{audio_path}.analysis.json"
 
