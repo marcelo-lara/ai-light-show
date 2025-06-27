@@ -3,6 +3,7 @@ import FixtureCard from './FixtureCard';
 import SongArrangement from './SongArrangement';
 import SongCues from './SongCues';
 import AudioPlayer from './AudioPlayer'; 
+import SongSelector from './SongSelector';
 import Chasers from './Chasers';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -219,41 +220,12 @@ export function App() {
           insertChaser={(chaserData) => wsSend("insertChaser", chaserData)}
         />
         <div className="mt-6">
-
-        {/* Song Selector start */}
-          <div>
-            {currentSongFile && (
-              <div
-                className="text-sm text-gray-500 mb-2 cursor-pointer"
-                onClick={() => setIsSongsListExpanded(!isSongsListExpanded)}
-              >
-                Song: <span className="font-bold">{currentSongFile}</span>
-              </div>
-            )}                
-          </div>
-          {isSongsListExpanded && (
-            songsList.length === 0 ? (
-              <div className="text-sm text-gray-500 italic">No songs available</div>
-            ) : (
-              <ul className="list-disc pl-5">
-                {songsList.map((song) => (
-                  <li 
-                    key={song} 
-                    className={`cursor-pointer hover:text-blue-400 ${currentSongFile === song ? 'font-bold' : ''}`}
-                    onClick={() => {
-                      setCurrentSongFile(song+".mp3");
-                      setIsSongsListExpanded(false);
-                    }}
-                  >
-                    {song}
-                  </li>
-                ))}
-              </ul>
-            )
-          )}
+          <SongSelector 
+            currentSongFile={currentSongFile} 
+            songsList={songsList} 
+            setCurrentSongFile={setCurrentSongFile} 
+          />
         </div>
-        {/* Song Selector ends */}
-
       </div>
     </div>
   );
