@@ -12,7 +12,7 @@ export default function SongSelector({ currentSongFile, songsList, setCurrentSon
         >
           Song: <span className="font-bold">{currentSongFile}</span>
         </div>
-      )}                
+      )}
       {isSongsListExpanded && (
         songsList.length === 0 ? (
           <div className="text-sm text-gray-500 italic">No songs available</div>
