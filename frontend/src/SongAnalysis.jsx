@@ -9,26 +9,16 @@ export default function SongAnalysis({ analysisResult, currentTime }) {
     const [maxEnergy, setMaxEnergy] = useState(0);
     const currentRegionRef = useRef(null);
 
-    const indexColor = [
-        '#1d4ed8', // Blue
-        '#10b981', // Green
-        '#ef4444', // Red
-        '#8b5cf6', // Purple
-        '#f472b6', // Pink
-        '#f97316', // Orange
-        '#f59e0b', // Yellow
-        '#0ea5e9'  // Sky Blue
-    ]
-    const regionLabelColor = (label) => {
-        if (label === 'A') return indexColor[0]; // Blue for label
-        if (label === 'B') return indexColor[1]; // Green for label
-        if (label === 'C') return indexColor[2]; // Red for label
-        if (label === 'D') return indexColor[3]; // Purple for label
-        if (label === 'E') return indexColor[4]; // Pink for label
-        if (label === 'F') return indexColor[5]; // Orange for label
-        if (label === 'G') return indexColor[6]; // Yellow for label
-        return indexColor[7]; // Default to Sky Blue for any other label
-    }
+    const labelColorMap = {
+        'A': '#1d4ed8', // Blue
+        'B': '#10b981', // Green
+        'C': '#ef4444', // Red
+        'D': '#8b5cf6', // Purple
+        'E': '#f472b6', // Pink
+        'F': '#f97316', // Orange
+        'G': '#f59e0b', // Yellow
+        'H': '#0ea5e9'  // Sky Blue
+    };
 
     useEffect(() => {
       if (analysisResult.regions) {
@@ -89,7 +79,7 @@ export default function SongAnalysis({ analysisResult, currentTime }) {
                   className={`border-b border-gray-700 ${index === currentRegion ? 'bg-green-800' : ''}`}
                 >
                   <td className="w-3">
-                    <div className="w-8 h-8 flex items-center justify-center rounded text-white" style={{ backgroundColor: regionLabelColor(region.label)}}>
+                    <div className="w-8 h-8 flex items-center justify-center rounded text-white" style={{ backgroundColor: labelColorMap[region.label]}}>
                       {region.label}
                     </div>
                   </td>
