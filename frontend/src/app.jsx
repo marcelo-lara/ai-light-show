@@ -12,11 +12,12 @@ export function App() {
   const [wsConnected, setWsConnected] = useState(false);
 
   // Song metadata and playback state
-  const [currentSongFile, setCurrentSongFile] = useState(); //'born_slippy.mp3'
+  const [currentSongFile, setCurrentSongFile] = useState(); 
   const [songData, setSongData] = useState();
   const [isPlaying, setIsPlaying] = useState(false);  
   const [currentTime, setCurrentTime] = useState(0);
   const [syncTime, setSyncTime] = useState(0);
+  const [songsList, setSongsList] = useState([]);
 
   // Song Analysis state
   const [analysisResult, setAnalysisResult] = useState({});
@@ -58,28 +59,37 @@ export function App() {
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
-        if (msg.type === "dmx_update") {
-          const universe = msg.universe;
-          onDmxUpdate(universe);
-          return;
-        }
-
-        if (msg.type === "cuesUpdated") {
-          console.log("Received cues update:", msg.cues);
-          setCues(msg.cues);
-        }
-
-        if (msg.type === "analyzeResult") {
-          setAnalysisResult(msg);
-          setToast("Song analysis complete!");
-        }
-
-        if (msg.type === "songLoaded") {
-          setCues(msg.cues || []);
-          setFixtures(msg.fixtures || []);
-          setFixturesPresets(msg.presets || []);
-          setSongData(msg.metadata || {});
-          setChasers(msg.chasers || []);
+        switch (msg.type) {
+          case "setup": {
+            console.log("setup:", msg);
+            setSongsList(msg.songs || []);
+            setFixtures(msg.fixtures || []);
+            setFixturesPresets(msg.presets || []);
+            setChasers(msg.chasers || []);
+            break;
+          }
+          case "dmx_update": {
+            const universe = msg.universe;
+            onDmxUpdate(universe);
+            break;
+          }
+          case "cuesUpdated": {
+            console.log("Received cues update:", msg.cues);
+            setCues(msg.cues);
+            break;
+          }
+          case "analyzeResult": {
+            setAnalysisResult(msg);
+            setToast("Song analysis complete!");
+            break;
+          }
+          case "songLoaded": {
+            setCues(msg.cues || []);
+            setSongData(msg.metadata || {});
+            break;
+          }
+          default:
+            console.warn("Unhandled message type:", msg.type);
         }
       } catch (err) {
         console.error("WebSocket message error:", err);
@@ -137,6 +147,8 @@ export function App() {
     if (!currentSongFile) return;
     wsSend("loadSong", { file: currentSongFile });
   }, [currentSongFile, wsConnected]);
+
+  const [isSongsListExpanded, setIsSongsListExpanded] = useState(false);
 
   return (
     <div className="flex flex-row gap-2">
@@ -206,6 +218,41 @@ export function App() {
           chasers={chasers}
           insertChaser={(chaserData) => wsSend("insertChaser", chaserData)}
         />
+        <div className="mt-6">
+
+        {/* Song Selector start */}
+          <div>
+            {currentSongFile && (
+              <div
+                className="text-sm text-gray-500 mb-2 cursor-pointer"
+                onClick={() => setIsSongsListExpanded(!isSongsListExpanded)}
+              >
+                Song: <span className="font-bold">{currentSongFile}</span>
+              </div>
+            )}                
+          </div>
+          {isSongsListExpanded && (
+            songsList.length === 0 ? (
+              <div className="text-sm text-gray-500 italic">No songs available</div>
+            ) : (
+              <ul className="list-disc pl-5">
+                {songsList.map((song) => (
+                  <li 
+                    key={song} 
+                    className={`cursor-pointer hover:text-blue-400 ${currentSongFile === song ? 'font-bold' : ''}`}
+                    onClick={() => {
+                      setCurrentSongFile(song+".mp3");
+                      setIsSongsListExpanded(false);
+                    }}
+                  >
+                    {song}
+                  </li>
+                ))}
+              </ul>
+            )
+          )}
+        </div>
+        {/* Song Selector ends */}
 
       </div>
     </div>

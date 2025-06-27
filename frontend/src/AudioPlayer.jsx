@@ -26,6 +26,12 @@ export default function AudioPlayer({
   useEffect(() => {
     if (!currentSongFile) return;
 
+    if (wavesurferRef.current) {
+      // If WaveSurfer instance already exists, load the new song
+      wavesurferRef.current.load(SongsFolder + currentSongFile);
+      return;
+    }
+
     const setupWaveSurfer = () => {
       wavesurferRef.current = WaveSurfer.create({
         container: containerRef.current,

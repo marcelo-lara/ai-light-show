@@ -10,6 +10,7 @@ import json
 from backend.dmx_controller import set_channel, get_universe, send_artnet
 from backend.timeline_engine import render_timeline, execute_timeline
 from backend.chaser_utils import expand_chaser_template, get_chasers
+from backend.song_utils import get_songs_list, load_song_metadata, save_song_metadata
 from backend.fixture_utils import load_fixtures_config
 from backend.ai.beat_detect import get_song_beats
 from backend.ai.essentia_analysis import extract_beats_and_chords
@@ -93,6 +94,12 @@ clients = []
 def load_cues(song_file):
     global cue_list
     cue_path = SONGS_DIR / f"{song_file}.cues.json"
+
+    if not cue_path.exists():
+        print(f"⚠️ No cues found for {song_file}, creating empty cue list.")
+        cue_list.clear()
+        return
+
     try:
         with open(cue_path) as f:
             cue_list.clear()
@@ -111,24 +118,6 @@ def save_cues(song_file, cues):
     bpm = song_metadata.get("bpm", 100)
     render_timeline(fixture_config, fixture_presets, cues=cues, current_song=song_file, bpm=bpm)        
 
-def load_song_metadata(song_file):
-    global song_metadata
-    metadata_path = SONGS_DIR / f"{song_file}.metadata.json"
-    try:
-        with open(metadata_path) as f:
-            song_metadata = json.load(f)
-        print(f"🎵 Loaded song metadata for {song_file}")
-    except Exception as e:
-        print(f"❌ load_song_metadata error: {e}")
-
-def save_song_metadata(song_file, metadata):
-    metadata_path = SONGS_DIR / f"{song_file}.metadata.json"
-    try:
-        metadata_path.write_text(json.dumps(metadata, indent=2))
-        print(f"💾 Saved metadata to {metadata_path}")
-    except Exception as e:
-        print(f"❌ save_song_metadata error: {e}")
-
 
 # 🎵 WebSocket for playback state synchronization 
 timeline = []
@@ -144,6 +133,13 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     clients.append(websocket)
     print(f"🧠 Client connected: {websocket.client}")
+    await websocket.send_json({
+        "type": "setup",
+        "songs": get_songs_list(),
+        "fixtures": fixture_config,
+        "presets": fixture_presets,
+        "chasers": get_chasers()
+    })
     try:
         while True:
             msg = await websocket.receive_json()
@@ -170,11 +166,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 load_song_metadata(current_song_file)
                 await websocket.send_json({
                     "type": "songLoaded",
-                    "cues": cue_list,
-                    "fixtures": fixture_config,
-                    "presets": fixture_presets,
                     "metadata": song_metadata,
-                    "chasers": get_chasers()
+                    "cues": cue_list,                    
                 })
                 bpm = song_metadata.get("bpm", 120)
                 render_timeline(fixture_config, fixture_presets, cues=cue_list, current_song=current_song_file, bpm=bpm)
@@ -341,11 +334,9 @@ async def broadcast(message: dict):
 app.mount("/songs", StaticFiles(directory="static/songs"), name="songs")
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
-## Get song beats, then create flash cues for each beat in the parcans
+## Test function to generate beat sync cues ------------------------------------
 def test_beat_sync(song_beats):
-    
     fixtures_id = ["parcan_pl", "parcan_pr", "parcan_l", "parcan_r"]
-    
     cue_template = {
         "time": 0,
         "fixture": "parcan_l",
@@ -375,6 +366,9 @@ def test_beat_sync(song_beats):
     render_timeline(fixture_config, fixture_presets, cues=cue_list, current_song=current_song, bpm=song_metadata['bpm'])
     return cue_list    
 
+# -----------------------------------------------------------------------------
+# Timeline executor to run the timeline engine
+# -----------------------------------------------------------------------------
 async def timeline_executor():
     global last_sent, is_playing, playback_time, fixture_config, fixture_presets, start_monotonic
     fixture_config, fixture_presets = load_fixtures_config()
