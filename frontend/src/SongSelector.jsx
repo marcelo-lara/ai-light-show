@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'preact/hooks';
 
 export default function SongSelector({ currentSongFile, songsList, setCurrentSongFile }) {
   const [isSongsListExpanded, setIsSongsListExpanded] = useState(false);
