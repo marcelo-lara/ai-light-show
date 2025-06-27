@@ -91,6 +91,10 @@ export function App() {
             setSongData(msg.metadata || {});
             break;
           }
+          case "syncAck": {
+            // keepalive message to acknowledge sync
+            break;
+          }
           default:
             console.warn("Unhandled message type:", msg.type);
         }
@@ -178,6 +182,7 @@ export function App() {
             <SongAnalysis 
               analysisResult={analysisResult} 
               currentTime={currentTime}
+              setCurrentTime={setCurrentTime}
             />
           </div>
           )}

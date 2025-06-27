@@ -1,7 +1,7 @@
 import { useState, useRef } from "preact/hooks";
 import { use, useEffect } from "react";
 
-export default function SongAnalysis({ analysisResult, currentTime }) {
+export default function SongAnalysis({ analysisResult, currentTime, setCurrentTime }) {
 
     const [regions, setRegions] = useState([]);
     const [currentRegion, setCurrentRegion] = useState(false);
@@ -40,16 +40,13 @@ export default function SongAnalysis({ analysisResult, currentTime }) {
     }, [currentTime]);
 
     useEffect(() => {
-        if (currentRegionRef.current) {
-            const container = currentRegionRef.current.closest('.overflow-x-auto');
-            if (container) {
-                const containerRect = container.getBoundingClientRect();
-                const regionRect = currentRegionRef.current.getBoundingClientRect();
-                if (regionRect.top < containerRect.top || regionRect.bottom > containerRect.bottom) {
-                    currentRegionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-                }
-            }
-        }
+      if (currentRegionRef.current) {
+        currentRegionRef.current.scrollIntoView({
+          behavior: 'smooth',
+          inline: 'center',
+          block: 'nearest'
+        });
+      }
     }, [currentRegion]);
 
   return (
@@ -62,42 +59,54 @@ export default function SongAnalysis({ analysisResult, currentTime }) {
       {/* Song Regions */}
       <div className="mt-4">
         <h3 className="text-xl font-bold mb-2">Regions</h3>
-        <div className="overflow-x-auto" style={{ maxHeight: 'calc(10 * 2.5rem)', overflowY: 'auto' }}>
-          <table className="w-full text-sm text-gray-300">
-            <thead>
-              <tr className="border-b border-gray-700">
-                <th className="text-left">Label</th>
-                <th className="text-left">Start</th>
-                <th className="text-left">Energy</th>
-              </tr>
-            </thead>
-            <tbody>
-              {regions.map((region, index) => (
-                <tr
+        <div className="overflow-x-auto">
+          <div className="flex items-end space-x-1 px-1 py-2">
+            {regions.map((region, index) => {
+              const energyPercent = ((region.energy - minEnergy) / (maxEnergy - minEnergy)) * 100;
+
+              return (
+                <div
                   key={index}
                   ref={index === currentRegion ? currentRegionRef : null}
-                  className={`border-b border-gray-700 ${index === currentRegion ? 'bg-green-800' : ''}`}
+                  className={`flex flex-col items-center transition-all duration-200 ${
+                    index === currentRegion ? 'ring-2 ring-gray-400' : ''
+                  }`}
+                  style={{ width: '20px' }}
+                  onClick={()=>{setCurrentTime(region.start)}}
                 >
-                  <td className="w-3">
-                    <div className="w-8 h-8 flex items-center justify-center rounded text-white" style={{ backgroundColor: labelColorMap[region.label]}}>
-                      {region.label}
-                    </div>
-                  </td>
-                  <td>{region.start.toFixed(2)}s</td>
-                  <td>
-                    <div className="w-full h-4 bg-gray-700 rounded">
-                      <div
-                        className="h-4 bg-green-500 rounded"
-                        style={{ width: `${((region.energy - minEnergy) / (maxEnergy - minEnergy)) * 100}%` }}
-                      ></div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  {/* Energy Container */}
+                  <div
+                    className="flex items-end w-full bg-gray-800 rounded"
+                    style={{ height: '100px' }}
+                  >
+                    <div
+                      className="bg-green-500 w-full rounded-t"
+                      style={{
+                        height: `${energyPercent}%`,
+                        transition: 'height 0.2s',
+                      }}
+                    ></div>
+                  </div>
+
+                  {/* Label Box */}
+                  <div
+                    className="w-full text-xs text-white flex items-center justify-center mt-1"
+                    style={{
+                      backgroundColor: labelColorMap[region.label],
+                      height: '20px',
+                      minWidth: '15px',
+                    }}
+                  >
+                    {region.label}
+                  </div>
+                </div>
+              );
+            })}
+
+          </div>
         </div>
       </div>
+
     </>
   );
 }
