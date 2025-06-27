@@ -6,9 +6,7 @@ from backend.config import LOCAL_TEST_SONG_PATH
 from sklearn.cluster import KMeans
 import numpy as np
 
-def extract_beats_and_chords(audio_path: str, output_json_path: str = '', bars_1=4, bars_2=2):
-    if output_json_path == '':
-        output_json_path = audio_path + ".beats_chords.json"
+def extract_beats_and_chords(audio_path: str, output_json_path: str = '', bars_1=4, bars_2=2, save_analysis=False):
 
     # Load audio (mono)
     loader = es.MonoLoader(filename=audio_path)
@@ -98,8 +96,14 @@ def extract_beats_and_chords(audio_path: str, output_json_path: str = '', bars_1
         "regions_2bars": regions_2
     }
 
-    Path(output_json_path).write_text(json.dumps(results, indent=2))
-    print(f"✅ Saved beat and chord data to {output_json_path}")
+    print(f"✅ Analysis complete for {output_json_path}")
+
+    if save_analysis:
+        if output_json_path == '':
+            output_json_path = audio_path + ".beats_chords.json"
+        Path(output_json_path).write_text(json.dumps(results, indent=2))
+        print(f"✅ Saved beat and chord data to {output_json_path}")
+    
     return results
 
 

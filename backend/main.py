@@ -274,6 +274,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
             elif msg.get("type") == "analyzeSong":
                 song_file = msg["songFile"]
+                song_file = song_file + '.mp3' if not song_file.endswith('.mp3') else song_file
+
                 model = msg.get("model", ["essentia"])
                 song_path = SONGS_DIR / song_file
 
@@ -286,9 +288,9 @@ async def websocket_endpoint(websocket: WebSocket):
 
                     results['beats'] = song_beats
                     results['regions'] = essentia_result.get("regions_4bars", [])
-                    #beats = get_song_beats(str(song_path))
-                    #print(f"   - {len(beats)} beats detected")
 
+                    song_metadata['analysis'] = essentia_result
+                    save_song_metadata(song_file, song_metadata)
 
                     await websocket.send_json({
                         "type": "analyzeResult",

@@ -27,8 +27,8 @@ def load_song(song_name: str) -> str:
     Loads a song by its name from the SONGS_DIR.
     Returns the full path to the song file.
     """
-
-    song_path = SONGS_DIR / f"{song_name}.mp3"
+    song_path = song_name + '.mp3' if not song_name.endswith('.mp3') else song_name
+    song_path = SONGS_DIR / song_name
     
     if not song_path.exists():
         raise FileNotFoundError(f"Song '{song_name}' not found in {SONGS_DIR}")
@@ -48,10 +48,10 @@ def load_song_metadata(song_name: str) -> dict:
     
     if not metadata_path.exists():
         return {
-          "length": 135,
-          "style": "electronic",
-          "title": "Born Slippy",
-          "bpm": 140,
+          "length": 100,
+          "style": "unknown",
+          "title": song_name,
+          "bpm": 120,
           "arrangement": []
         }
 

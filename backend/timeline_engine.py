@@ -34,7 +34,7 @@ def execute_timeline(current_time):
     return timefound
 
 # Render the timeline for a song based on its cues
-def render_timeline(fixture_config, fixture_presets, current_song, cues=None, bpm=120.0, fps=120):
+def render_timeline(fixture_config, fixture_presets, current_song, cues=None, bpm=120.0, fps=FPS):
     """ 
     Render the timeline for a song based on its cues.
     This function processes the cues and generates a timeline of DMX frames.
@@ -83,7 +83,7 @@ def pre_render_timeline(cues, fixture_config, fixture_presets, bpm=120.0, fps=12
     def find_fixture(fid):
         return next((f for f in fixture_config if f["id"] == fid), None)
 
-    def find_preset(pname, ftype):
+    def find_preset(pname: str, ftype: str) -> dict | None:
         return next((p for p in fixture_presets if p["name"] == pname and p["type"] == ftype), None)
 
     def interpolate_steps(start_values, end_values, duration, fps):
@@ -134,6 +134,9 @@ def pre_render_timeline(cues, fixture_config, fixture_presets, bpm=120.0, fps=12
         def render_steps(start_time):
             nonlocal channel_last_values
             t = start_time
+            if not preset or "steps" not in preset or preset["steps"] is None:
+                print(f"  ⚠️ Skipping cue at {start_time}s: preset or steps missing")
+                return
             for step in preset["steps"]:
                 step_type = step["type"]
 
