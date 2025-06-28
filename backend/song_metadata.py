@@ -54,7 +54,7 @@ class SongMetadata:
 
     @property
     def mp3_path(self) -> str:
-        return self._mp3_path or ''
+        return self._mp3_path or 'PATH_NOT_FOUND'
 
     @property
     def title(self):
@@ -106,7 +106,10 @@ class SongMetadata:
 
     def _find_mp3_path(self):
         """Try to locate the MP3 file for this song."""
-        mp3_path = os.path.join(self._songs_folder, f"{self._song_name}.mp3")
+        if not self._song_name.endswith(".mp3"):
+            self._song_name += ".mp3"
+
+        mp3_path = os.path.join(self._songs_folder, self._song_name)
         if os.path.isfile(mp3_path):
             return mp3_path
         else:

@@ -100,7 +100,7 @@ def extract_with_essentia(audio_path: str, bars_1=4, bars_2=2):
         return np.interp(target_times, series_times, series_values).tolist()
 
     beat_volumes = interpolate_series_at_targets(rms_times, rms_values, [float(b) for b in beats])
-    beat_volume_tuples = [[round(float(b), 4), round(float(v), 6)] for b, v in zip(beats, beat_volumes)]
+    beat_volume_tuples = [[round(float(b), 4), round(float(v), 4)] for b, v in zip(beats, beat_volumes)]
 
     # Load audio (mono)
     loader = es.MonoLoader(filename=audio_path)

@@ -13,6 +13,7 @@ from backend.chaser_utils import expand_chaser_template, get_chasers
 from backend.song_utils import get_songs_list, load_song_metadata, save_song_metadata
 from backend.fixture_utils import load_fixtures_config
 from backend.song_metadata import SongMetadata, Section
+from backend.song_analyze import song_analyze
 from backend.ai.essentia_analysis import extract_with_essentia
 from backend.ai.essentia_chords import extract_chords_and_align
 from backend.config import SONGS_DIR
@@ -280,53 +281,19 @@ async def websocket_endpoint(websocket: WebSocket):
                 })
 
             elif msg.get("type") == "analyzeSong":
-                song_file = msg["songFile"]
-                song_file = song_file + '.mp3' if not song_file.endswith('.mp3') else song_file
+                if not song:
+                    print("❌ No song loaded for analysis")
+                    return
+                print(f"🔍 Analyzing song: {song.title} ({song.mp3_path})")
 
-                model = msg.get("model", ["essentia"])
-                song_path = SONGS_DIR / song_file
+                song = song_analyze(song)
+                song.save()
 
-                try:
-                    print(f"🎵 Analyzing {song_file}")
-                    results = {}
-                    essentia_result = extract_with_essentia(str(song_path))
-
-                    essentia_chords_result = extract_chords_and_align(str(song_path))
-                    song_beats = essentia_chords_result.get("beats", [])
-                    results['chords'] = essentia_chords_result.get("chords", [])
-
-                    # Save analysis core - results
-                    bpm = essentia_result.get("bpm", 100)
-                    results['bpm'] = bpm
-                    results['beats'] = song_beats
-                    results['regions'] = essentia_result.get("regions_2bars", [])
-                    results['essentia'] = essentia_result
-
-                    song_metadata['bpm'] = bpm
-                    save_song_metadata(song_file, song_metadata)
-
-                    await websocket.send_json({
-                        "type": "analyzeResult",
-                        "status": "ok",
-                        "analysis": results,
-                        "songMetadata": song_metadata
-                    })
-
-                    # test beat sync
-                    if msg['renderCues']:
-                        tmp_cue = test_beat_sync(song_beats)
-                        await websocket.send_json({
-                            "type": "cuesUpdated",
-                            "cues": tmp_cue
-                        })
-
-
-                except Exception as e:
-                    await websocket.send_json({
-                        "type": "analyzeResult",
-                        "status": "error",
-                        "message": str(e)
-                    })
+                await websocket.send_json({
+                    "type": "analyzeResult",
+                    "status": "ok",
+                    "songMetadata": song.to_dict()
+                })
 
             else:
                 print(f"❓ Unknown message type: {msg.get('type')}")
