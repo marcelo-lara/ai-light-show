@@ -81,8 +81,7 @@ export function App() {
             break;
           }
           case "analyzeResult": {
-            setAnalysisResult(msg.analysis || {});
-            if (msg.metadata)setSongData(msg.metadata);
+            if (msg.metadata) setSongData(msg.metadata);
             setToast("Song analysis complete!");
             break;
           }

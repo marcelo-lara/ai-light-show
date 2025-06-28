@@ -284,7 +284,6 @@ async def websocket_endpoint(websocket: WebSocket):
                 if not song:
                     print("❌ No song loaded for analysis")
                     return
-                print(f"🔍 Analyzing song: {song.title} ({song.mp3_path})")
 
                 song = song_analyze(song)
                 song.save()
@@ -292,7 +291,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.send_json({
                     "type": "analyzeResult",
                     "status": "ok",
-                    "songMetadata": song.to_dict()
+                    "metadata": song.to_dict()
                 })
 
             else:

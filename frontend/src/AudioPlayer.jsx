@@ -127,8 +127,8 @@ export default function AudioPlayer({
   }
 
   useEffect(() => {
-    console.log("Analysis result updated:", analysisResult);
     if (!analysisResult || analysisResult.status !== "ok") return;
+    console.log("Analysis result updated:", analysisResult);
     setSongBeats(analysisResult.beats || []);
 
   }, [analysisResult]);
