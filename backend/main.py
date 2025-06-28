@@ -12,10 +12,10 @@ from backend.timeline_engine import render_timeline, execute_timeline
 from backend.chaser_utils import expand_chaser_template, get_chasers
 from backend.song_utils import get_songs_list, load_song_metadata, save_song_metadata
 from backend.fixture_utils import load_fixtures_config
-from backend.ai.beat_detect import get_song_beats
+from backend.song_metadata import SongMetadata, Section
 from backend.ai.essentia_analysis import extract_with_essentia
 from backend.ai.essentia_chords import extract_chords_and_align
-from backend.config import MASTER_FIXTURE_CONFIG, SONGS_DIR, LOCAL_TEST_SONG_PATH, FIXTURE_PRESETS
+from backend.config import SONGS_DIR
 from fastapi import WebSocket, WebSocketDisconnect
 
 # ArtNet Fixture Config and Presets
@@ -27,6 +27,7 @@ current_song = None
 cue_list = []
 current_song_file = None
 song_metadata = {}
+song = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -129,7 +130,7 @@ is_playing = False
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    global is_playing, playback_time, start_monotonic, current_song_file, cue_list
+    global is_playing, playback_time, start_monotonic, current_song_file, cue_list, song
 
     await websocket.accept()
     clients.append(websocket)
@@ -163,14 +164,16 @@ async def websocket_endpoint(websocket: WebSocket):
             elif msg.get("type") == "loadSong":
                 print(f"🎶 Loading song: {msg['file']}")
                 current_song_file = msg["file"]
+                
+                song = SongMetadata(current_song_file, songs_folder=SONGS_DIR)
                 load_cues(current_song_file)
-                load_song_metadata(current_song_file)
+
                 await websocket.send_json({
                     "type": "songLoaded",
-                    "metadata": song_metadata,
+                    "metadata": song.to_dict(),
                     "cues": cue_list,                    
                 })
-                bpm = song_metadata.get("bpm", 120)
+                bpm = song.bpm
                 render_timeline(fixture_config, fixture_presets, cues=cue_list, current_song=current_song_file, bpm=bpm)
 
 
@@ -247,8 +250,11 @@ async def websocket_endpoint(websocket: WebSocket):
 
             elif msg.get("type") == "saveArrangement":
                 arrangement = msg["arrangement"]
-                song_metadata['arrangement'] = arrangement
-                save_song_metadata(current_song_file, song_metadata)
+                if song is not None:
+                    song.arrangement = {k: Section(**v) for k, v in arrangement.items()}
+                    song.save()
+                else:
+                    print("No song object loaded; cannot save arrangement.")
 
             elif msg.get("type") == "insertChaser":
                 chaser_name = msg["chaser"]

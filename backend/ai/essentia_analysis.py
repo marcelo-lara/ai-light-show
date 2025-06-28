@@ -73,9 +73,7 @@ def cluster_chord_progressions(regions):
     return regions
 
 
-def extract_with_essentia(audio_path: str, output_json_path: str='', bars_1=4, bars_2=2):
-    if output_json_path == '':
-        output_json_path = f"{audio_path}.analysis.json"
+def extract_with_essentia(audio_path: str, bars_1=4, bars_2=2):
 
     # Load audio (mono)
     loader = es.MonoLoader(filename=audio_path)
@@ -171,13 +169,10 @@ def extract_with_essentia(audio_path: str, output_json_path: str='', bars_1=4, b
         "regions_1bar": regions_1
     }
 
-    Path(output_json_path).write_text(json.dumps(results, indent=2))
-    print(f"✅ Saved beat and chord data to {output_json_path}")
     return results
 
 
 if __name__ == "__main__":
-    LOCAL_TEST_SONG_PATH = "/home/darkangel/ai-light-show/songs/Era-Cathar_Rhythm.mp3"
-    extract_with_essentia(
-        LOCAL_TEST_SONG_PATH
-    )
+    results = extract_with_essentia("/home/darkangel/ai-light-show/songs/born_slippy.mp3"    )
+    Path("/home/darkangel/ai-light-show/songs/born_slippy.mp3.analysis.json").write_text(json.dumps(results, indent=2))
+    print(f"✅ Saved beat and chord data")
