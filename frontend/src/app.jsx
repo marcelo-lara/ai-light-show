@@ -177,7 +177,7 @@ export function App() {
               analysisResult={analysisResult}
             />
           </div>
-          {analysisResult && ( 
+          {analysisResult && analysisResult?.bpm && ( 
           <div className="bg-white/10 rounded-2xl p-6 mb-6">
             <SongAnalysis 
               analysisResult={analysisResult} 

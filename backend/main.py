@@ -158,7 +158,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     "isPlaying": is_playing,
                     "currentTime": playback_time
                 })
-                print(f"[WS] Sync: isPlaying={is_playing}, currentTime={playback_time}")
+                # print(f"[WS] Sync: isPlaying={is_playing}, currentTime={playback_time}")
 
             elif msg.get("type") == "loadSong":
                 print(f"🎶 Loading song: {msg['file']}")
@@ -293,7 +293,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     bpm = essentia_result.get("bpm", 100)
                     results['bpm'] = bpm
                     results['beats'] = song_beats
-                    results['regions'] = essentia_result.get("regions_1bar", [])
+                    results['regions'] = essentia_result.get("regions_2bars", [])
                     results['essentia'] = essentia_result
 
                     song_metadata['bpm'] = bpm

@@ -5,7 +5,8 @@
     "type": "rgb",
     "mode": "single",
     "parameters": {
-        "fade_beats": 0.25
+        "fade_beats": 0.25,
+        "start_brightness": 1
     },
     "steps": [
         {
@@ -28,8 +29,8 @@
     ]
 },
 {
-    "name": "flash to black",
-    "description": "Set RGB to max brightness, then fade to black",
+    "name": "red flash to black",
+    "description": "Set red channel to start_brightness, then fade to black",
     "type": "rgb",
     "mode": "single",
     "parameters": {
@@ -40,17 +41,13 @@
         {
             "type": "set",
             "values": {
-                "red": 128,
-                "green": 128,
-                "blue": 128
+                "red": 128
             }
         },
         {
             "type": "fade",
             "values": {
-                "red": 0,
-                "green": 0,
-                "blue": 0
+                "red": 0
             },
             "duration": 0.25
         }
@@ -70,80 +67,80 @@
         {
             "type": "set",
             "values": {
-                "green": 255
+                "blue": 255
             }
         },
         {
             "type": "fade",
             "values": {
-                "green": 0
+                "blue": 0
             },
             "duration": 0.5
         },
         {
             "type": "fade",
             "values": {
-                "green": 0
+                "blue": 0
             },
             "duration": 0.5
         },
         {
             "type": "set",
             "values": {
-                "green": 215
+                "blue": 215
             }
         },
         {
             "type": "fade",
             "values": {
-                "green": 0
+                "blue": 0
             },
             "duration": 0.5
         },
         {
             "type": "fade",
             "values": {
-                "green": 0
+                "blue": 0
             },
             "duration": 0.5
         },
         {
             "type": "set",
             "values": {
-                "green": 175
+                "blue": 175
             }
         },
         {
             "type": "fade",
             "values": {
-                "green": 0
+                "blue": 0
             },
             "duration": 0.5
         },
         {
             "type": "fade",
             "values": {
-                "green": 0
+                "blue": 0
             },
             "duration": 0.5
         },
         {
             "type": "set",
             "values": {
-                "green": 135
+                "blue": 135
             }
         },
         {
             "type": "fade",
             "values": {
-                "green": 0
+                "blue": 0
             },
             "duration": 0.5
         },
         {
             "type": "fade",
             "values": {
-                "green": 0
+                "blue": 0
             },
             "duration": 0.5
         }
@@ -156,7 +153,8 @@
     "mode": "loop",
     "parameters": {
         "fade_beats": 0.5,
-        "loop_beats": 4
+        "loop_beats": 4,
+        "start_brightness": 1
     },
     "steps": [
         {

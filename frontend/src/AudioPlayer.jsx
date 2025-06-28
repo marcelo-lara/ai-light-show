@@ -42,6 +42,7 @@ export default function AudioPlayer({
         minPxPerSec: 10,
         autoScroll: true,
         dragToSeek: true,
+        normalize: true,
         scrollParent: true, // Ensure scrollbar is always visible
         plugins: [TimelinePlugin.create(), regions]
       });
