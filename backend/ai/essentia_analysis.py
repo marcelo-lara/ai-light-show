@@ -79,6 +79,33 @@ def extract_with_essentia(audio_path: str, bars_1=4, bars_2=2):
     loader = es.MonoLoader(filename=audio_path)
     audio = loader()
 
+    # --- Compute RMS (volume) for each frame ---
+    frame_length = 2048
+    hop_length = 512
+    rms = es.RMS()
+    rms_values = []
+    rms_times = []
+    for i, frame in enumerate(es.FrameGenerator(audio, frameSize=frame_length, hopSize=hop_length, startFromZero=True)):
+        rms_val = float(rms(frame))
+        rms_values.append(rms_val)
+        rms_times.append((i * hop_length) / 44100.0)
+
+    # Beat detection
+    rhythm_extractor = es.RhythmExtractor2013(method="multifeature")
+    bpm, beats, _, _, _ = rhythm_extractor(audio)
+
+    # Interpolate RMS at beat times
+    def interpolate_series_at_targets(series_times, series_values, target_times):
+        import numpy as np
+        return np.interp(target_times, series_times, series_values).tolist()
+
+    beat_volumes = interpolate_series_at_targets(rms_times, rms_values, [float(b) for b in beats])
+    beat_volume_tuples = [[round(float(b), 4), round(float(v), 6)] for b, v in zip(beats, beat_volumes)]
+
+    # Load audio (mono)
+    loader = es.MonoLoader(filename=audio_path)
+    audio = loader()
+
     # Beat detection
     rhythm_extractor = es.RhythmExtractor2013(method="multifeature")
     bpm, beats, _, _, _ = rhythm_extractor(audio)
@@ -163,6 +190,7 @@ def extract_with_essentia(audio_path: str, bars_1=4, bars_2=2):
         "scale": scale,
         "strength": float(strength),
         "beats": [round(float(b), 4) for b in beats],
+        "beat_volumes": beat_volume_tuples,
         "avg_hpcp": [round(float(val), 4) for val in avg_hpcp],
         "regions_4bars": regions_4,
         "regions_2bars": regions_2,

@@ -22,6 +22,7 @@ class Section:
 
 
 class SongMetadata:
+
     def __init__(self, song_name, songs_folder=None, ignore_existing=False):
         self._song_name = song_name
         self._title = song_name.replace("_", " ")
@@ -29,6 +30,7 @@ class SongMetadata:
         self._bpm = 120
         self._beats = []
         self._arrangement = {}
+        self._duration = 0.0
         if not songs_folder:
             from backend.config import SONGS_DIR
             self._songs_folder = SONGS_DIR
@@ -51,8 +53,8 @@ class SongMetadata:
         return self._songs_folder
 
     @property
-    def mp3_path(self):
-        return self._mp3_path
+    def mp3_path(self) -> str:
+        return self._mp3_path or ''
 
     @property
     def title(self):
@@ -69,6 +71,14 @@ class SongMetadata:
     @genre.setter
     def genre(self, value):
         self._genre = value
+
+    @property
+    def duration(self) -> float:
+        return self._duration
+
+    @duration.setter
+    def duration(self, value: float):
+        self._duration = float(value)
 
     @property
     def bpm(self):
@@ -136,14 +146,32 @@ class SongMetadata:
             "outro": Section(2.5, 3.0, "Outro with fade-out or reduced energy.")
         }
 
-    def add_beat(self, time):
-        self.beats.append({"time": time, "volume": 0.0, "energy": 0.0})
+    def add_beat(self, time, volume=0.0, energy=1.0):
+        self.beats.append({"time": time, "volume": volume, "energy": energy})
 
     def clear_beats(self):
         self.beats = []
 
     def get_beats_array(self):
         return [beat["time"] for beat in self.beats]
+
+    def set_beats_volume(self, beat_volume: list[tuple[float, float]]):
+        if len(beat_volume) != len(self.beats):
+            print(f"⚠️ Warning: Volume list length {len(beat_volume)} does not match number of beats {len(self.beats)}.")
+            return
+        for i, (time, volume) in enumerate(beat_volume):
+            if abs(self.beats[i]["time"] - time) > 1e-6:
+                print(f"⚠️ Warning: Beat time mismatch at index {i}: expected {self.beats[i]['time']}, got {time}")
+            self.beats[i]["volume"] = float(volume)
+
+    def set_beats_energy(self, beat_energy: list[tuple[float, float]]):
+        if len(beat_energy) != len(self.beats):
+            print(f"⚠️ Warning: Energy list length {len(beat_energy)} does not match number of beats {len(self.beats)}.")
+            return
+        for i, (time, energy) in enumerate(beat_energy):
+            if abs(self.beats[i]["time"] - time) > 1e-6:
+                print(f"⚠️ Warning: Beat time mismatch at index {i}: expected {self.beats[i]['time']}, got {time}")
+            self.beats[i]["energy"] = float(energy)
 
     def update_beat(self, time, volume=None, energy=None):
         for beat in self.beats:
