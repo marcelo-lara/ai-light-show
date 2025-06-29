@@ -83,11 +83,11 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
 
     return (
     <>
-      <h2 className="text-2xl font-bold mb-4">Song Analysis</h2>
+      <h2 className="text-x2 font-bold mb-4">🤖 Song Analysis</h2>
       
       {/* Song Beats */}
       <div className="mt-4">
-        <h3 className="text-xl font-bold mb-2">Beats</h3>
+        <h3 className="text-x1 font-bold mb-2">beats</h3>
         <div className="overflow-x-auto">
           <div className="flex items-end space-x-1 px-1 py-2">
             {beats.map((beat, index) => {
