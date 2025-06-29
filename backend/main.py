@@ -13,7 +13,7 @@ from backend.chaser_utils import expand_chaser_template, get_chasers
 from backend.song_utils import get_songs_list, load_song_metadata, save_song_metadata
 from backend.fixture_utils import load_fixtures_config
 from backend.song_metadata import SongMetadata, Section
-from backend.song_analyze import song_analyze
+from backend.song_analyze import song_analyze, build_test_cues
 from backend.ai.essentia_analysis import extract_with_essentia
 from backend.ai.essentia_chords import extract_chords_and_align
 from backend.config import SONGS_DIR
@@ -293,6 +293,20 @@ async def websocket_endpoint(websocket: WebSocket):
                     "status": "ok",
                     "metadata": song.to_dict()
                 })
+
+                create_test = msg.get("renderTestCues", False)
+                if create_test:
+                    print("👁️‍🗨️ Generating cues from song analysis")
+                    cues = build_test_cues(song)
+                    cue_list.clear()
+                    cue_list.extend(cues)
+                    render_timeline(fixture_config, fixture_presets, cues=cue_list, current_song=current_song_file, bpm=song.bpm)
+
+                    await websocket.send_json({
+                        "type": "cuesUpdated",
+                        "cues": cue_list
+                    })
+
 
             else:
                 print(f"❓ Unknown message type: {msg.get('type')}")

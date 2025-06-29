@@ -30,6 +30,10 @@ def execute_timeline(current_time):
     dmx_universe = show_timeline[timefound]
 
     send_artnet(dmx_universe)
+    # Log DMX values from index 15 to 35 (channels 16-36), fixed 3 digits
+    dmx_slice = dmx_universe[15:40]
+    dmx_str = '.'.join(f"{v:03d}" for v in dmx_slice)
+    print(f"[{timefound:.3f}] {dmx_str}")
     return timefound
 
 # Render the timeline for a song based on its cues

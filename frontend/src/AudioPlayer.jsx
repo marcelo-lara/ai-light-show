@@ -123,7 +123,7 @@ export default function AudioPlayer({
   }, [currentTime]);
 
   const handleAnalyzeSong = () => {
-      analyzeSong({songFile: currentSongFile, renderCues: generateCues});
+      analyzeSong({songFile: currentSongFile, renderTestCues: generateCues});
   }
 
   useEffect(() => {
