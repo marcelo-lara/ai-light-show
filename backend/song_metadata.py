@@ -24,11 +24,12 @@ class Section:
 class SongMetadata:
 
     def __init__(self, song_name, songs_folder=None, ignore_existing=False):
-        self._song_name = song_name
+        self._song_name = song_name[:-4] if song_name.endswith(".mp3") else song_name
         self._title = song_name.replace("_", " ")
         self._genre = "unknown"
         self._bpm = 120
         self._beats = []
+        self._chords = []
         self._arrangement = {}
         self._duration = 0.0
         if not songs_folder:
@@ -38,11 +39,12 @@ class SongMetadata:
             self._songs_folder = songs_folder
 
         self._mp3_path = self._find_mp3_path()
+        self._hints_folder = os.path.join(self._songs_folder, "hints")
 
         if not ignore_existing and self.exists():
             self.load()
         else:
-            self.generate_placeholders()
+            self.initialize_song_metadata()
 
     @property
     def song_name(self):
@@ -97,6 +99,14 @@ class SongMetadata:
         self._beats = value
 
     @property
+    def chords(self):
+        return self._chords
+
+    @chords.setter
+    def chords(self, value):
+        self._chords = value
+
+    @property
     def arrangement(self):
         return self._arrangement
 
@@ -106,15 +116,52 @@ class SongMetadata:
 
     def _find_mp3_path(self):
         """Try to locate the MP3 file for this song."""
-        if not self._song_name.endswith(".mp3"):
-            self._song_name += ".mp3"
+        song_file = f"{self._song_name}.mp3" if not self._song_name.endswith(".mp3") else self._song_name
 
-        mp3_path = os.path.join(self._songs_folder, self._song_name)
+        mp3_path = os.path.join(self._songs_folder, song_file)
         if os.path.isfile(mp3_path):
             return mp3_path
         else:
             print(f"⚠️ Warning: MP3 file not found for '{self._song_name}' at {mp3_path}")
             return None
+
+    def _load_hints_files(self):
+        """Try to locate the hints files for this song."""
+        hints_folder = os.path.join(self._songs_folder, "hints")
+        if not os.path.isdir(hints_folder):
+            print(f"⚠️ Warning: Hints folder not found for '{self._song_name}' at {hints_folder}")
+            return None
+
+        ## chords file
+        chords_file = os.path.join(hints_folder, f"{self._song_name}.chords.json")
+        if os.path.isfile(chords_file):
+            with open(chords_file, "r") as f:
+                self._chords = json.load(f)
+            print(f" -> Chords loaded from {chords_file}")
+
+        # lyrics file
+        lyrics_file = os.path.join(hints_folder, f"{self._song_name}.lyrics.json")
+        if os.path.isfile(lyrics_file):
+            with open(lyrics_file, "r") as f:
+                lyrics_data = json.load(f)
+            print(f" -> Lyrics loaded from {lyrics_file}")
+
+        # segments file (moises.ai)
+        segments_file = os.path.join(hints_folder, f"{self._song_name}.segments.json")
+        if os.path.isfile(segments_file):
+            with open(segments_file, "r") as f:
+                segments_data = json.load(f)
+            print(f" -> Segments loaded from {segments_file}")
+
+            # convert segments to arrangement
+            for segment in segments_data:
+                section = Section(
+                    start=segment["start"],
+                    end=segment["end"],
+                    prompt=segment.get("prompt", "")
+                )
+                self._arrangement[segment["label"]] = section
+            print(f"    .. {len(self._arrangement)} sections created")
 
     def get_metadata_path(self):
         return os.path.join(self._songs_folder, f"{self._song_name}.meta.json")
@@ -132,7 +179,11 @@ class SongMetadata:
         self.beats = data.get("beats", [])
         self.arrangement = {k: Section.from_dict(v) for k, v in data.get("arrangement", {}).items()}
 
-    def generate_placeholders(self):
+    def initialize_song_metadata(self):
+
+        # look for hints files
+        self._load_hints_files()
+        
         self.beats = [
             {"time": 0.5, "volume": 0.2, "energy": 0.3},
             {"time": 1.0, "volume": 0.4, "energy": 0.5},
@@ -141,13 +192,14 @@ class SongMetadata:
             {"time": 2.5, "volume": 0.3, "energy": 0.4},
         ]
 
-        self.arrangement = {
-            "intro": Section(0.0, 0.5, "Intro section with ambient sounds."),
-            "verse": Section(0.5, 1.5, "Verse with minimal instrumentation and vocals."),
-            "chorus": Section(1.5, 2.0, "Chorus with full energy and instrumentation."),
-            "bridge": Section(2.0, 2.5, "Bridge section with rhythmic variation."),
-            "outro": Section(2.5, 3.0, "Outro with fade-out or reduced energy.")
-        }
+        if len(self._arrangement) == 0:
+            self.arrangement = {
+                "intro": Section(0.0, 0.5, "Intro section with ambient sounds."),
+                "verse": Section(0.5, 1.5, "Verse with minimal instrumentation and vocals."),
+                "chorus": Section(1.5, 2.0, "Chorus with full energy and instrumentation."),
+                "bridge": Section(2.0, 2.5, "Bridge section with rhythmic variation."),
+                "outro": Section(2.5, 3.0, "Outro with fade-out or reduced energy.")
+            }
 
     def add_beat(self, time, volume=0.0, energy=1.0):
         self.beats.append({"time": time, "volume": volume, "energy": energy})
