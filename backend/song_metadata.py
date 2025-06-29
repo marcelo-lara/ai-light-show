@@ -4,22 +4,19 @@ import json
 import os
 
 class Section:
-    def __init__(self, start, end, prompt):
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "start": self.start,
+            "end": self.end,
+            "prompt": self.prompt,
+        }
+    
+    def __init__(self, name, start, end, prompt):
+        self.name = name
         self.start = start
         self.end = end
         self.prompt = prompt
-
-    def to_dict(self):
-        return {
-            "start": self.start,
-            "end": self.end,
-            "prompt": self.prompt
-        }
-
-    @staticmethod
-    def from_dict(data):
-        return Section(data["start"], data["end"], data["prompt"])
-
 
 class SongMetadata:
 
@@ -30,7 +27,7 @@ class SongMetadata:
         self._bpm = 120
         self._beats = []
         self._chords = []
-        self._arrangement = {}
+        self._arrangement = []
         self._duration = 0.0
         if not songs_folder:
             from backend.config import SONGS_DIR
@@ -107,11 +104,15 @@ class SongMetadata:
         self._chords = value
 
     @property
-    def arrangement(self):
+    def arrangement(self) -> list[Section]:
         return self._arrangement
 
     @arrangement.setter
     def arrangement(self, value):
+        if not isinstance(value, list):
+            raise TypeError("Arrangement must be a list of Section objects.")
+        if not all(isinstance(v, Section) for v in value):
+            raise TypeError("All elements of arrangement must be Section objects.")
         self._arrangement = value
 
     def _find_mp3_path(self):
@@ -125,6 +126,40 @@ class SongMetadata:
             print(f"⚠️ Warning: MP3 file not found for '{self._song_name}' at {mp3_path}")
             return None
 
+    def load_chords_from_hints(self):
+        """Load chords from hints files if available."""
+        hints_folder = os.path.join(self._songs_folder, "hints")
+        chords_file = os.path.join(hints_folder, f"{self._song_name}.chords.json")
+
+        if os.path.isfile(chords_file):
+            with open(chords_file, "r") as f:
+                self._chords = json.load(f)
+            print(f" -> Chords loaded from {chords_file}")
+        else:
+            print(f"⚠️ Warning: Chords file not found for '{self._song_name}' at {chords_file}")
+
+    def load_arrangement_from_hints(self):
+        """Load arrangement from hints files if available."""
+        hints_folder = os.path.join(self._songs_folder, "hints")
+        segments_file = os.path.join(hints_folder, f"{self._song_name}.segments.json")
+        if not os.path.isfile(segments_file):
+            return False
+        with open(segments_file, "r") as f:
+            segments_data = json.load(f)
+        print(f" -> Segments loaded from {segments_file}")
+
+        # convert segments to arrangement (list of Section)
+        self.arrangement = [
+            Section(
+                name=segment.get("label") or segment.get("name", ""),
+                start=segment["start"],
+                end=segment["end"],
+                prompt=segment.get("prompt", "")
+            ) for segment in segments_data
+        ]
+        print(f"    .. {len(self._arrangement)} sections created")
+        return True
+
     def _load_hints_files(self):
         """Try to locate the hints files for this song."""
         hints_folder = os.path.join(self._songs_folder, "hints")
@@ -133,11 +168,7 @@ class SongMetadata:
             return None
 
         ## chords file
-        chords_file = os.path.join(hints_folder, f"{self._song_name}.chords.json")
-        if os.path.isfile(chords_file):
-            with open(chords_file, "r") as f:
-                self._chords = json.load(f)
-            print(f" -> Chords loaded from {chords_file}")
+        self.load_chords_from_hints()
 
         # lyrics file
         lyrics_file = os.path.join(hints_folder, f"{self._song_name}.lyrics.json")
@@ -146,22 +177,8 @@ class SongMetadata:
                 lyrics_data = json.load(f)
             print(f" -> Lyrics loaded from {lyrics_file}")
 
-        # segments file (moises.ai)
-        segments_file = os.path.join(hints_folder, f"{self._song_name}.segments.json")
-        if os.path.isfile(segments_file):
-            with open(segments_file, "r") as f:
-                segments_data = json.load(f)
-            print(f" -> Segments loaded from {segments_file}")
-
-            # convert segments to arrangement
-            for segment in segments_data:
-                section = Section(
-                    start=segment["start"],
-                    end=segment["end"],
-                    prompt=segment.get("prompt", "")
-                )
-                self._arrangement[segment["label"]] = section
-            print(f"    .. {len(self._arrangement)} sections created")
+        # segments file
+        self.load_arrangement_from_hints()
 
     def get_metadata_path(self):
         return os.path.join(self._songs_folder, f"{self._song_name}.meta.json")
@@ -177,7 +194,14 @@ class SongMetadata:
         self.genre = data.get("genre", self.genre)
         self.bpm = data.get("bpm", self.bpm)
         self.beats = data.get("beats", [])
-        self.arrangement = {k: Section.from_dict(v) for k, v in data.get("arrangement", {}).items()}
+        self.chords = data.get("chords", [])
+        self._arrangement = data.get("arrangement", [])
+
+        # attempt to load hints files if not already done
+        if len(self.beats) == 0:
+            self.load_chords_from_hints()
+        if len(self._arrangement) == 0:
+            self.load_arrangement_from_hints()
 
     def initialize_song_metadata(self):
 
@@ -193,13 +217,13 @@ class SongMetadata:
         ]
 
         if len(self._arrangement) == 0:
-            self.arrangement = {
-                "intro": Section(0.0, 0.5, "Intro section with ambient sounds."),
-                "verse": Section(0.5, 1.5, "Verse with minimal instrumentation and vocals."),
-                "chorus": Section(1.5, 2.0, "Chorus with full energy and instrumentation."),
-                "bridge": Section(2.0, 2.5, "Bridge section with rhythmic variation."),
-                "outro": Section(2.5, 3.0, "Outro with fade-out or reduced energy.")
-            }
+            self.arrangement = [
+                Section("intro", 0.0, 0.5, "Intro section with ambient sounds. (placeholder)"),
+                Section("verse", 0.5, 1.5, "Verse with minimal instrumentation and vocals."),
+                Section("chorus", 1.5, 2.0, "Chorus with full energy and instrumentation."),
+                Section("bridge", 2.0, 2.5, "Bridge section with rhythmic variation."),
+                Section("outro", 2.5, 3.0, "Outro with fade-out or reduced energy.")
+            ]
 
     def add_beat(self, time, volume=0.0, energy=1.0):
         self.beats.append({"time": time, "volume": volume, "energy": energy})
@@ -243,8 +267,10 @@ class SongMetadata:
             "title": self.title,
             "genre": self.genre,
             "bpm": self.bpm,
+            "chords": self.chords,
             "beats": self.beats,
-            "arrangement": {k: v.to_dict() for k, v in self.arrangement.items()},
+            # Serialize arrangement as list of dicts
+            "arrangement": [s.to_dict() if isinstance(s, Section) else s for s in self.arrangement],
         }
 
     def to_json(self):

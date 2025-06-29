@@ -1,8 +1,11 @@
 from backend.song_metadata import SongMetadata
 from backend.ai.essentia_analysis import extract_with_essentia
 
-def song_analyze(song: SongMetadata) -> SongMetadata:
+def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
     print(f"🔍 Analyzing song: {song.title} ({song.mp3_path})")
+
+    if reset_file:
+        song = SongMetadata(song.song_name, songs_folder=song.songs_folder, ignore_existing=True)
 
     ## Core analysis using Essentia
     essentia_core = extract_with_essentia(song.mp3_path)

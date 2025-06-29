@@ -4,6 +4,7 @@ import SongArrangement from './SongArrangement';
 import SongCues from './SongCues';
 import AudioPlayer from './AudioPlayer'; 
 import SongSelector from './SongSelector';
+import ChordsCard from './ChordsCard';
 import Chasers from './Chasers';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -90,6 +91,7 @@ export function App() {
           case "songLoaded": {
             setCues(msg.cues || []);
             setSongData(msg.metadata || {});
+            console.log("Song loaded:", msg.metadata);
             break;
           }
           case "syncAck": {
@@ -198,21 +200,30 @@ export function App() {
               updateCues={(cues)=>wsSend("updateCues", {cues: cues})}
             />
           </div>
-
-          {/* Song Arrangement Controls Card */}
-          <div className="bg-white/10 rounded-2xl p-6">
-            <SongArrangement
-              currentTime={currentTime}
-              songData={songData}
-              saveArrangement={(a) => {wsSend("saveArrangement", {arrangement: a})}}
-            />
-          </div>
-
         </div>
       </div>
 
-      {/* Fixture Panel */}
+      {/* Right Panel */}
       <div className="w-1/3 text-white p-6">
+        <div>
+          <SongSelector 
+            currentSongFile={currentSongFile} 
+            songsList={songsList} 
+            setCurrentSongFile={setCurrentSongFile} 
+          />
+        </div>
+
+        <SongArrangement
+          currentTime={currentTime}
+          setCurrentTime={setCurrentTime}
+          songData={songData}
+          saveArrangement={(a) => {wsSend("saveArrangement", {arrangement: a})}}
+        />
+
+        <div className="bg-white/10 p-2 mb-6 rounded text-white text-sm">
+          <ChordsCard songData={songData} currentTime={currentTime} />
+        </div>
+
         <div>
           <h2 className="text-2xl font-bold mb-4">Fixtures</h2>
           {fixtures.length === 0 ? (
@@ -234,13 +245,6 @@ export function App() {
             currentTime={currentTime}
             chasers={chasers}
             insertChaser={(chaserData) => wsSend("insertChaser", chaserData)}
-          />
-        </div>
-        <div className="mt-6">
-          <SongSelector 
-            currentSongFile={currentSongFile} 
-            songsList={songsList} 
-            setCurrentSongFile={setCurrentSongFile} 
           />
         </div>
       </div>
