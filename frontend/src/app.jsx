@@ -81,6 +81,8 @@ export function App() {
             break;
           }
           case "analyzeResult": {
+            console.log("Received song analysis result:", msg);
+            setAnalysisResult({"status": msg.status});
             if (msg.metadata) setSongData(msg.metadata);
             setToast("Song analysis complete!");
             break;
@@ -176,10 +178,10 @@ export function App() {
               analysisResult={analysisResult}
             />
           </div>
-          {analysisResult && analysisResult?.bpm && ( 
+          {songData && songData?.bpm && ( 
           <div className="bg-white/10 rounded-2xl p-6 mb-6">
             <SongAnalysis 
-              analysisResult={analysisResult} 
+              songData={songData} 
               currentTime={currentTime}
               setCurrentTime={setCurrentTime}
             />
