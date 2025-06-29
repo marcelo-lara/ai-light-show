@@ -27,9 +27,15 @@ def execute_timeline(current_time):
         return current_time  # Nothing to send
 
     timefound = max(available_times)
-    dmx_universe = show_timeline[timefound]
+    
+    # skip when timeline ends
+    if timefound == last_timefound:
+        return
+    last_timefound = timefound
 
+    dmx_universe = show_timeline[timefound]
     send_artnet(dmx_universe)
+
     # Log DMX values from index 15 to 35 (channels 16-36), fixed 3 digits
     dmx_slice = dmx_universe[15:40]
     dmx_str = '.'.join(f"{v:03d}" for v in dmx_slice)
