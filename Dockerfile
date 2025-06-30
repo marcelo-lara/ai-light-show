@@ -33,4 +33,4 @@ COPY --from=frontend /app/dist ./static/
 
 EXPOSE 5000
 ENV PYTHONUNBUFFERED=1
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "5000"]
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "5500"]

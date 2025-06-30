@@ -2,7 +2,7 @@ services:
   ai-light-show:
     build: .
     ports:
-      - "5000:5000"
+      - "5500:5500"
     network_mode: host
     volumes:
       - ./songs:/app/static/songs
