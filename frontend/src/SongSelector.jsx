@@ -3,6 +3,8 @@ import { useState } from 'preact/hooks';
 export default function SongSelector({ currentSongFile, songsList, setCurrentSongFile }) {
   const [isSongsListExpanded, setIsSongsListExpanded] = useState(false);
 
+  const sortedSongsList = [...songsList].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+
   return (
     <div>
       {currentSongFile && (
@@ -14,11 +16,11 @@ export default function SongSelector({ currentSongFile, songsList, setCurrentSon
         </div>
       )}
       {isSongsListExpanded && (
-        songsList.length === 0 ? (
+        sortedSongsList.length === 0 ? (
           <div className="text-sm text-gray-500 italic">No songs available</div>
         ) : (
           <ul className="pl-5">
-            {songsList.map((song) => (
+            {sortedSongsList.map((song) => (
               <li 
                 key={song} 
                 className={`cursor-pointer hover:text-blue-400 ${currentSongFile === song ? 'font-bold' : ''}`}
