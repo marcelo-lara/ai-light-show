@@ -5,22 +5,21 @@ import Spectrogram from 'wavesurfer.js/dist/plugins/spectrogram.esm.js'
 import ZoomPlugin from 'wavesurfer.js/dist/plugins/zoom.esm.js'
 import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.esm.js'
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js'
-import { use } from 'react';
-
 
 export default function AudioPlayer({ 
-  currentSongFile, onReady,
+  currentSongFile, 
   isPlaying, setIsPlaying,
   currentTime, setCurrentTime, 
-  analyzeSong, analysisResult
+  analyzeSong, analysisResult,
+  songData
  }) {
   const containerRef = useRef(null);
   const wavesurferRef = useRef(null);
+  const songDataRef = useRef(songData);
   const [showSpectrogram] = useState(false);
-  const [songBeats, setSongBeats] = useState([]);
-  const [renderBeats, setRenderBeats] = useState(false);
   const [generateCues, setGenerateCues] = useState(false);
 
+  const [showRegions, setShowRegions] = useState(false);
   const regions = RegionsPlugin.create()
 
   useEffect(() => {
@@ -80,7 +79,10 @@ export default function AudioPlayer({
       wavesurferRef.current.load(SongsFolder + currentSongFile);
 
       const ws = wavesurferRef.current;
-      ws.on('ready', () => {onReady()});
+      ws.on('ready', () => {
+        console.log("WaveSurfer is ready -> songData:", songDataRef.current);
+        displaySectionMarkers(songDataRef.current?.arrangement || []);
+      });
       ws.on('finish', () => {
         setIsPlaying(false);
       });
@@ -126,49 +128,44 @@ export default function AudioPlayer({
       analyzeSong({songFile: currentSongFile, renderTestCues: generateCues});
   }
 
-  useEffect(() => {
-    if (!analysisResult || analysisResult.status !== "ok") return;
-    console.log("Analysis result updated:", analysisResult);
-    setSongBeats(analysisResult.beats || []);
+  // WaveSurfer Markers helper
+  const clearMarkers = () => {
+    regions.clearRegions();
+  };  
 
-  }, [analysisResult]);
-  
-  useEffect(() => {
-    if (!wavesurferRef.current) return;
-    
-    if (renderBeats) {
-      regions.clearRegions();
-      songBeats.forEach((beat, index) => {
-        regions.addRegion({
-          start: beat,
-          color: 'rgba(255, 255, 255, 0.5)',
-          id: `beat-${index}`,
-        });
-      });
-    }else{
-      // If not rendering beats, clear existing regions
-      regions.clearRegions();
-    }
+  const addMarker = (time, label) => {
+    regions.addRegion({
+      start: time,
+      content: label,
+      drag: false,
+      resize: false,
+      color: '#555555'});
+  }
 
-    // Clear existing regions
-    wavesurferRef.current.clearRegions();
-
-    // Add new regions for each beat
-    songBeats.forEach((beat, index) => {
-      wavesurferRef.current.addRegion({
-        start: beat.start,
-        end: beat.end,
-        color: 'rgb(255, 255, 255)',
-        id: `beat-${index}`,
-        data: { type: 'beat', index }
-      });
+  const displaySectionMarkers = (arrangement) => {
+    console.log("displaySectionMarkers:", arrangement);
+    clearMarkers();
+    arrangement.forEach((section) => {
+      addMarker(section.start, section.name);
     });
+  };
 
-  }, [renderBeats]);
+  useEffect(() => {
+    songDataRef.current = songData;
+  }, [songData]);
+
+
+  useEffect(() => {
+    if (!songData) return;
+    if (!wavesurferRef.current) return;
+    console.log("songData:", songData);
+
+  }, [songData]);
+  
 
   return (
     <>
-      <div ref={containerRef} className="mb-4"/>
+      <div ref={containerRef} className="mb-4 text-xs" />
       <div id="song-controls" className="flex flex-col items-center">
         <div className="flex items-center justify-between w-full mb-4">
           <div id="playback-controls" className="flex items-center">
@@ -192,10 +189,10 @@ export default function AudioPlayer({
             <label className="ml-4 flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={renderBeats}
-                onChange={e => setRenderBeats(e.target.checked)}
+                checked={showRegions}
+                onChange={e => setShowRegions(e.target.checked)}
               />
-              <span className="text-gray-300">Show Beats</span>
+              <span className="text-gray-300">Regions</span>
             </label>
           </div>
         </div>

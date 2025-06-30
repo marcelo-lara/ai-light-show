@@ -15,7 +15,8 @@ export function App() {
   const [wsConnected, setWsConnected] = useState(false);
 
   // Song metadata and playback state
-  const [currentSongFile, setCurrentSongFile] = useState(); 
+  const [currentSongFile, setCurrentSongFile] = useState();
+  const [previousSongFile, setPreviousSongFile] = useState();
   const [songData, setSongData] = useState();
   const [isPlaying, setIsPlaying] = useState(false);  
   const [currentTime, setCurrentTime] = useState(0);
@@ -69,6 +70,10 @@ export function App() {
             setFixtures(msg.fixtures || []);
             setFixturesPresets(msg.presets || []);
             setChasers(msg.chasers || []);
+
+            // load default song if not set
+            setCurrentSongFile("born_slippy.mp3");
+
             break;
           }
           case "dmx_update": {
@@ -148,12 +153,10 @@ export function App() {
 
   
   ///////////////////////////////////////////////////////
-  // load song and fixtures on initial render
+  // load song 
   useEffect(() => {
-    setCurrentSongFile("born_slippy.mp3");
-  }, []);
-
-  useEffect(() => {
+    if (previousSongFile == currentSongFile) return;
+    setPreviousSongFile(currentSongFile);
     if (!currentSongFile) return;
     wsSend("loadSong", { file: currentSongFile });
   }, [currentSongFile, wsConnected]);
@@ -171,13 +174,13 @@ export function App() {
           <div className="bg-white/10 rounded-2xl p-6 mb-6">
             <AudioPlayer 
               currentSongFile={currentSongFile} 
-              onReady={()=>{}}
               isPlaying={isPlaying}
               setIsPlaying={setIsPlaying}
               currentTime={currentTime}
               setCurrentTime={setCurrentTime}
               analyzeSong={(data)=>{setAnalysisResult(undefined); wsSend("analyzeSong", data)}}
               analysisResult={analysisResult}
+              songData={songData}
             />
           </div>
           {songData && songData?.bpm && ( 
