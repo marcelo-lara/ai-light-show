@@ -29,6 +29,27 @@
     ]
 },
 {
+  "name": "orange fade",
+  "description": "Warm orange pulse using ADSR",
+  "type": "rgb",
+  "mode": "adsr",
+  "parameters": {
+    "max_value": 0.8,
+    "channel_map": {
+      "red": 1.0,
+      "green": 0.65,
+      "blue": 0.0
+    },
+    "adsr": {
+      "attack":  { "time": 0.3, "to": 1.0 },
+      "decay":   { "time": 0.2, "to": 0.6 },
+      "sustain": { "time": 1.0, "value": 0.6 },
+      "release": { "time": 0.5 }
+    }
+  }
+},
+{
+
     "name": "red flash to black",
     "description": "Set red channel to start_brightness, then fade to black",
     "type": "rgb",

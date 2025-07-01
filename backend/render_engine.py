@@ -50,13 +50,14 @@ def pre_render_cues(cues, fixture_config, fixture_presets, bpm=120.0, fps=120):
         start_brightness = float(overrides.get("start_brightness", preset["parameters"].get("start_brightness", 1.0)))
 
         cycle_duration = 0.0
-        for step in preset["steps"]:
-            if step["type"] == "fade":
-                fade_beats = overrides.get("fade_beats", step.get("fade_beats", 0))
-                cycle_duration += beats_to_ms(fade_beats, bpm) / 1000.0
-            elif step["type"] == "hold":
-                hold_beats = overrides.get("hold_beats", step.get("duration", 0))
-                cycle_duration += beats_to_ms(hold_beats, bpm) / 1000.0
+        if "steps" in preset and preset["steps"]:
+            for step in preset["steps"]:
+                if step["type"] == "fade":
+                    fade_beats = overrides.get("fade_beats", step.get("fade_beats", 0))
+                    cycle_duration += beats_to_ms(fade_beats, bpm) / 1000.0
+                elif step["type"] == "hold":
+                    hold_beats = overrides.get("hold_beats", step.get("duration", 0))
+                    cycle_duration += beats_to_ms(hold_beats, bpm) / 1000.0
 
         step_offset = 0.0
         max_step_time = 0.0
@@ -67,6 +68,7 @@ def pre_render_cues(cues, fixture_config, fixture_presets, bpm=120.0, fps=120):
             if not preset or "steps" not in preset or preset["steps"] is None:
                 print(f"  ⚠️ Skipping cue at {start_time}s: preset or steps missing")
                 return
+            
             for step in preset["steps"]:
                 step_type = step["type"]
                 scaled_values = {}
@@ -122,6 +124,54 @@ def pre_render_cues(cues, fixture_config, fixture_presets, bpm=120.0, fps=120):
                 render_steps(start_time + step_offset)
                 step_offset += cycle_duration
             cue["duration"] = step_offset
+
+        elif mode == "adsr":
+            adsr_params = preset.get("parameters", {}).get("adsr", {})
+            max_value = float(overrides.get("max_value", preset["parameters"].get("max_value", 1.0)))
+            channel_map = preset.get("parameters", {}).get("channel_map", {})
+            t = start_time
+
+            def stage(stage_name, from_val, to_rel, duration):
+                nonlocal t
+                from_vals = {
+                    ch_map[ch]: int(from_val * channel_map[ch])
+                    for ch in channel_map if ch in ch_map
+                }
+                to_vals = {
+                    ch_map[ch]: int(255 * max_value * to_rel * channel_map[ch])
+                    for ch in channel_map if ch in ch_map
+                }
+                fade_steps = interpolate_steps(from_vals, to_vals, duration, fps)
+                for offset, vals in fade_steps:
+                    t_step = round(t + offset, 4)
+                    append_values_at_time(t_step, vals)
+                    for ch, v in vals.items():
+                        channel_last_values[ch] = (t_step, v)
+                t += duration
+                return to_vals
+
+            v_attack = stage("attack", 0, adsr_params["attack"]["to"], adsr_params["attack"]["time"])
+            v_decay = stage("decay", list(v_attack.values())[0], adsr_params["decay"]["to"], adsr_params["decay"]["time"])
+
+            # Sustain
+            sustain_val = int(255 * max_value * adsr_params["sustain"]["value"])
+            sustain_time = adsr_params["sustain"]["time"]
+            steps = int(sustain_time * fps)
+            for i in range(steps):
+                t_step = round(t + (i / fps), 4)
+                sustain_vals = {
+                    ch_map[ch]: int(sustain_val * channel_map[ch])
+                    for ch in channel_map if ch in ch_map
+                }
+                append_values_at_time(t_step, sustain_vals)
+                for ch, v in sustain_vals.items():
+                    channel_last_values[ch] = (t_step, v)
+            t += sustain_time
+
+            # Release
+            stage("release", sustain_val, 0.0, adsr_params["release"]["time"])
+            cue["duration"] = round(t - start_time, 3)
+
         else:
             render_steps(start_time)
             cue["duration"] = round(max_step_time - start_time, 3)
