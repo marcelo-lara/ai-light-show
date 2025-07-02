@@ -19,7 +19,6 @@ export default function AudioPlayer({
   const [showSpectrogram] = useState(false);
   const [generateCues, setGenerateCues] = useState(false);
 
-  const [showRegions, setShowRegions] = useState(false);
   const regions = RegionsPlugin.create()
 
   useEffect(() => {
@@ -80,7 +79,6 @@ export default function AudioPlayer({
 
       const ws = wavesurferRef.current;
       ws.on('ready', () => {
-        console.log("WaveSurfer is ready -> songData:", songDataRef.current);
         displaySectionMarkers(songDataRef.current?.arrangement || []);
       });
       ws.on('finish', () => {
@@ -139,11 +137,10 @@ export default function AudioPlayer({
       content: label,
       drag: false,
       resize: false,
-      color: '#555555'});
+      color: '#FFFFFF40'});
   }
 
   const displaySectionMarkers = (arrangement) => {
-    console.log("displaySectionMarkers:", arrangement);
     clearMarkers();
     arrangement.forEach((section) => {
       addMarker(section.start, section.name);
@@ -158,8 +155,6 @@ export default function AudioPlayer({
   useEffect(() => {
     if (!songData) return;
     if (!wavesurferRef.current) return;
-    console.log("songData:", songData);
-
   }, [songData]);
   
 
@@ -185,14 +180,6 @@ export default function AudioPlayer({
                 onChange={e => setGenerateCues(e.target.checked)}
               />
               <span className="text-gray-300">Generate Cues</span>
-            </label>
-            <label className="ml-4 flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={showRegions}
-                onChange={e => setShowRegions(e.target.checked)}
-              />
-              <span className="text-gray-300">Regions</span>
             </label>
           </div>
         </div>

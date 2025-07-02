@@ -249,6 +249,29 @@ async def websocket_endpoint(websocket: WebSocket):
                     "cues": cue_list
                 })
 
+            elif msg.get("type") == "previewDmx":
+                cue = msg["cue"]
+                cue["time"] = 0  # Set time to 0 for preview
+
+                # Render a tiny timeline with only this cue
+                bpm = 120  # or use currentSong.bpm
+                fps = 30
+                tmp_timeline = render_timeline(
+                    fixture_config,
+                    fixture_presets,
+                    cues=[cue],
+                    current_song="__preview__",
+                    bpm=bpm,
+                    fps=fps
+                )
+
+                print(f"🔍 Previewing DMX for cue: {cue}")
+
+                # Immediately execute the DMX for first few frames (simulate preview)
+                for frame in tmp_timeline: 
+                    send_artnet(tmp_timeline[frame])
+                    await asyncio.sleep(1 / fps)
+
             elif msg.get("type") == "saveArrangement":
                 arrangement = msg["arrangement"]
                 if song is not None:

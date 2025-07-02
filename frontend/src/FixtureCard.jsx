@@ -3,7 +3,7 @@
 import PresetSelector from "./PresetSelector";
 import { useState, useEffect, useRef } from "preact/hooks";
 
-export default function FixtureCard({ fixture, currentTime, addCue, allPresets }) {
+export default function FixtureCard({ fixture, currentTime, addCue, allPresets, previewDmx }) {
   const [values, setValues] = useState({ ...fixture.current_values });
   const { name, channels, presets } = fixture;
   const [expandedMap, setExpandedMap] = useState({});
@@ -123,7 +123,8 @@ export default function FixtureCard({ fixture, currentTime, addCue, allPresets }
               fixture={fixture}
               presets={allPresets}
               currentTime={currentTime}
-              onAddCue={(cue) => {addCue(cue);}}                
+              onAddCue={(cue) => {addCue(cue);}}
+              previewDmx={(cue) => {previewDmx(cue);}}
             />
           </div>
             

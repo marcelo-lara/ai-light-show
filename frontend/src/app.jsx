@@ -239,7 +239,8 @@ export function App() {
                 currentTime={currentTime}
                 allPresets={fixturesPresets}
                 addCue={(cue)=>wsSend("addCue", {cue: cue})}
-                />
+                previewDmx={(cue) => wsSend("previewDmx", {cue: cue})}
+              />
             ))
           )}
         </div>

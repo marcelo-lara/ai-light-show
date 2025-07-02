@@ -2,7 +2,7 @@
 
 import { useState } from "preact/hooks";
 
-export default function PresetSelector({ fixture, presets, currentTime, onAddCue }) {
+export default function PresetSelector({ fixture, presets, currentTime, onAddCue, previewDmx }) {
   const [selected, setSelected] = useState(null);
   const [paramValues, setParamValues] = useState({});
 
@@ -60,6 +60,18 @@ export default function PresetSelector({ fixture, presets, currentTime, onAddCue
             className="bg-green-700 text-white px-3 py-1 rounded hover:bg-green-600"
           >
             + Add to Cue @{currentTime.toFixed(3)}s
+          </button>
+
+          <button
+            className="mt-2"
+            onClick={() => 
+              previewDmx({
+                fixture: fixture.id,
+                preset: selected.name,
+                parameters: { ...paramValues }
+            })}
+          >
+            Preview
           </button>          
         </div>
       )}
