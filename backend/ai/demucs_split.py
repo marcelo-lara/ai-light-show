@@ -8,7 +8,7 @@ def set_folders(temp_dir:str = '', songs_folder:str =''):
     if not songs_folder == '':
         SONGS_FOLDER = songs_folder
 
-def extract_vocals(input_file: str, output_file: str = '', song_prefix: str = ''):
+def extract_vocals(input_file: str, song_prefix: str = ''):
     """
     Extract vocals from an audio file using Demucs.
     :param input_file: Path to the input audio file.
@@ -35,7 +35,7 @@ def extract_vocals(input_file: str, output_file: str = '', song_prefix: str = ''
         "no_vocals": out_no_vocal
     }
 
-def extract_drums(input_file: str, output_file: str = '', song_prefix: str = ''):
+def extract_drums(input_file: str, song_prefix: str = ''):
     """
     Extract drums from an audio file using Demucs.
     :param input_file: Path to the input audio file.
@@ -47,6 +47,7 @@ def extract_drums(input_file: str, output_file: str = '', song_prefix: str = '')
     import subprocess
     command = [
         "python", "-m", "demucs.separate", 
+        "-n=htdemucs_ft",
         "--two-stems=drums", 
         "-o", SONGS_TEMP_DIR,
         input_file        
@@ -61,6 +62,31 @@ def extract_drums(input_file: str, output_file: str = '', song_prefix: str = '')
         "drums": out_drum,
         "no_drums": out_no_drum
     }
+
+def extract_all_stems(input_file: str, song_prefix: str = ''):
+    """
+    Extract all stems from an audio file using Demucs.
+    :param input_file: Path to the input audio file.
+    :param output_file: Path to save the extracted stems.
+    """
+    if song_prefix == '':
+        song_prefix = input_file.split("/")[-1].split(".")[0]
+
+    import subprocess
+    command = [
+        "python", "-m", "demucs.separate", 
+        "-o", SONGS_TEMP_DIR,
+        input_file        
+    ]
+    
+    result = subprocess.run(command, capture_output=True, text=True, check=True)
+    print(f"{result.stdout}")
+
+    out_stems = f"{SONGS_TEMP_DIR}/htdemucs/{song_prefix}"
+    return {
+        "stems": out_stems
+    }
+
 
 ## Example usage:
 if __name__ == "__main__":
@@ -82,4 +108,9 @@ if __name__ == "__main__":
     results = extract_vocals(songs_file)
     print(f"Vocals extracted to {results['vocals']}")
     print(f"No vocals extracted to {results['no_vocals']}")
+    print("-----------")
+
+    print(f"Extracting all stems from {songs_file}...")
+    results = extract_all_stems(songs_file)
+    print(f"All stems extracted to {results['stems']}")
     print("-----------")
