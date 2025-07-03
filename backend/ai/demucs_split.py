@@ -1,116 +1,62 @@
-SONGS_TEMP_DIR = "/app/static/songs/temp"
-SONGS_FOLDER = "/app/static/songs"
+from pathlib import Path
 
-def set_folders(temp_dir:str = '', songs_folder:str =''):
-    global SONGS_TEMP_DIR, SONGS_FOLDER
-    if not temp_dir == '':
-        SONGS_TEMP_DIR = temp_dir
-    if not songs_folder == '':
-        SONGS_FOLDER = songs_folder
-
-def extract_vocals(input_file: str, song_prefix: str = ''):
+def extract_stems(input_file: str, songs_temp_folder: str = '', song_prefix: str = '', stems: str = 'all', model: str = ''):
     """
-    Extract vocals from an audio file using Demucs.
+    Extract stems from an audio file using Demucs.
     :param input_file: Path to the input audio file.
-    :param output_file: Path to save the extracted vocals.
+    :param songs_temp_folder: Folder to store temporary output files.
+    :param song_prefix: Prefix for the output files.
+    :param stems: Type of stems to extract ('vocals', 'drums', 'bass', 'other', or 'all').
+    :param model: Model to use for separation (optional: 'htdemucs_ft', 'mdx_extra') [https://github.com/facebookresearch/demucs?tab=readme-ov-file#separating-tracks].
+    :return: Dictionary with output paths.
+    :raises RuntimeError: If Demucs fails to run.
     """
+    # set default values if not provided
     if song_prefix == '':
         song_prefix = input_file.split("/")[-1].split(".")[0]
+    if songs_temp_folder == '':
+        songs_temp_folder = str(Path(input_file).parent) + '/temp/'
 
+    # prepare command
     import subprocess
     command = [
         "python", "-m", "demucs.separate", 
-        "--two-stems=vocals", 
-        "-o", SONGS_TEMP_DIR,
+        "-o", songs_temp_folder,
+        *(["--two-stems=" + stems] if stems != 'all' else []),
+        *(["-n=" + model] if model else []),
         input_file        
     ]
     
+    # ececute command
     result = subprocess.run(command, capture_output=True, text=True, check=True)
-    print(f"{result.stdout}")
+    if result.returncode != 0:
+        print(f"Error running Demucs: {result.stderr}")
+        raise RuntimeError(f"Demucs failed with error: {result.stderr}")
+    else:
+        print(f"{result.stdout}")
 
-    out_vocal = f"{SONGS_TEMP_DIR}/htdemucs/{song_prefix}/vocals.wav"
-    out_no_vocal = f"{SONGS_TEMP_DIR}/htdemucs/{song_prefix}/no_vocals.wav"
+
+    # return output paths
+    output_folder = f"{songs_temp_folder}htdemucs/{song_prefix}"
     return {
-        "vocals": out_vocal,
-        "no_vocals": out_no_vocal
+        "output_folder": output_folder
     }
-
-def extract_drums(input_file: str, song_prefix: str = ''):
-    """
-    Extract drums from an audio file using Demucs.
-    :param input_file: Path to the input audio file.
-    :param output_file: Path to save the extracted drums.
-    """
-    if song_prefix == '':
-        song_prefix = input_file.split("/")[-1].split(".")[0]
-
-    import subprocess
-    command = [
-        "python", "-m", "demucs.separate", 
-        "-n=htdemucs_ft",
-        "--two-stems=drums", 
-        "-o", SONGS_TEMP_DIR,
-        input_file        
-    ]
-    
-    result = subprocess.run(command, capture_output=True, text=True, check=True)
-    print(f"{result.stdout}")
-
-    out_drum = f"{SONGS_TEMP_DIR}/htdemucs/{song_name}/drums.wav"
-    out_no_drum = f"{SONGS_TEMP_DIR}/htdemucs/{song_name}/no_drums.wav"
-    return {
-        "drums": out_drum,
-        "no_drums": out_no_drum
-    }
-
-def extract_all_stems(input_file: str, song_prefix: str = ''):
-    """
-    Extract all stems from an audio file using Demucs.
-    :param input_file: Path to the input audio file.
-    :param output_file: Path to save the extracted stems.
-    """
-    if song_prefix == '':
-        song_prefix = input_file.split("/")[-1].split(".")[0]
-
-    import subprocess
-    command = [
-        "python", "-m", "demucs.separate", 
-        "-o", SONGS_TEMP_DIR,
-        input_file        
-    ]
-    
-    result = subprocess.run(command, capture_output=True, text=True, check=True)
-    print(f"{result.stdout}")
-
-    out_stems = f"{SONGS_TEMP_DIR}/htdemucs/{song_prefix}"
-    return {
-        "stems": out_stems
-    }
-
 
 ## Example usage:
 if __name__ == "__main__":
-    set_folders(
-        temp_dir="/home/darkangel/ai-light-show/songs/temp", 
-        songs_folder="/home/darkangel/ai-light-show/songs"
-      )
-    songs_file = "/home/darkangel/ai-light-show/songs/born_slippy.mp3"
-    song_name = songs_file.split("/")[-1].split(".")[0]
+    song_file = "/home/darkangel/ai-light-show/songs/born_slippy.mp3"
 
-    print(f"Extracting drums from {songs_file}...")
-    results = extract_drums(songs_file)
-
-    print(f"Drums extracted to {results['drums']}")
-    print(f"No drums extracted to {results['no_drums']}")   
+    print(f"Extracting drums from {song_file}...")
+    results = extract_stems(song_file, stems='drums')
     print("-----------")
 
-    print(f"Extracting vocals from {songs_file}...")
-    results = extract_vocals(songs_file)
-    print(f"Vocals extracted to {results['vocals']}")
-    print(f"No vocals extracted to {results['no_vocals']}")
-    print("-----------")
+    # print(f"Extracting vocals from {songs_file}...")
+    # results = extract_vocals(songs_file)
+    # print(f"Vocals extracted to {results['vocals']}")
+    # print(f"No vocals extracted to {results['no_vocals']}")
+    # print("-----------")
 
-    print(f"Extracting all stems from {songs_file}...")
-    results = extract_all_stems(songs_file)
-    print(f"All stems extracted to {results['stems']}")
-    print("-----------")
+    # print(f"Extracting all stems from {songs_file}...")
+    # results = extract_all_stems(songs_file)
+    # print(f"All stems extracted to {results['stems']}")
+    # print("-----------")
