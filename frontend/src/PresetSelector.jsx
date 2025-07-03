@@ -41,9 +41,10 @@ export default function PresetSelector({ fixture, presets, currentTime, onAddCue
                 <span className="text-gray-300">{key}</span>
                 <input
                   type="number"
+                  step="0.10"
                   className="bg-gray-800 p-1 rounded text-white"
                   value={paramValues[key]}
-                  onChange={(e) => handleParamChange(key, parseInt(e.target.value))}
+                  onChange={(e) => handleParamChange(key, parseFloat(e.target.value))}
                 />
               </label>
             ))}

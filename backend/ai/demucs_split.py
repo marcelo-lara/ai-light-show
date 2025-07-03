@@ -27,14 +27,14 @@ def extract_stems(input_file: str, songs_temp_folder: str = '', song_prefix: str
         input_file        
     ]
     
-    # ececute command
+    # execute command
+    print("🎵 Extracting stems from the song...")
     result = subprocess.run(command, capture_output=True, text=True, check=True)
     if result.returncode != 0:
         print(f"Error running Demucs: {result.stderr}")
         raise RuntimeError(f"Demucs failed with error: {result.stderr}")
     else:
         print(f"{result.stdout}")
-
 
     # return output paths
     output_folder = f"{songs_temp_folder}htdemucs/{song_prefix}"
@@ -49,14 +49,3 @@ if __name__ == "__main__":
     print(f"Extracting drums from {song_file}...")
     results = extract_stems(song_file, stems='drums')
     print("-----------")
-
-    # print(f"Extracting vocals from {songs_file}...")
-    # results = extract_vocals(songs_file)
-    # print(f"Vocals extracted to {results['vocals']}")
-    # print(f"No vocals extracted to {results['no_vocals']}")
-    # print("-----------")
-
-    # print(f"Extracting all stems from {songs_file}...")
-    # results = extract_all_stems(songs_file)
-    # print(f"All stems extracted to {results['stems']}")
-    # print("-----------")

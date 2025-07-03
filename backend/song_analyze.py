@@ -9,7 +9,6 @@ def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
         song = SongMetadata(song.song_name, songs_folder=song.songs_folder, ignore_existing=True)
 
     ## split song into stems
-    print("🎵 Extracting drums from the song...")
     extract_stems(song.mp3_path)
 
     ## Core analysis using Essentia
