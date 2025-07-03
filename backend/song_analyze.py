@@ -1,6 +1,6 @@
 from backend.song_metadata import SongMetadata
 from backend.ai.essentia_analysis import extract_with_essentia
-from backend.ai.demucs_split import extract_drums
+from backend.ai.demucs_split import extract_stems
 
 def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
     print(f"🔍 Analyzing song: {song.title} ({song.mp3_path})")
@@ -10,7 +10,7 @@ def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
 
     ## split song into stems
     print("🎵 Extracting drums from the song...")
-    extract_drums(song.mp3_path, song_prefix=song.song_name)
+    extract_stems(song.mp3_path)
 
     ## Core analysis using Essentia
     essentia_core = extract_with_essentia(song.mp3_path)
