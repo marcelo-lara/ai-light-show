@@ -71,7 +71,7 @@ class SongMetadata:
     @drums.setter
     def drums(self, value):
         self._drums = value
-        
+
     @property
     def genre(self):
         return self._genre
@@ -143,7 +143,7 @@ class SongMetadata:
         if os.path.isfile(chords_file):
             with open(chords_file, "r") as f:
                 self._chords = json.load(f)
-            print(f" -> Chords loaded from {chords_file}")
+            print(f" 📜 Chords loaded from {chords_file}")
         else:
             print(f"⚠️ Warning: Chords file not found for '{self._song_name}' at {chords_file}")
 
@@ -155,7 +155,7 @@ class SongMetadata:
             return False
         with open(segments_file, "r") as f:
             segments_data = json.load(f)
-        print(f" -> Segments loaded from {segments_file}")
+        print(f" 📜 Segments loaded from {segments_file}")
 
         # convert segments to arrangement (list of Section)
         self.arrangement = [
@@ -184,7 +184,7 @@ class SongMetadata:
         if os.path.isfile(lyrics_file):
             with open(lyrics_file, "r") as f:
                 lyrics_data = json.load(f)
-            print(f" -> Lyrics loaded from {lyrics_file}")
+            print(f" 📜 Lyrics loaded from {lyrics_file}")
 
         # segments file
         self.load_arrangement_from_hints()
@@ -199,11 +199,12 @@ class SongMetadata:
         with open(self.get_metadata_path(), "r") as f:
             data = json.load(f)
 
-        self.title = data.get("title", self.title)
-        self.genre = data.get("genre", self.genre)
-        self.bpm = data.get("bpm", self.bpm)
-        self.beats = data.get("beats", [])
-        self.chords = data.get("chords", [])
+        self._title = data.get("title", self.title)
+        self._genre = data.get("genre", self.genre)
+        self._bpm = data.get("bpm", self.bpm)
+        self._beats = data.get("beats", [])
+        self._chords = data.get("chords", [])
+        self._drums = data.get("drums", [])
         self._arrangement = data.get("arrangement", [])
 
         # attempt to load hints files if not already done
@@ -275,9 +276,11 @@ class SongMetadata:
         return {
             "title": self.title,
             "genre": self.genre,
+            "duration": self.duration,
             "bpm": self.bpm,
             "chords": self.chords,
             "beats": self.beats,
+            "drums": self.drums,
             # Serialize arrangement as list of dicts
             "arrangement": [s.to_dict() if isinstance(s, Section) else s for s in self.arrangement],
         }

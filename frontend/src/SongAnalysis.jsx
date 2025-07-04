@@ -1,6 +1,6 @@
-
 import { useState, useRef } from "preact/hooks";
 import { use, useEffect } from "react";
+import Bar from "./Bar";
 
 export default function SongAnalysis({ songData, currentTime, setCurrentTime }) {
 
@@ -21,37 +21,6 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
         'H': '#0ea5e9'  // Sky Blue
     };
 
-  function BarLevel({ level }) {
-    return (
-      <div
-        className="flex items-end w-full bg-gray-800 rounded"
-        style={{ height: '100px' }}
-      >
-        <div
-          className="bg-green-500 w-full rounded-t"
-          style={{
-            height: `${level}%`,
-            transition: 'height 0.2s',
-          }}
-        ></div>
-      </div>
-    );
-  }
-
-  function BarLabel({ label, color }) {
-    return (
-      <div
-        className="w-full text-xs text-white flex items-center justify-center mt-1"
-        style={{
-          backgroundColor: color || 'gray',
-          height: '20px',
-          minWidth: '15px',
-        }}
-      >
-        {label}
-      </div>
-    );
-  }
     useEffect(() => {
       if (songData.beats) {
         setBeats(songData.beats);
@@ -85,6 +54,27 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
     <>
       <h2 className="text-x2 font-bold mb-4">🤖 Song Analysis</h2>
       
+      {/* Drum Parts */}
+      <div className="mt-4">
+        <h3 className="text-x1 font-bold mb-2">Drum Parts</h3>
+        <div className="overflow-x-auto">
+          <div className="px-1">
+            {songData.drums && songData.drums.map((_type, index) => (
+              <div key={index} className="flex items-center space-x-4">
+                <div className="text-xs text-gray-400">{_type['type']}</div>
+                <div className="flex space-x-1">
+                  {_type['time'].map((_time, regionIndex) => (
+                    <div key={regionIndex} className="px-2 py-1 bg-gray-900 rounded text-xs" onClick={() => setCurrentTime(_time)}>
+                      {_time}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Song Beats */}
       <div className="mt-4">
         <h3 className="text-x1 font-bold mb-2">beats</h3>
@@ -97,19 +87,13 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
                 <div
                   key={index}
                   ref={index === currentBeat ? currentBeatRef : null}
-                  className={`flex flex-col items-center transition-all duration-200 ${
-                    index === currentBeat ? 'ring-2 ring-gray-400' : ''
-                  }`}
-                  style={{ width: '20px' }}
-                  onClick={()=>{setCurrentTime(beat.time)}}
+                  className={index === currentBeat ? 'ring-2 ring-gray-400' : ''}
+                  onClick={() => setCurrentTime(beat.time)}
                 >
-                  {/* Energy Container */}
-                  <BarLevel level={energyPercent} />
-
-                  {/* Label Box */}
-                  <BarLabel 
-                    label={index} 
-                    color={labelColorMap[beat.label]} 
+                  <Bar
+                    level={energyPercent}
+                    label={index}
+                    color={labelColorMap[beat.label]}
                   />
                 </div>
               );

@@ -7,3 +7,5 @@ essentia
 numpy==1.24.3
 soundfile
 demucs
+transformers
+torch
