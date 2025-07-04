@@ -1,5 +1,6 @@
 from backend.song_metadata import SongMetadata
 from backend.ai.essentia_analysis import extract_with_essentia
+from backend.ai.drums_infer import infer_drums
 from backend.ai.demucs_split import extract_stems
 
 def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
@@ -8,9 +9,6 @@ def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
     if reset_file:
         song = SongMetadata(song.song_name, songs_folder=song.songs_folder, ignore_existing=True)
 
-    ## split song into stems
-    extract_stems(song.mp3_path)
-
     ## Core analysis using Essentia
     essentia_core = extract_with_essentia(song.mp3_path)
     song.clear_beats()
@@ -18,6 +16,14 @@ def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
     song.duration = essentia_core['song_duration']
     [song.add_beat(b) for b in essentia_core['beats']]
     song.set_beats_volume(essentia_core['beat_volumes'])
+
+    ## split song into stems
+    stems_folder = extract_stems(song.mp3_path)
+
+    ## infer drums
+    drums_path = f"{stems_folder['output_folder']}/drums.wav"
+    song.drums = infer_drums(drums_path)
+
 
     return song
 

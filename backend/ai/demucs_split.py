@@ -15,7 +15,7 @@ def extract_stems(input_file: str, songs_temp_folder: str = '', song_prefix: str
     if song_prefix == '':
         song_prefix = input_file.split("/")[-1].split(".")[0]
     if songs_temp_folder == '':
-        songs_temp_folder = str(Path(input_file).parent) + '/temp/'
+        songs_temp_folder = str(Path(input_file).parent) + '/temp'
 
     # prepare command
     import subprocess
@@ -29,15 +29,20 @@ def extract_stems(input_file: str, songs_temp_folder: str = '', song_prefix: str
     
     # execute command
     print("🎵 Extracting stems from the song...")
-    result = subprocess.run(command, capture_output=True, text=True, check=True)
-    if result.returncode != 0:
-        print(f"Error running Demucs: {result.stderr}")
-        raise RuntimeError(f"Demucs failed with error: {result.stderr}")
-    else:
-        print(f"{result.stdout}")
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        if result.returncode != 0:
+            print(f"Error running Demucs: {result.stderr}")
+            raise RuntimeError(f"Demucs failed with error: {result.stderr}")
+        else:
+            print(f"{result.stdout}")
+    except subprocess.CalledProcessError as e:
+        print(f"Command: {' '.join(command)}")
+        print(f"Error running Demucs: {e.stderr}")
+        raise RuntimeError(f"Demucs failed with error: {e.stderr}")
 
     # return output paths
-    output_folder = f"{songs_temp_folder}htdemucs/{song_prefix}"
+    output_folder = f"{songs_temp_folder}/htdemucs/{song_prefix}"
     return {
         "output_folder": output_folder
     }

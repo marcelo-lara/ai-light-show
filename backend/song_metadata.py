@@ -29,6 +29,7 @@ class SongMetadata:
         self._chords = []
         self._arrangement = []
         self._duration = 0.0
+        self._drums = []
         if not songs_folder:
             from backend.config import SONGS_DIR
             self._songs_folder = SONGS_DIR
@@ -63,6 +64,14 @@ class SongMetadata:
     def title(self, value):
         self._title = value
 
+    @property
+    def drums(self):
+        return self._drums
+
+    @drums.setter
+    def drums(self, value):
+        self._drums = value
+        
     @property
     def genre(self):
         return self._genre
@@ -281,6 +290,9 @@ class SongMetadata:
         with open(self.get_metadata_path(), "w") as f:
             json.dump(self.to_dict(), f, indent=2)
         print(f"ℹ️ Metadata saved for '{self._song_name}' at {self.get_metadata_path()}")
+
+    def __str__(self):
+        return f"SongMetadata(song_name={self._song_name}, title={self.title}, genre={self.genre}, bpm={self.bpm}, duration={self.duration}, beats={len(self.beats)}, arrangement={len(self.arrangement)})"
 
 
 # Example usage
