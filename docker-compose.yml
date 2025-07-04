@@ -7,4 +7,5 @@ services:
     volumes:
       - ./songs:/app/static/songs
       - ./fixtures:/app/static/fixtures
+      - ./.cache:/root/.cache
     restart: unless-stopped
