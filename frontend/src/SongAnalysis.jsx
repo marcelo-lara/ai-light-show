@@ -64,8 +64,11 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
                 <div className="text-xs text-gray-400">{_type['type']}</div>
                 <div className="flex space-x-1">
                   {_type['time'].map((_time, regionIndex) => (
-                    <div key={regionIndex} className="px-2 py-1 bg-gray-900 rounded text-xs" onClick={() => setCurrentTime(_time)}>
-                      {_time}
+                    <div key={regionIndex} 
+                         className={`px-2 py-1 rounded text-xs ${currentTime >= _time[0] ? 'bg-green-500' : 'bg-gray-900'}`} 
+                         onClick={() => setCurrentTime(_time[0])}>
+                      {_time[0]}<br />
+                      {_time[1].toFixed(2)}
                     </div>
                   ))}
                 </div>

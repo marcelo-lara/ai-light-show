@@ -2,7 +2,7 @@ from transformers import Wav2Vec2ForSequenceClassification, Wav2Vec2FeatureExtra
 import torch, librosa, numpy as np
 
 
-def infer_drums(drums_file_path):
+def infer_drums(drums_file_path, confidence_threshold:float=0.6, model:str="yojul/wav2vec2-base-one-shot-hip-hop-drums-clf"):
     """
     Infer drum events from an audio file using a pre-trained Wav2Vec2 model.
     
@@ -18,7 +18,7 @@ def infer_drums(drums_file_path):
     print(f"🥁 Inferring drums from {drums_file_path}...")
 
     # load model and feature extractor
-    model_name = "yojul/wav2vec2-base-one-shot-hip-hop-drums-clf"
+    model_name = model
     feat = Wav2Vec2FeatureExtractor.from_pretrained(model_name)
     model = Wav2Vec2ForSequenceClassification.from_pretrained(model_name)
 
@@ -36,7 +36,7 @@ def infer_drums(drums_file_path):
         probs = torch.softmax(logits, dim=-1).squeeze().cpu().numpy()
         label = model.config.id2label[np.argmax(probs)]
         conf = float(np.max(probs))
-        if conf > 0.6:  # tune down if needed
+        if conf > confidence_threshold:  # tune down if needed
             events.append({"time": (start+window/2)/sr, "type": label, "confidence": conf})
 
     # group events by type
@@ -48,7 +48,7 @@ def infer_drums(drums_file_path):
     for t in unique_types:
         drums_events.append({
             "type": t,
-            "time": [e['time'] for e in events if e['type'] == t]
+            "time": [(e['time'], e['confidence']) for e in events if e['type'] == t]
             })
     return drums_events
 

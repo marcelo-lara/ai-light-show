@@ -205,6 +205,7 @@ class SongMetadata:
         self._beats = data.get("beats", [])
         self._chords = data.get("chords", [])
         self._drums = data.get("drums", [])
+        self._duration = data.get("duration", 0.0)
         self._arrangement = data.get("arrangement", [])
 
         # attempt to load hints files if not already done

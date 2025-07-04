@@ -34,8 +34,7 @@ def extract_stems(input_file: str, songs_temp_folder: str = '', song_prefix: str
         if result.returncode != 0:
             print(f"Error running Demucs: {result.stderr}")
             raise RuntimeError(f"Demucs failed with error: {result.stderr}")
-        else:
-            print(f"{result.stdout}")
+
     except subprocess.CalledProcessError as e:
         print(f"Command: {' '.join(command)}")
         print(f"Error running Demucs: {e.stderr}")

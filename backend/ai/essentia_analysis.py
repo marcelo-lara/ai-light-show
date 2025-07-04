@@ -75,6 +75,8 @@ def cluster_chord_progressions(regions):
 
 def extract_with_essentia(audio_path: str, bars_1=4, bars_2=2):
 
+    print(f"🎧 Extracting beats, volume and basic metadata...")
+
     # Load audio (mono)
     loader = es.MonoLoader(filename=audio_path)
     audio = loader()

@@ -7,7 +7,7 @@ import socket
 DMX_CHANNELS = 512
 FPS = 60
 ARTNET_PORT = 6454
-ARTNET_IP = "192.168.1.221" # real 192.168.1.221
+ARTNET_IP = "127.0.0.1" # real 192.168.1.221
 ARTNET_UNIVERSE = 0
 
 # --- DMX State ---

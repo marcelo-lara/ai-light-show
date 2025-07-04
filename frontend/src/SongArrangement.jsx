@@ -94,7 +94,11 @@ export default function SongArrangement({
                                         onClick={() => setCurrentTime(section.start)}
                                     >
                                         {section.name}
-                                    </span> {section.prompt}
+                                    </span>
+                                    
+                                    <span className="text-gray-400" style="display: block"> 
+                                        {section.prompt}
+                                    </span>
                                 </>
                             )}
                         </li>
