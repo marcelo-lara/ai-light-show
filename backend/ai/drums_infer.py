@@ -2,7 +2,7 @@ from transformers import Wav2Vec2ForSequenceClassification, Wav2Vec2FeatureExtra
 import torch, librosa, numpy as np
 
 
-def infer_drums(drums_file_path, confidence_threshold:float=0.6, model:str="yojul/wav2vec2-base-one-shot-hip-hop-drums-clf"):
+def infer_drums(drums_file_path, confidence_threshold:float=0.7, model:str="yojul/wav2vec2-base-one-shot-hip-hop-drums-clf"):
     """
     Infer drum events from an audio file using a pre-trained Wav2Vec2 model.
     
