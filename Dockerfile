@@ -21,6 +21,10 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+# Install Core Python dependencies
+RUN pip install --upgrade pip
+RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+
 # Copy only requirements.txt for caching pip install
 COPY backend/requirements.txt ./
 RUN pip install -r requirements.txt
