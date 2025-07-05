@@ -2,6 +2,7 @@ from backend.song_metadata import SongMetadata
 from backend.ai.essentia_analysis import extract_with_essentia
 from backend.ai.drums_infer import infer_drums
 from backend.ai.demucs_split import extract_stems
+from backend.ai.pattern_finder import get_stem_clusters
 
 def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
     print(f"🔍 Analyzing song: {song.title} ({song.mp3_path})")
@@ -20,9 +21,22 @@ def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
     ## split song into stems
     stems_folder = extract_stems(song.mp3_path)
 
+    # analyze stems
+    stems_list = ['drums', 'bass']
+    for stem in stems_list:
+        stem_path = f"{stems_folder['output_folder']}/{stem}.wav"
+        stem_clusters = get_stem_clusters(
+            song.get_beats_array(),
+            stem_path,
+            full_file=song.mp3_path,
+            debug=False
+        )
+        print(f"  Adding {len(stem_clusters['clusters_timeline'])} clusters for {stem}...")
+        song.add_clusters(stem, stem_clusters['clusters_timeline'])
+
     ## infer drums
-    drums_path = f"{stems_folder['output_folder']}/drums.wav"
-    song.drums = infer_drums(drums_path)
+    # drums_path = f"{stems_folder['output_folder']}/drums.wav"
+    # song.drums = infer_drums(drums_path)
 
 
     return song
@@ -69,5 +83,6 @@ def add_flash_preset(start_time:float=0.0, fixture:str="parcan_l", start_brightn
 if __name__ == "__main__":
     # Example usage
     song = SongMetadata("born_slippy", songs_folder="/home/darkangel/ai-light-show/songs", ignore_existing=True)
+    print(f"---------------------")
     song = song_analyze(song)
     song.save()

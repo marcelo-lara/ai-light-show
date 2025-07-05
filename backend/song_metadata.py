@@ -18,6 +18,42 @@ class Section:
         self.end = end
         self.prompt = prompt
 
+class Segment:
+    def __init__(self, start: float, end: float, cluster: str = ''):
+        self.cluster = cluster
+        self.start = start
+        self.end = end
+
+    def to_dict(self):
+        return {
+            "cluster": self.cluster,
+            "start": self.start,
+            "end": self.end,
+        }
+
+    def __str__(self):
+        return f"Segment(start={self.start}, end={self.end}, cluster={self.cluster})"
+
+    def __iter__(self):
+        return iter((self.start, self.end, self.cluster))
+
+class Cluster:
+    def __init__(self, part:str, segments: list[Segment] ):
+        self.part = part
+        self.segments = segments if isinstance(segments, list) else [Segment(*seg) for seg in segments]
+
+    def __iter__(self):
+        return iter(self.segments)
+
+    def to_dict(self):
+        return {
+            "part": self.part,
+            "segments": [seg.to_dict() for seg in self.segments]  # Convert Segment objects to dicts for JSON serialization
+        }
+    
+    def __str__(self):
+        return f"Cluster(part={self.part}, segments={self.segments})"
+
 class SongMetadata:
 
     def __init__(self, song_name, songs_folder=None, ignore_existing=False):
@@ -27,6 +63,7 @@ class SongMetadata:
         self._bpm = 120
         self._beats = []
         self._chords = []
+        self._clusters = []
         self._arrangement = []
         self._duration = 0.0
         self._drums = []
@@ -79,6 +116,14 @@ class SongMetadata:
     @genre.setter
     def genre(self, value):
         self._genre = value
+
+    @property
+    def clusters(self):
+        return self._clusters
+
+    @clusters.setter
+    def clusters(self, value):
+        self._clusters = value
 
     @property
     def duration(self) -> float:
@@ -203,6 +248,7 @@ class SongMetadata:
         self._genre = data.get("genre", self.genre)
         self._bpm = data.get("bpm", self.bpm)
         self._beats = data.get("beats", [])
+        self._clusters = data.get("clusters", [])
         self._chords = data.get("chords", [])
         self._drums = data.get("drums", [])
         self._duration = data.get("duration", 0.0)
@@ -273,6 +319,14 @@ class SongMetadata:
                 return
         print(f"⚠️ Beat at time {time} not found.")
 
+    def add_clusters(self, stem_name, clusters):
+        """
+        Adds clusters for a given stem to the song metadata.
+        """
+        if not hasattr(self, "_clusters"):
+            self._clusters = []
+        self._clusters.append({"stem": stem_name, "clusters": clusters})
+
     def to_dict(self):
         return {
             "title": self.title,
@@ -282,6 +336,7 @@ class SongMetadata:
             "chords": self.chords,
             "beats": self.beats,
             "drums": self.drums,
+            "clusters": self._clusters,
             # Serialize arrangement as list of dicts
             "arrangement": [s.to_dict() if isinstance(s, Section) else s for s in self.arrangement],
         }

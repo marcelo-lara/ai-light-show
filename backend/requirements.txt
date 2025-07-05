@@ -9,3 +9,6 @@ soundfile
 demucs
 transformers
 torch
+kneed
+torchvision 
+torchaudio
