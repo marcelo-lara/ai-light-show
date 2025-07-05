@@ -1,3 +1,4 @@
+from backend.ai.pattern_finder_ml import get_stem_clusters_with_model
 from backend.song_metadata import SongMetadata
 from backend.ai.essentia_analysis import extract_with_essentia
 from backend.ai.drums_infer import infer_drums
@@ -25,14 +26,22 @@ def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
     stems_list = ['drums', 'bass']
     for stem in stems_list:
         stem_path = f"{stems_folder['output_folder']}/{stem}.wav"
+
+        # get clusters (librosa)
         stem_clusters = get_stem_clusters(
             song.get_beats_array(),
             stem_path,
-            full_file=song.mp3_path,
-            debug=False
+            full_file=song.mp3_path
         )
         print(f"  Adding {len(stem_clusters['clusters_timeline'])} clusters for {stem}...")
         song.add_clusters(stem, stem_clusters['clusters_timeline'])
+
+        # get clusters (ML)
+        stem_clusters = get_stem_clusters_with_model(
+            song.get_beats_array(), 
+            stem_path
+        )
+        song.add_clusters(f"{stem}_m", stem_clusters['clusters_timeline'])
 
     ## infer drums
     # drums_path = f"{stems_folder['output_folder']}/drums.wav"
