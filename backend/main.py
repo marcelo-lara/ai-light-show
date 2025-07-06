@@ -131,7 +131,7 @@ is_playing = False
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    global is_playing, playback_time, start_monotonic, current_song_file, cue_list, song
+    global is_playing, playback_time, start_monotonic, current_song_file, cue_list, song, fixture_config, fixture_presets
 
     await websocket.accept()
     clients.append(websocket)
@@ -176,7 +176,6 @@ async def websocket_endpoint(websocket: WebSocket):
                 })
                 bpm = song.bpm
                 render_timeline(fixture_config, fixture_presets, cues=cue_list, current_song=current_song_file, bpm=bpm)
-
 
             elif msg.get("type") == "getCues":
                 print(f"🔍 Fetching cues for {current_song_file}")
@@ -330,6 +329,15 @@ async def websocket_endpoint(websocket: WebSocket):
                         "cues": cue_list
                     })
 
+            elif msg.get("type") == "reloadFixtures":
+                print("--🔄 Reloading fixture configuration")
+                fixture_config, fixture_presets, chasers = load_fixtures_config(force_reload=True)
+                await websocket.send_json({
+                    "type": "fixturesUpdated",
+                    "fixtures": fixture_config,
+                    "presets": fixture_presets,
+                    "chasers": chasers
+                })
 
             else:
                 print(f"❓ Unknown message type: {msg.get('type')}")
@@ -389,8 +397,8 @@ def test_beat_sync(song_beats):
 # Timeline executor to run the timeline engine
 # -----------------------------------------------------------------------------
 async def timeline_executor():
-    global last_sent, is_playing, playback_time, fixture_config, fixture_presets, start_monotonic
-    fixture_config, fixture_presets = load_fixtures_config()
+    global last_sent, is_playing, playback_time, fixture_config, fixture_presets, start_monotonic, chasers
+    fixture_config, fixture_presets, chasers = load_fixtures_config()
 
     while True:
         if is_playing:

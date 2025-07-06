@@ -8,5 +8,14 @@
       "fade_beats": 0.5,
       "beat_spacing": 0.25
     }
-  }
+  },
+  {
+  "name": "left_echo_blue",
+  "description": "Blue echo on left-side fixtures (parcan_pl, parcan_l)",
+  "preset": "blue echo",
+  "fixture_ids": ["parcan_pl", "parcan_l"],
+  "parameters": {
+    "fade_beats": 1.5,
+    "beat_spacing": 0.5
+  }}
 ]

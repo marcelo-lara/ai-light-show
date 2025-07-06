@@ -100,6 +100,14 @@ export function App() {
             console.log("Song loaded:", msg.metadata);
             break;
           }
+          case "fixturesUpdated": {
+            console.log("Received fixtures update:", msg);
+            setFixtures(msg.fixtures || []);
+            setFixturesPresets(msg.presets || []);
+            setChasers(msg.chasers || []);
+            setToast("Fixtures updated!");
+            break;
+          }
           case "syncAck": {
             // keepalive message to acknowledge sync
             break;
@@ -256,6 +264,7 @@ export function App() {
             currentTime={currentTime}
             chasers={chasers}
             insertChaser={(chaserData) => wsSend("insertChaser", chaserData)}
+            reloadFixtures={() => wsSend("reloadFixtures", {})}
           />
         </div>
       </div>

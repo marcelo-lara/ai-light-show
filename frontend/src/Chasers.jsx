@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 
-export default function Chasers({ currentTime, insertChaser, chasers }) {
+export default function Chasers({ currentTime, insertChaser, chasers, reloadFixtures }) {
   const [templates, setTemplates] = useState([]);
   const [selected, setSelected] = useState(null);
   const [parameters, setParameters] = useState({});
@@ -24,7 +24,7 @@ export default function Chasers({ currentTime, insertChaser, chasers }) {
   const handleParamChange = (key, value) => {
     setParameters(prev => ({
       ...prev,
-      [key]: isNaN(value) ? value : parseFloat(value)
+      [key]: value === '' || value === '.' || isNaN(value) ? value : parseFloat(value)
     }));
   };
 
@@ -42,7 +42,17 @@ export default function Chasers({ currentTime, insertChaser, chasers }) {
 
   return (
     <div className="bg-white/10 p-2 mb-6">
-      <h2 className="text-xl font-semibold mb-4">✨ Chaser</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">✨ Chaser</h2>
+        <div>
+          <button
+            className="bg-blue-600 hover:bg-blue-700 px-1 py-1 rounded text-white"
+            onClick={() => { reloadFixtures(); }}
+          >
+            ♲
+          </button>
+        </div>
+      </div>
 
       {templates.length === 0 ? (
         <div className="text-sm text-gray-400">No chasers defined</div>
@@ -68,6 +78,7 @@ export default function Chasers({ currentTime, insertChaser, chasers }) {
                   <label className="w-32 text-white">{key}</label>
                   <input
                     type="number"
+                    step="0.1"
                     value={val}
                     onChange={(e) => handleParamChange(key, e.target.value)}
                     className="bg-gray-800 p-1 rounded text-white"
