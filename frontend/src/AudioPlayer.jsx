@@ -11,6 +11,7 @@ export default function AudioPlayer({
   isPlaying, setIsPlaying,
   currentTime, setCurrentTime, 
   analyzeSong, analysisResult,
+  seekTo,
   songData
  }) {
   const containerRef = useRef(null);
@@ -121,6 +122,11 @@ export default function AudioPlayer({
       wavesurferRef.current.seekTo(currentTime / wavesurferRef.current.getDuration());
     }
   }, [currentTime]);
+
+  useEffect(() => {
+    if (!wavesurferRef.current || seekTo === undefined) return;
+    wavesurferRef.current.seekTo(seekTo / wavesurferRef.current.getDuration());
+  }, [seekTo]);
 
   const handleAnalyzeSong = () => {
       analyzeSong({songFile: currentSongFile, renderTestCues: generateCues});

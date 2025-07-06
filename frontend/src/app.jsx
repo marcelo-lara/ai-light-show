@@ -22,6 +22,7 @@ export function App() {
   const [currentTime, setCurrentTime] = useState(0);
   const [syncTime, setSyncTime] = useState(0);
   const [songsList, setSongsList] = useState([]);
+  const [seekToTime, setSeekToTime] = useState(0);
 
   // Song Analysis state
   const [analysisResult, setAnalysisResult] = useState({});
@@ -161,6 +162,10 @@ export function App() {
     wsSend("loadSong", { file: currentSongFile });
   }, [currentSongFile, wsConnected]);
 
+  function handleSeekTo(time) {
+    setSeekToTime(time);
+  }
+
   return (
     <div className="flex flex-row gap-2">
       {/* Main Panel */}
@@ -181,6 +186,7 @@ export function App() {
               analyzeSong={(data)=>{setAnalysisResult(undefined); wsSend("analyzeSong", data)}}
               analysisResult={analysisResult}
               songData={songData}
+              seekTo={seekToTime}
             />
           </div>
           {songData && songData?.bpm && ( 
@@ -220,6 +226,7 @@ export function App() {
           currentTime={currentTime}
           setCurrentTime={setCurrentTime}
           songData={songData}
+          seekTo={(time) => handleSeekTo(time)}
           saveArrangement={(a) => {wsSend("saveArrangement", {arrangement: a})}}
         />
 

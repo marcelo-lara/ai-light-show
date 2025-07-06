@@ -42,7 +42,7 @@ export default function ChordsCard({ songData, currentTime }) {
       <h2 className="text-xl font-semibold mb-3">🎼 Chords</h2>
       <div
         ref={containerRef}
-        className="overflow-y-auto max-h-72 px-1 space-y-2"
+        className="overflow-y-auto max-h-40 px-1 space-y-2"
         style={{ scrollBehavior: 'smooth' }}
       >
         {groupedChords.map((row, rowIdx) => (

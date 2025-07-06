@@ -1,5 +1,5 @@
 import { formatTime } from "./utils";
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useState, useRef } from 'preact/hooks';
 
 // Section schema: { name, start, end, prompt }
 // Arrangement is an array of Sections
@@ -7,6 +7,7 @@ import { useEffect, useState } from 'preact/hooks';
 
 export default function SongArrangement({
     currentTime,
+    seekTo,
     setCurrentTime,
     songData,
     saveArrangement
@@ -15,6 +16,7 @@ export default function SongArrangement({
     const [editMode, setEditMode] = useState(false);
     const [arrangement, setArrangement] = useState([]);
     const [showControls, setShowControls] = useState(false);
+    const currentSectionRef = useRef(null);
 
     // Load arrangement from song data if available
     useEffect(() => {
@@ -33,6 +35,16 @@ export default function SongArrangement({
         }
         setCurrentSection(currentIdx);
     }, [currentTime, arrangement]);
+
+    // Auto-scroll to current section when it changes
+    useEffect(() => {
+        if (currentSectionRef.current) {
+            currentSectionRef.current.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest'
+            });
+        }
+    }, [currentSection]);
 
     const onSaveArrangement = () => {
         setEditMode(false);
@@ -78,9 +90,13 @@ export default function SongArrangement({
 
             <div className="bg-white/10 rounded p-4 text-sm">
                 <h2 className="text-lg mb-2 font-semibold">Arrangement</h2>
-                <ul className="space-y-1">
+                <ul className="space-y-1 max-h-36 overflow-y-auto">
                     {arrangement.map((section, idx) => (
-                        <li key={idx} className={idx === currentSection ? 'bg-green-700 px-2 py-1 rounded' : 'text-gray-300'}>
+                        <li 
+                            key={idx} 
+                            ref={idx === currentSection ? currentSectionRef : null}
+                            className={idx === currentSection ? 'bg-green-700 px-2 py-1 rounded' : 'text-gray-300'}
+                        >
                             {editMode ? (
                                 <div className="flex items-center gap-2">
                                     <input className="text-black px-1 rounded w-28" value={section.name} readOnly />
@@ -91,7 +107,7 @@ export default function SongArrangement({
                                 <>
                                     <span
                                         className="cursor-pointer hover:text-gray-500"
-                                        onClick={() => setCurrentTime(section.start)}
+                                        onClick={() => seekTo(section.start)}
                                     >
                                         {section.name}
                                     </span>
