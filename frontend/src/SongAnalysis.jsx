@@ -69,6 +69,25 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
         );
     };
 
+    const ClustersTimeline = ({ beats, currentTime, setCurrentTime, currentClusterBeat, currentClusterBeatRef }) => (
+        <div className="mt-4">
+            <h3 className="text-x1 font-bold mb-2">clusters timeline</h3>
+            <div className="overflow-x-auto flex flex-row space-x-1">
+                {beats.map((beat, index) => (
+                    <BeatBlock 
+                        key={index}
+                        beat={beat}
+                        index={index}
+                        currentTime={currentTime}
+                        setCurrentTime={setCurrentTime}
+                        beatRef={index === currentClusterBeat ? currentClusterBeatRef : null}
+                        isCurrent={index === currentClusterBeat}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+
     const labelColorMap = {
         'A': '#1d4ed8', // Blue
         'B': '#10b981', // Green
@@ -140,28 +159,66 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
       return retval;
     }
 
+    function getUniqueClusters(clusters) {
+      const uniqueClusterNumbers = [];
+      for (const c of clusters) {
+        if (uniqueClusterNumbers.includes(c.cluster)) continue;
+        uniqueClusterNumbers.push(c.cluster);
+      }
+      // sort the cluster numbers
+      uniqueClusterNumbers.sort((a, b) => a - b);
+      console.log("uniqueClusterNumbers", uniqueClusterNumbers);
+      return uniqueClusterNumbers
+    }
+
+    function getCurrentClusterNumber(currentTime, clusters) {
+      for (const cluster of clusters) {
+        for (const c of cluster.clusters) {
+          if (c.start <= currentTime && c.end >= currentTime) {
+            return c.cluster;
+          }
+        }
+      }
+      return null;
+    }
+
     return (
     <>
       <h2 className="text-x2 font-bold mb-4">🤖 Song Analysis</h2>
-      
+
+        <div className="mt-4">
+          <h3 className="text-x1 font-bold mb-2">clusters</h3>
+          {/* unique clusters by stem */}
+          <div className="overflow-x-auto">
+            { clusters.map((cluster, index) => (
+              <div key={index} className="px-1 py-2">
+                <div className="flex items-center space-x-1">
+                  <div className="text-xs">{cluster.stem}</div>
+                  {getUniqueClusters(cluster.clusters).map((c, cIndex) => (
+                    <div
+                      className="rounded text-xs"
+                      key={cIndex}
+                    >
+                      {c}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )) }  
+          </div>
+        </div>      
+
+
+
       {/* Beats and clusters */}
       {clusters.length > 0 && (
-      <div className="mt-4">
-        <h3 className="text-x1 font-bold mb-2">clusters</h3>
-        <div className="overflow-x-auto flex flex-row space-x-1" >
-            {beats.map((beat, index) => (
-              <BeatBlock 
-                key={index}
-                beat={beat}
-                index={index}
-                currentTime={currentTime}
-                setCurrentTime={setCurrentTime}
-                beatRef={index === currentClusterBeat ? currentClusterBeatRef : null}
-                isCurrent={index === currentClusterBeat}
-              />
-            ))}
-        </div>
-      </div>
+        <ClustersTimeline 
+          beats={beats}
+          currentTime={currentTime}
+          setCurrentTime={setCurrentTime}
+          currentClusterBeat={currentClusterBeat}
+          currentClusterBeatRef={currentClusterBeatRef}
+        />
       )}
 
       {/* Drum Parts */}
