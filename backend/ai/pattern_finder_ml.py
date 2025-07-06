@@ -171,7 +171,7 @@ def get_stem_clusters_with_model(beats, stem_file, min_duration_beats=1, debug=F
             {
                 "start": start,
                 "end": end,
-                "segmentId": cluster
+                "cluster": cluster
             }
             for (start, end), cluster in sorted(zip(segments, cluster_labels), key=lambda x: x[0][0])
         ]

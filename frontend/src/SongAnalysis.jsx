@@ -70,8 +70,8 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
     function getUniquePatterns(patterns) {
       const uniquePatternNumbers = [];
       for (const c of patterns) {
-        if (uniquePatternNumbers.includes(c.segmentId)) continue;
-        uniquePatternNumbers.push(c.segmentId);
+        if (uniquePatternNumbers.includes(c.cluster)) continue;
+        uniquePatternNumbers.push(c.cluster);
       }
       // sort the cluster numbers
       uniquePatternNumbers.sort((a, b) => a - b);
@@ -81,9 +81,9 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
 
     function getCurrentPatternNumber(currentTime, patterns) {
       for (const pattern of patterns) {
-        for (const c of pattern.patterns) {
+        for (const c of pattern.clusters) {
           if (c.start <= currentTime && c.end >= currentTime) {
-            return c.segmentId;
+            return c.cluster;
           }
         }
       }
@@ -102,7 +102,7 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
               <div key={index} className="px-1 py-2">
                 <div className="flex items-center space-x-1">
                   <div className="text-xs">{pattern.stem}</div>
-                  {getUniquePatterns(pattern.patterns).map((c, cIndex) => (
+                  {getUniquePatterns(pattern.clusters).map((c, cIndex) => (
                     <div
                       className="rounded text-xs"
                       key={cIndex}

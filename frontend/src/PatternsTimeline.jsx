@@ -12,7 +12,7 @@ export default function PatternsTimeline({ songData, beats, currentTime, setCurr
             }`} 
             onClick={() => setCurrentTime(cluster.start)}
         >
-            {cluster.segmentId}
+            {cluster.cluster}
         </div>
     );
 
@@ -59,7 +59,7 @@ export default function PatternsTimeline({ songData, beats, currentTime, setCurr
         const retval = [];
         for(const pattern of patterns){
             // get patterns where 'start' is in this beat time
-            const filteredPatterns = pattern.patterns.filter(c => {
+            const filteredPatterns = pattern.clusters.filter(c => {
                 return c.start <= beatTime && c.end >= beatTime;
             });
             // add the pattern placeholder

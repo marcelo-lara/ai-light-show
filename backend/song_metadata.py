@@ -26,9 +26,9 @@ class Segment:
 
     def to_dict(self):
         return {
-            "segmentId": self.segment_id,
             "start": self.start,
             "end": self.end,
+            "cluster": self.segment_id,
         }
 
     def __str__(self):
@@ -325,7 +325,7 @@ class SongMetadata:
         """
         if not hasattr(self, "_patterns"):
             self._patterns = []
-        self._patterns.append({"stem": stem_name, "patterns": patterns})
+        self._patterns.append({"stem": stem_name, "clusters": patterns})
 
     def to_dict(self):
         return {

@@ -195,7 +195,7 @@ def get_stem_clusters(beats, stem_file, full_file=None, n_mels=64, fmax=8000, ho
             {
                 "start": start,
                 "end": end,
-                "segmentId": cluster
+                "cluster": cluster
             }
             for (start, end), cluster in sorted(zip(segments, cluster_labels), key=lambda x: x[0][0])
         ],
