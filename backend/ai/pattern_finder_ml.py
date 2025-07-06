@@ -171,7 +171,7 @@ def get_stem_clusters_with_model(beats, stem_file, min_duration_beats=1, debug=F
             {
                 "start": start,
                 "end": end,
-                "cluster": cluster
+                "segmentId": cluster
             }
             for (start, end), cluster in sorted(zip(segments, cluster_labels), key=lambda x: x[0][0])
         ]
@@ -193,6 +193,6 @@ if __name__ == "__main__":
         debug=True
         )
 
-    song.add_clusters("drums_m", stem_clusters['clusters_timeline'])
+    song.add_patterns("drums_m", stem_clusters['clusters_timeline'])
 
     print(f"  Found {stem_clusters['n_clusters']} clusters in {len(stem_clusters['clusters_timeline'])} segments for drums...")

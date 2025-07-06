@@ -70,8 +70,8 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
     function getUniquePatterns(patterns) {
       const uniquePatternNumbers = [];
       for (const c of patterns) {
-        if (uniquePatternNumbers.includes(c.cluster)) continue;
-        uniquePatternNumbers.push(c.cluster);
+        if (uniquePatternNumbers.includes(c.segmentId)) continue;
+        uniquePatternNumbers.push(c.segmentId);
       }
       // sort the cluster numbers
       uniquePatternNumbers.sort((a, b) => a - b);
@@ -83,7 +83,7 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
       for (const pattern of patterns) {
         for (const c of pattern.patterns) {
           if (c.start <= currentTime && c.end >= currentTime) {
-            return c.cluster;
+            return c.segmentId;
           }
         }
       }

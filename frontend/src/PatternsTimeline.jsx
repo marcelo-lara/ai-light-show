@@ -12,7 +12,7 @@ export default function PatternsTimeline({ songData, beats, currentTime, setCurr
             }`} 
             onClick={() => setCurrentTime(cluster.start)}
         >
-            {cluster.cluster}
+            {cluster.segmentId}
         </div>
     );
 

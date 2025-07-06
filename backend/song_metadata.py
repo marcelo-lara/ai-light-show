@@ -19,23 +19,23 @@ class Section:
         self.prompt = prompt
 
 class Segment:
-    def __init__(self, start: float, end: float, cluster: str = ''):
-        self.cluster = cluster
+    def __init__(self, start: float, end: float, segment_id: str = ''):
+        self.segment_id = segment_id
         self.start = start
         self.end = end
 
     def to_dict(self):
         return {
-            "cluster": self.cluster,
+            "segmentId": self.segment_id,
             "start": self.start,
             "end": self.end,
         }
 
     def __str__(self):
-        return f"Segment(start={self.start}, end={self.end}, cluster={self.cluster})"
+        return f"Segment(start={self.start}, end={self.end}, segment_id={self.segment_id})"
 
     def __iter__(self):
-        return iter((self.start, self.end, self.cluster))
+        return iter((self.start, self.end, self.segment_id))
 
 class Cluster:
     def __init__(self, part:str, segments: list[Segment] ):
@@ -319,7 +319,7 @@ class SongMetadata:
                 return
         print(f"⚠️ Beat at time {time} not found.")
 
-    def add_patterns(self, stem_name, patterns):
+    def add_patterns(self, stem_name:str, patterns:list[dict]):
         """
         Adds patterns for a given stem to the song metadata.
         """
