@@ -2,13 +2,33 @@
 
 import json
 import os
+import numpy as np
+
+def ensure_json_serializable(obj):
+    """
+    Recursively convert numpy types to native Python types for JSON serialization.
+    """
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {key: ensure_json_serializable(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [ensure_json_serializable(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple(ensure_json_serializable(item) for item in obj)
+    else:
+        return obj
 
 class Section:
     def to_dict(self):
         return {
             "name": self.name,
-            "start": self.start,
-            "end": self.end,
+            "start": float(self.start),
+            "end": float(self.end),
             "prompt": self.prompt,
         }
     
@@ -26,8 +46,8 @@ class Segment:
 
     def to_dict(self):
         return {
-            "start": self.start,
-            "end": self.end,
+            "start": float(self.start),
+            "end": float(self.end),
             "cluster": self.segment_id,
         }
 
@@ -328,7 +348,7 @@ class SongMetadata:
         self._patterns.append({"stem": stem_name, "clusters": patterns})
 
     def to_dict(self):
-        return {
+        data = {
             "title": self.title,
             "genre": self.genre,
             "duration": self.duration,
@@ -340,6 +360,8 @@ class SongMetadata:
             # Serialize arrangement as list of dicts
             "arrangement": [s.to_dict() if isinstance(s, Section) else s for s in self.arrangement],
         }
+        # Ensure all data is JSON serializable
+        return ensure_json_serializable(data)
 
     def to_json(self):
         return json.dumps(self.to_dict())

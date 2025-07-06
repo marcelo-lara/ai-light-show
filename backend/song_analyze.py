@@ -4,6 +4,7 @@ from backend.ai.essentia_analysis import extract_with_essentia
 from backend.ai.drums_infer import infer_drums
 from backend.ai.demucs_split import extract_stems
 from backend.ai.pattern_finder import get_stem_clusters
+from backend.ai.audio_proccess import noise_gate
 
 def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
     print(f"🔍 Analyzing song: {song.title} ({song.mp3_path})")
@@ -27,6 +28,9 @@ def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
     for stem in stems_list:
         stem_path = f"{stems_folder['output_folder']}/{stem}.wav"
 
+        # apply noise gate to stem
+        noise_gate(input_path=stem_path, threshold_db=-35.0)
+
         # get clusters (librosa)
         stem_clusters = get_stem_clusters(
             song.get_beats_array(),
@@ -37,11 +41,11 @@ def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
         song.add_patterns(stem, stem_clusters['clusters_timeline'])
 
         # get clusters (ML)
-        stem_clusters = get_stem_clusters_with_model(
-            song.get_beats_array(), 
-            stem_path
-        )
-        song.add_patterns(f"{stem}_m", stem_clusters['clusters_timeline'])
+        # stem_clusters = get_stem_clusters_with_model(
+        #     song.get_beats_array(), 
+        #     stem_path
+        # )
+        # song.add_patterns(f"{stem}_m", stem_clusters['clusters_timeline'])
 
     ## infer drums
     # drums_path = f"{stems_folder['output_folder']}/drums.wav"

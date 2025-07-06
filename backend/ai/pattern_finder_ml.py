@@ -88,8 +88,8 @@ def get_stem_clusters_with_model(beats, stem_file, min_duration_beats=1, debug=F
     # Create beat-aligned segments
     segments = []
     for i in range(len(beats) - min_duration_beats):
-        start_time = beats[i]
-        end_time = beats[i + min_duration_beats]
+        start_time = float(beats[i])
+        end_time = float(beats[i + min_duration_beats])
         segments.append((start_time, end_time))
 
     segment_features = []
@@ -138,7 +138,7 @@ def get_stem_clusters_with_model(beats, stem_file, min_duration_beats=1, debug=F
 
     segment_times_by_cluster = {}
     for i, label in enumerate(cluster_labels):
-        segment_times_by_cluster.setdefault(label, []).append(segments[i])
+        segment_times_by_cluster.setdefault(int(label), []).append(segments[i])
 
     # Optional: save debug audio
     if debug:
@@ -169,9 +169,9 @@ def get_stem_clusters_with_model(beats, stem_file, min_duration_beats=1, debug=F
         "segment_times_by_cluster": segment_times_by_cluster,
         "clusters_timeline": [
             {
-                "start": start,
-                "end": end,
-                "cluster": cluster
+                "start": float(start),
+                "end": float(end),
+                "cluster": int(cluster)
             }
             for (start, end), cluster in sorted(zip(segments, cluster_labels), key=lambda x: x[0][0])
         ]

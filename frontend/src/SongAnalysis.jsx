@@ -98,7 +98,6 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-x2 font-bold">🤖 Song Analysis</h2>
         <div>
-          {/* 3 checkboxes for enabling/disabling pattern, patternTimeline and beats visualization */}
           <div className="flex items-center space-x-6">
             <label className="flex items-center space-x-2">
               <input
@@ -140,16 +139,29 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
           <div className="overflow-x-auto">
             { patterns.map((pattern, index) => (
               <div key={index} className="px-1 py-2">
-                <div className="flex items-center space-x-1">
-                  <div className="text-xs">{pattern.stem}</div>
-                  {getUniquePatterns(pattern.clusters).map((c, cIndex) => (
-                    <div
-                      className="rounded text-xs"
-                      key={cIndex}
-                    >
-                      {c}
-                    </div>
-                  ))}
+                <div className="text-xs">{pattern.stem}</div>
+                <div className="flex space-x-3">
+                  {getUniquePatterns(pattern.clusters).map((cluster, cIndex) => {
+                    // Check if this cluster is currently active
+                    const isCurrentCluster = pattern.clusters.some(c => 
+                      c.cluster === cluster && 
+                      currentTime >= c.start && 
+                      currentTime <= c.end
+                    );
+                    
+                    return (
+                      <div
+                        className={`rounded text-xs min-w-2 px-2 py-1 ${
+                          isCurrentCluster 
+                            ? 'bg-green-500 text-white' 
+                            : 'bg-gray-700 text-gray-300'
+                        }`}
+                        key={cIndex}
+                      >
+                        {cluster}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )) }  
