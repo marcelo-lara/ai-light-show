@@ -11,6 +11,9 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
     const [currentClusterBeat, setCurrentClusterBeat] = useState(0);
     const [minEnergy, setMinEnergy] = useState(0);
     const [maxEnergy, setMaxEnergy] = useState(0);
+    const [showPatterns, setShowPatterns] = useState(true);
+    const [showPatternsTimeline, setShowPatternsTimeline] = useState(false);
+    const [showBeats, setShowBeats] = useState(false);
     const currentBeatRef = useRef(null);
     const currentClusterBeatRef = useRef(null);
 
@@ -92,11 +95,48 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
 
     return (
     <>
-      <h2 className="text-x2 font-bold mb-4">🤖 Song Analysis</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-x2 font-bold">🤖 Song Analysis</h2>
+        <div>
+          {/* 3 checkboxes for enabling/disabling pattern, patternTimeline and beats visualization */}
+          <div className="flex items-center space-x-6">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={showPatterns}
+                onChange={(e) => setShowPatterns(e.target.checked)}
+                className="form-checkbox h-4 w-4 text-blue-600"
+              />
+              <span className="text-sm">Patterns</span>
+            </label>
+            
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={showPatternsTimeline}
+                onChange={(e) => setShowPatternsTimeline(e.target.checked)}
+                className="form-checkbox h-4 w-4 text-blue-600"
+              />
+              <span className="text-sm">Patterns Timeline</span>
+            </label>
+            
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={showBeats}
+                onChange={(e) => setShowBeats(e.target.checked)}
+                className="form-checkbox h-4 w-4 text-blue-600"
+              />
+              <span className="text-sm">Beats</span>
+            </label>
+          </div>
+        </div>
+      </div>
 
+        {showPatterns && (
         <div className="mt-4">
           <h3 className="text-x1 font-bold mb-2">patterns</h3>
-          {/* unique patterns by stem */}
+          {/* unique clusters by stem */}
           <div className="overflow-x-auto">
             { patterns.map((pattern, index) => (
               <div key={index} className="px-1 py-2">
@@ -114,12 +154,13 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
               </div>
             )) }  
           </div>
-        </div>      
+        </div>
+        )}      
 
 
 
       {/* Beats and patterns */}
-      {patterns.length > 0 && (
+      {showPatternsTimeline && patterns.length > 0 && (
         <PatternsTimeline 
           songData={songData}
           beats={beats}
@@ -157,6 +198,7 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
       )}
 
       {/* Song Beats */}
+      {showBeats && (
       <div className="mt-4">
         <h3 className="text-x1 font-bold mb-2">beats</h3>
         <div className="overflow-x-auto">
@@ -183,6 +225,7 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
           </div>
         </div>
       </div>
+      )}
 
     </>
   );
