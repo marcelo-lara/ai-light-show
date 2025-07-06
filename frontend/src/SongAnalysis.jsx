@@ -11,6 +11,54 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
     const [maxEnergy, setMaxEnergy] = useState(0);
     const currentBeatRef = useRef(null);
 
+    const ClusterTag = ({ cluster, currentTime, setCurrentTime }) => (
+        <div
+            className={`px-2 py-1 rounded text-xs cursor-pointer ${
+                currentTime >= cluster.start && currentTime <= cluster.end 
+                    ? 'bg-green-500' 
+                    : 'bg-gray-900'
+            }`} 
+            onClick={() => setCurrentTime(cluster.start)}
+        >
+            {cluster.cluster}
+        </div>
+    );
+
+    const BeatTags = ({ _cluster, currentTime, setCurrentTime }) => (
+        <div className="text-xs flex flex-column">
+            <div className=" flex flex-row space-x-1">
+                {_cluster.tags && _cluster.tags.map((c, cIndex) => (
+                    <ClusterTag 
+                        key={cIndex}
+                        cluster={c} 
+                        currentTime={currentTime} 
+                        setCurrentTime={setCurrentTime} 
+                    />
+                ))}
+            </div>
+            {_cluster.stem}
+        </div>
+    );
+
+    const BeatBlock = ({ beat, index, currentTime, setCurrentTime }) => {
+        const _time = beat.time || -1;
+        const clustersForBeat = getClustersForBeat(_time);
+
+        return (
+            <div className="flex flex-column items-center space-x-4">
+                {clustersForBeat.map((_cluster, clusterIndex) => (
+                    <BeatTags 
+                        key={clusterIndex}
+                        _cluster={_cluster}
+                        currentTime={currentTime}
+                        setCurrentTime={setCurrentTime}
+                    />
+                ))}
+                <div className="text-xs">{index}</div>
+            </div>
+        );
+    };
+
     const labelColorMap = {
         'A': '#1d4ed8', // Blue
         'B': '#10b981', // Green
@@ -80,35 +128,15 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
       <div className="mt-4">
         <h3 className="text-x1 font-bold mb-2">clusters</h3>
         <div className="overflow-x-auto flex flex-row space-x-1" >
-            {beats.map((beat, index) => {
-              const _time = beat.time || -1;
-              const clustersForBeat = getClustersForBeat(_time);
-
-              return (                
-              <div key={index} className="flex flex-column items-center space-x-4">
-                {
-                  clustersForBeat.map((_cluster, clusterIndex) => {
-                    return (
-                      <div key={clusterIndex} className="text-xs flex flex-column">
-                        <div className=" flex flex-row space-x-1">
-                          {_cluster.tags && _cluster.tags.map((c, cIndex) => (
-                            <div
-                              key={cIndex}
-                              className={`px-2 py-1 rounded text-xs ${currentTime >= c.start && currentTime <= c.end ? 'bg-green-500' : 'bg-gray-900'}`} 
-                                onClick={() => setCurrentTime(c.start)}>
-                                  {c.cluster}
-                            </div>
-                          ))}
-                        </div>
-                        {_cluster.stem}
-                      </div>
-                    )
-                  })
-                }
-                <div className="text-xs">{index}</div>
-              </div>
-              )
-            })}
+            {beats.map((beat, index) => (
+              <BeatBlock 
+                key={index}
+                beat={beat}
+                index={index}
+                currentTime={currentTime}
+                setCurrentTime={setCurrentTime}
+              />
+            ))}
         </div>
       </div>
       )}
