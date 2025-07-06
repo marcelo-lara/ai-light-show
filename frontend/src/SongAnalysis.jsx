@@ -7,9 +7,11 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
     const [beats, setBeats] = useState([]);
     const [clusters, setClusters] = useState([]);
     const [currentBeat, setCurrentBeat] = useState(false);
+    const [currentClusterBeat, setCurrentClusterBeat] = useState(0);
     const [minEnergy, setMinEnergy] = useState(0);
     const [maxEnergy, setMaxEnergy] = useState(0);
     const currentBeatRef = useRef(null);
+    const currentClusterBeatRef = useRef(null);
 
     const ClusterTag = ({ cluster, currentTime, setCurrentTime }) => (
         <div
@@ -25,36 +27,44 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
     );
 
     const BeatTags = ({ _cluster, currentTime, setCurrentTime }) => (
-        <div className="text-xs flex flex-column">
-            <div className=" flex flex-row space-x-1">
-                {_cluster.tags && _cluster.tags.map((c, cIndex) => (
-                    <ClusterTag 
-                        key={cIndex}
-                        cluster={c} 
-                        currentTime={currentTime} 
-                        setCurrentTime={setCurrentTime} 
-                    />
-                ))}
+        <div className="text-xs">
+            <div className="flex flex-row space-x-1">
+
+              {/* <div className="">
+                  {_cluster.stem}
+              </div> */}
+              {_cluster.tags && _cluster.tags.map((c, cIndex) => (
+                  <ClusterTag 
+                      key={cIndex}
+                      cluster={c} 
+                      currentTime={currentTime} 
+                      setCurrentTime={setCurrentTime} 
+                  />
+              ))}
             </div>
-            {_cluster.stem}
         </div>
     );
 
-    const BeatBlock = ({ beat, index, currentTime, setCurrentTime }) => {
+    const BeatBlock = ({ beat, index, currentTime, setCurrentTime, isCurrent, beatRef }) => {
         const _time = beat.time || -1;
         const clustersForBeat = getClustersForBeat(_time);
 
         return (
-            <div className="flex flex-column items-center space-x-4">
-                {clustersForBeat.map((_cluster, clusterIndex) => (
-                    <BeatTags 
-                        key={clusterIndex}
-                        _cluster={_cluster}
-                        currentTime={currentTime}
-                        setCurrentTime={setCurrentTime}
-                    />
-                ))}
-                <div className="text-xs">{index}</div>
+            <div 
+                ref={beatRef}
+                className={`bg-gray-800 px-2 ${isCurrent ? 'ring-2 ring-blue-400' : ''}`}
+            >
+                <div className="">
+                    {clustersForBeat.map((_cluster, clusterIndex) => (
+                        <BeatTags 
+                            key={clusterIndex}
+                            _cluster={_cluster}
+                            currentTime={currentTime}
+                            setCurrentTime={setCurrentTime}
+                        />
+                    ))}
+                </div>
+                <div className="text-xs text-right">{index}</div>
             </div>
         );
     };
@@ -90,7 +100,8 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
           if (currentTime >= beats[i].time) current = i;
         }
         setCurrentBeat(current);
-    }, [currentTime]);
+        setCurrentClusterBeat(current);
+    }, [currentTime, beats]);
 
     useEffect(() => {
       if (currentBeatRef.current) {
@@ -101,6 +112,16 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
         });
       }
     }, [currentBeat]);
+
+    useEffect(() => {
+      if (currentClusterBeatRef.current) {
+        currentClusterBeatRef.current.scrollIntoView({
+          behavior: 'smooth',
+          inline: 'center',
+          block: 'nearest'
+        });
+      }
+    }, [currentClusterBeat]);
 
     function getClustersForBeat(beatTime) {
       const retval = [];
@@ -135,6 +156,8 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
                 index={index}
                 currentTime={currentTime}
                 setCurrentTime={setCurrentTime}
+                beatRef={index === currentClusterBeat ? currentClusterBeatRef : null}
+                isCurrent={index === currentClusterBeat}
               />
             ))}
         </div>
