@@ -34,14 +34,14 @@ def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
             full_file=song.mp3_path
         )
         print(f"  Adding {len(stem_clusters['clusters_timeline'])} clusters for {stem}...")
-        song.add_clusters(stem, stem_clusters['clusters_timeline'])
+        song.add_patterns(stem, stem_clusters['clusters_timeline'])
 
         # get clusters (ML)
         stem_clusters = get_stem_clusters_with_model(
             song.get_beats_array(), 
             stem_path
         )
-        song.add_clusters(f"{stem}_m", stem_clusters['clusters_timeline'])
+        song.add_patterns(f"{stem}_m", stem_clusters['clusters_timeline'])
 
     ## infer drums
     # drums_path = f"{stems_folder['output_folder']}/drums.wav"

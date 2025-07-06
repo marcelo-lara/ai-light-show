@@ -218,7 +218,7 @@ if __name__ == "__main__":
 
     stem_clusters = get_stem_clusters(beats, stem_file, full_file=song.mp3_path, debug=True)
 
-    song.add_clusters("drums", stem_clusters['clusters_timeline'])
+    song.add_patterns("drums", stem_clusters['clusters_timeline'])
     song.save()
 
     #todo: save as json

@@ -1,92 +1,18 @@
 import { useState, useRef } from "preact/hooks";
 import { use, useEffect } from "react";
 import Bar from "./Bar";
+import PatternsTimeline from "./PatternsTimeline";
 
 export default function SongAnalysis({ songData, currentTime, setCurrentTime }) {
 
     const [beats, setBeats] = useState([]);
-    const [clusters, setClusters] = useState([]);
+    const [patterns, setPatterns] = useState([]);
     const [currentBeat, setCurrentBeat] = useState(false);
     const [currentClusterBeat, setCurrentClusterBeat] = useState(0);
     const [minEnergy, setMinEnergy] = useState(0);
     const [maxEnergy, setMaxEnergy] = useState(0);
     const currentBeatRef = useRef(null);
     const currentClusterBeatRef = useRef(null);
-
-    const ClusterTag = ({ cluster, currentTime, setCurrentTime }) => (
-        <div
-            className={`px-2 py-1 rounded text-xs cursor-pointer ${
-                currentTime >= cluster.start && currentTime <= cluster.end 
-                    ? 'bg-green-500' 
-                    : 'bg-gray-900'
-            }`} 
-            onClick={() => setCurrentTime(cluster.start)}
-        >
-            {cluster.cluster}
-        </div>
-    );
-
-    const BeatTags = ({ _cluster, currentTime, setCurrentTime }) => (
-        <div className="text-xs">
-            <div className="flex flex-row space-x-1">
-
-              {/* <div className="">
-                  {_cluster.stem}
-              </div> */}
-              {_cluster.tags && _cluster.tags.map((c, cIndex) => (
-                  <ClusterTag 
-                      key={cIndex}
-                      cluster={c} 
-                      currentTime={currentTime} 
-                      setCurrentTime={setCurrentTime} 
-                  />
-              ))}
-            </div>
-        </div>
-    );
-
-    const BeatBlock = ({ beat, index, currentTime, setCurrentTime, isCurrent, beatRef }) => {
-        const _time = beat.time || -1;
-        const clustersForBeat = getClustersForBeat(_time);
-
-        return (
-            <div 
-                ref={beatRef}
-                className={`bg-gray-800 px-2 ${isCurrent ? 'ring-2 ring-blue-400' : ''}`}
-            >
-                <div className="">
-                    {clustersForBeat.map((_cluster, clusterIndex) => (
-                        <BeatTags 
-                            key={clusterIndex}
-                            _cluster={_cluster}
-                            currentTime={currentTime}
-                            setCurrentTime={setCurrentTime}
-                        />
-                    ))}
-                </div>
-                <div className="text-xs text-right">{index}</div>
-            </div>
-        );
-    };
-
-    const ClustersTimeline = ({ beats, currentTime, setCurrentTime, currentClusterBeat, currentClusterBeatRef }) => (
-        <div className="mt-4">
-            <h3 className="text-x1 font-bold mb-2">clusters timeline</h3>
-            <div className="overflow-x-auto flex flex-row space-x-1">
-                {beats.map((beat, index) => (
-                    <BeatBlock 
-                        key={index}
-                        beat={beat}
-                        index={index}
-                        currentTime={currentTime}
-                        setCurrentTime={setCurrentTime}
-                        beatRef={index === currentClusterBeat ? currentClusterBeatRef : null}
-                        isCurrent={index === currentClusterBeat}
-                    />
-                ))}
-            </div>
-        </div>
-    );
 
     const labelColorMap = {
         'A': '#1d4ed8', // Blue
@@ -103,8 +29,8 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
       if (songData.beats) {
         setBeats(songData.beats);
       }
-      if (songData.clusters) {
-        setClusters(songData.clusters);
+      if (songData.patterns) {
+        setPatterns(songData.patterns);
       }
     }, [songData]);
 
@@ -139,41 +65,23 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
           inline: 'center',
           block: 'nearest'
         });
-      }
-    }, [currentClusterBeat]);
+      }      }, [currentClusterBeat]);
 
-    function getClustersForBeat(beatTime) {
-      const retval = [];
-      for(const cluster of clusters){
-
-        // get clusters where 'start' is in this beat time
-        const filteredClusters = cluster.clusters.filter(c => {
-          return c.start <= beatTime && c.end >= beatTime;
-        });
-        // add the cluster placeholder
-        retval.push({
-          stem: cluster.stem,
-          tags: filteredClusters
-        });
-      }
-      return retval;
-    }
-
-    function getUniqueClusters(clusters) {
-      const uniqueClusterNumbers = [];
-      for (const c of clusters) {
-        if (uniqueClusterNumbers.includes(c.cluster)) continue;
-        uniqueClusterNumbers.push(c.cluster);
+    function getUniquePatterns(patterns) {
+      const uniquePatternNumbers = [];
+      for (const c of patterns) {
+        if (uniquePatternNumbers.includes(c.cluster)) continue;
+        uniquePatternNumbers.push(c.cluster);
       }
       // sort the cluster numbers
-      uniqueClusterNumbers.sort((a, b) => a - b);
-      console.log("uniqueClusterNumbers", uniqueClusterNumbers);
-      return uniqueClusterNumbers
+      uniquePatternNumbers.sort((a, b) => a - b);
+      console.log("uniquePatternNumbers", uniquePatternNumbers);
+      return uniquePatternNumbers
     }
 
-    function getCurrentClusterNumber(currentTime, clusters) {
-      for (const cluster of clusters) {
-        for (const c of cluster.clusters) {
+    function getCurrentPatternNumber(currentTime, patterns) {
+      for (const pattern of patterns) {
+        for (const c of pattern.patterns) {
           if (c.start <= currentTime && c.end >= currentTime) {
             return c.cluster;
           }
@@ -187,14 +95,14 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
       <h2 className="text-x2 font-bold mb-4">🤖 Song Analysis</h2>
 
         <div className="mt-4">
-          <h3 className="text-x1 font-bold mb-2">clusters</h3>
-          {/* unique clusters by stem */}
+          <h3 className="text-x1 font-bold mb-2">patterns</h3>
+          {/* unique patterns by stem */}
           <div className="overflow-x-auto">
-            { clusters.map((cluster, index) => (
+            { patterns.map((pattern, index) => (
               <div key={index} className="px-1 py-2">
                 <div className="flex items-center space-x-1">
-                  <div className="text-xs">{cluster.stem}</div>
-                  {getUniqueClusters(cluster.clusters).map((c, cIndex) => (
+                  <div className="text-xs">{pattern.stem}</div>
+                  {getUniquePatterns(pattern.patterns).map((c, cIndex) => (
                     <div
                       className="rounded text-xs"
                       key={cIndex}
@@ -210,9 +118,10 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
 
 
 
-      {/* Beats and clusters */}
-      {clusters.length > 0 && (
-        <ClustersTimeline 
+      {/* Beats and patterns */}
+      {patterns.length > 0 && (
+        <PatternsTimeline 
+          songData={songData}
           beats={beats}
           currentTime={currentTime}
           setCurrentTime={setCurrentTime}

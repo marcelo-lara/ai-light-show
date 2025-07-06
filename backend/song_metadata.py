@@ -63,7 +63,7 @@ class SongMetadata:
         self._bpm = 120
         self._beats = []
         self._chords = []
-        self._clusters = []
+        self._patterns = []
         self._arrangement = []
         self._duration = 0.0
         self._drums = []
@@ -118,12 +118,12 @@ class SongMetadata:
         self._genre = value
 
     @property
-    def clusters(self):
-        return self._clusters
+    def patterns(self):
+        return self._patterns
 
-    @clusters.setter
-    def clusters(self, value):
-        self._clusters = value
+    @patterns.setter
+    def patterns(self, value):
+        self._patterns = value
 
     @property
     def duration(self) -> float:
@@ -248,7 +248,7 @@ class SongMetadata:
         self._genre = data.get("genre", self.genre)
         self._bpm = data.get("bpm", self.bpm)
         self._beats = data.get("beats", [])
-        self._clusters = data.get("clusters", [])
+        self._patterns = data.get("patterns", [])
         self._chords = data.get("chords", [])
         self._drums = data.get("drums", [])
         self._duration = data.get("duration", 0.0)
@@ -319,13 +319,13 @@ class SongMetadata:
                 return
         print(f"⚠️ Beat at time {time} not found.")
 
-    def add_clusters(self, stem_name, clusters):
+    def add_patterns(self, stem_name, patterns):
         """
-        Adds clusters for a given stem to the song metadata.
+        Adds patterns for a given stem to the song metadata.
         """
-        if not hasattr(self, "_clusters"):
-            self._clusters = []
-        self._clusters.append({"stem": stem_name, "clusters": clusters})
+        if not hasattr(self, "_patterns"):
+            self._patterns = []
+        self._patterns.append({"stem": stem_name, "patterns": patterns})
 
     def to_dict(self):
         return {
@@ -336,7 +336,7 @@ class SongMetadata:
             "chords": self.chords,
             "beats": self.beats,
             "drums": self.drums,
-            "clusters": self._clusters,
+            "patterns": self._patterns,
             # Serialize arrangement as list of dicts
             "arrangement": [s.to_dict() if isinstance(s, Section) else s for s in self.arrangement],
         }
