@@ -11,6 +11,42 @@ from collections import Counter
 from sklearn.metrics.pairwise import cosine_similarity
 import json
 
+def get_rhythmic_features(audio, sr):
+    """Extract advanced rhythmic features including onset detection and tempogram."""
+    try:
+        onset_env = librosa.onset.onset_strength(y=audio, sr=sr)
+        tempogram = librosa.feature.tempogram(onset_envelope=onset_env, sr=sr)
+        
+        # Ensure consistent feature dimensions
+        t_mean = np.mean(tempogram, axis=1) if tempogram.size > 0 else np.zeros(384)
+        t_std = np.std(tempogram, axis=1) if tempogram.size > 0 else np.zeros(384)
+        
+        return {
+            'onset_strength': np.mean(onset_env) if onset_env.size > 0 else 0.0,
+            'tempogram_mean': t_mean[:384],  # Ensure fixed length of 384
+            'tempogram_std': t_std[:384]
+        }
+    except Exception as e:
+        print(f"⚠️ Rhythmic feature error: {str(e)}")
+        return {
+            'onset_strength': 0.0,
+            'tempogram_mean': np.zeros(384),
+            'tempogram_std': np.zeros(384)
+        }
+
+def get_temporal_features(audio, sr, n_mels=64):
+    """Extract temporal dynamics features with delta features."""
+    S = librosa.feature.melspectrogram(y=audio, sr=sr, n_mels=n_mels)
+    log_S = librosa.power_to_db(S, ref=np.max)
+    mfcc = librosa.feature.mfcc(S=log_S, n_mfcc=13)
+    delta_mfcc = librosa.feature.delta(mfcc)
+    delta2_mfcc = librosa.feature.delta(mfcc, order=2)
+    return {
+        'mfcc': mfcc,
+        'delta_mfcc': delta_mfcc,
+        'delta2_mfcc': delta2_mfcc
+    }
+
 def get_suggested_threshold(features, step=1):
     features_sampled = features[::step]
     Z = linkage(features_sampled, method='ward')
@@ -29,11 +65,36 @@ def get_stem_clusters(
     segment_beat_lengths=(0.5, 1, 2, 4),
     debug=False
 ):
+    """ 
+    Find repeated patterns in a stem file based on beats.
+    This function segments the audio file into chunks based on the provided beat lengths,
+    extracts features from each segment, and clusters them to find similar patterns.
+    :param beats: List of beat timestamps in seconds.
+    :param stem_file: Path to the audio stem file to analyze.
+    :param full_file: Optional path to the full audio file (not used in this function).
+    :param n_mels: Number of mel bands to use in the mel spectrogram.
+    :param fmax: Maximum frequency for the mel spectrogram.
+    :param hop_length: Hop length for the mel spectrogram.
+    :param segment_beat_lengths: Tuple of beat lengths to segment the audio into.
+    :param debug: If True, prints debug information.
+    :return: Dictionary containing cluster labels, segments, and other analysis results.
+    """
     if not Path(stem_file).exists():
         raise FileNotFoundError(f"Stem file not found: {stem_file}")
+        
     y, sr = librosa.load(stem_file, sr=None)
     if len(y) == 0:
         raise ValueError("Audio file is empty or could not be loaded")
+
+    # Check if entire audio is silent
+    if np.allclose(y, 0, atol=1e-4):
+        return {
+            "clusters_timeline": [],
+            "n_clusters": 0,
+            "clusterization_score": 0.0,
+            "best_duration_beats": 0,
+            "all_durations": {}
+        }
 
     results_by_duration = {}
 
@@ -60,14 +121,28 @@ def get_stem_clusters(
             audio = y[start_sample:end_sample]
             if np.allclose(audio, 0, atol=1e-4):
                 continue
+            # Use updated feature extraction to match second pass
             S = librosa.feature.melspectrogram(y=audio, sr=sr, n_mels=n_mels, fmax=fmax)
             log_S = librosa.power_to_db(S, ref=np.max)
-            mfcc = librosa.feature.mfcc(S=log_S, n_mfcc=13)
+            
+            temporal = get_temporal_features(audio, sr, n_mels)
+            rhythmic = get_rhythmic_features(audio, sr)
+            
             chroma = librosa.feature.chroma_stft(S=S, sr=sr)
+            spectral_contrast = librosa.feature.spectral_contrast(S=S, sr=sr)
             rms = librosa.feature.rms(y=audio)
+            
             vector = np.hstack([
-                np.mean(log_S, axis=1), np.std(log_S, axis=1),
-                np.mean(mfcc, axis=1), np.mean(chroma, axis=1),
+                np.mean(log_S, axis=1), 
+                np.std(log_S, axis=1),
+                np.mean(temporal['mfcc'], axis=1),
+                np.mean(temporal['delta_mfcc'], axis=1),
+                np.mean(temporal['delta2_mfcc'], axis=1),
+                np.mean(chroma, axis=1),
+                np.mean(spectral_contrast, axis=1),
+                rhythmic['onset_strength'],
+                np.mean(rhythmic['tempogram_mean']),
+                np.mean(rhythmic['tempogram_std']),
                 np.mean(rms)
             ])
             feature_dim = len(vector)
@@ -89,18 +164,58 @@ def get_stem_clusters(
                 continue
             S = librosa.feature.melspectrogram(y=audio, sr=sr, n_mels=n_mels, fmax=fmax)
             log_S = librosa.power_to_db(S, ref=np.max)
-            mfcc = librosa.feature.mfcc(S=log_S, n_mfcc=13)
-            chroma = librosa.feature.chroma_stft(S=S, sr=sr)
-            rms = librosa.feature.rms(y=audio)
+            
+            temporal = get_temporal_features(audio, sr, n_mels)
+            rhythmic = get_rhythmic_features(audio, sr)
+            
+            chroma = librosa.feature.chroma_stft(S=S, sr=sr) if S.size > 0 else np.zeros((12, 1))
+            spectral_contrast = librosa.feature.spectral_contrast(S=S, sr=sr) if S.size > 0 else np.zeros((7, 1))
+            rms = librosa.feature.rms(y=audio) if audio.size > 0 else np.zeros(1)
+            
             vector = np.hstack([
-                np.mean(log_S, axis=1), np.std(log_S, axis=1),
-                np.mean(mfcc, axis=1), np.mean(chroma, axis=1),
+                np.mean(log_S, axis=1), 
+                np.std(log_S, axis=1),
+                np.mean(temporal['mfcc'], axis=1),
+                np.mean(temporal['delta_mfcc'], axis=1),
+                np.mean(temporal['delta2_mfcc'], axis=1),
+                np.mean(chroma, axis=1),
+                np.mean(spectral_contrast, axis=1),
+                rhythmic['onset_strength'],
+                np.mean(rhythmic['tempogram_mean']),
+                np.mean(rhythmic['tempogram_std']),
                 np.mean(rms)
             ])
             features.append(vector)
 
-        X = StandardScaler().fit_transform(features)
-        X_reduced = PCA(n_components=min(10, X.shape[1], X.shape[0]-1)).fit_transform(X)
+        # Ensure valid input for PCA
+        X = np.array(features)
+        X = np.nan_to_num(X, nan=0.0, posinf=1e6, neginf=-1e6)  # Handle NaN/Inf
+        
+        try:
+            # Scale with fallback for zero-variance features
+            X_scaled = StandardScaler().fit_transform(X)
+        except ValueError:
+            X_scaled = X  # Fallback if scaling fails (e.g. all features zero)
+            
+        # Ensure no NaNs/Infs after scaling
+        X_scaled = np.nan_to_num(X_scaled, nan=0.0, posinf=1e6, neginf=-1e6)
+        
+        # Handle zero-variance PCA input
+        if np.allclose(X_scaled, 0) or np.isnan(X_scaled).any():
+            # If all segments are silent, assign single cluster
+            cluster_labels = [0]*len(segments)
+            results_by_duration[duration_beats] = {
+                "cluster_labels": cluster_labels,
+                "segments": segments,
+                "n_clusters": 1,
+                "cluster_centroids": {0: np.zeros(feature_dim)},
+                "similarity_matrix": [[100.0]]
+            }
+            continue
+            
+        pca = PCA(n_components=0.95)  # Keep 95% variance
+        X_reduced = pca.fit_transform(X_scaled)
+        X_reduced = np.nan_to_num(X_reduced, nan=0.0)
         threshold = get_suggested_threshold(X_reduced)
         clustering = AgglomerativeClustering(n_clusters=None, distance_threshold=threshold, linkage='ward')
         raw_labels = clustering.fit_predict(X_reduced)
@@ -124,19 +239,56 @@ def get_stem_clusters(
         similarity_matrix = cosine_similarity(centroid_array)
         similarity_percent = (similarity_matrix * 100).round(1)
 
+        # Merge clusters with >99.5% similarity
+        def merge_clusters(sim_matrix, threshold=99.5):
+            """Merge clusters with similarity above threshold"""
+            clusters = list(range(sim_matrix.shape[0]))
+            merged = []
+            
+            while clusters:
+                current = clusters.pop(0)
+                group = [current]
+                # Find all clusters similar to current
+                for i, val in enumerate(sim_matrix[current]):
+                    if i != current and val > threshold and i in clusters:
+                        group.append(i)
+                        clusters.remove(i)
+                merged.append(group)
+            
+            # Create label mapping
+            label_map = {}
+            for new_label, group in enumerate(merged):
+                for old_label in group:
+                    label_map[labels_sorted[old_label]] = new_label
+            
+            return label_map, merged
+
+        merge_map, merged_groups = merge_clusters(similarity_percent, 99.5)
+        
+        # Remap cluster labels
+        merged_labels = [merge_map[label] for label in cluster_labels]
+        merged_centroids = {}
+        for new_label, group in enumerate(merged_groups):
+            group_centroids = [cluster_centroids[labels_sorted[i]] for i in group]
+            merged_centroids[new_label] = np.mean(group_centroids, axis=0)
+        
+        # Recalculate similarity matrix with merged clusters
+        merged_array = np.array([merged_centroids[k] for k in sorted(merged_centroids.keys())])
+        merged_similarity = (cosine_similarity(merged_array) * 100).round(1)
+
         results_by_duration[duration_beats] = {
-            "cluster_labels": cluster_labels,
+            "cluster_labels": merged_labels,
             "segments": segments,
-            "n_clusters": len(set(cluster_labels)),
-            "cluster_centroids": cluster_centroids,
-            "similarity_matrix": similarity_percent.tolist(),
+            "n_clusters": len(merged_centroids),
+            "cluster_centroids": merged_centroids,
+            "similarity_matrix": merged_similarity.tolist()
         }
 
         if debug:
             print(f"   → Clusters: {len(set(cluster_labels))}")
             print(f"   → Segments: {len(segments)}")
             print(f"   → Score: {round(len(set(cluster_labels)) / len(segments), 4)}")
-            print("   → Similarity Matrix (%):")
+            print("Similarity Matrix (%):")
             header = "     " + "  ".join(f"C{i}" for i in range(len(labels_sorted)))
             print(header)
             for i, row in enumerate(similarity_percent):
@@ -211,10 +363,18 @@ def get_stem_clusters(
         for (start, end), cluster in zip(best_result_clean["segments"], best_result_clean["cluster_labels"])
     ]
 
+    if best_result_clean["n_clusters"] == 0:
+        print("⚠️ No clusters found after processing.")
+        return None
+
+    if best_result_clean["n_clusters"] > 50:
+        print("⚠️ Too many clusters found, likely too noisy or complex.")
+        return None
+
     return best_result_clean
 
 if __name__ == "__main__":
-    from backend.song_metadata import SongMetadata
+    from ..models.song_metadata import SongMetadata
 
     song = SongMetadata("born_slippy", songs_folder="/home/darkangel/ai-light-show/songs")
     beats = song.get_beats_array()
