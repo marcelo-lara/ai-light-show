@@ -25,6 +25,8 @@ def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
 
     # analyze stems
     stems_list = ['drums', 'bass']
+    song.clear_patterns()
+
     for stem in stems_list:
         stem_path = f"{stems_folder['output_folder']}/{stem}.wav"
 
@@ -34,9 +36,12 @@ def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
         # get clusters (librosa)
         stem_clusters = get_stem_clusters(
             song.get_beats_array(),
-            stem_path,
-            full_file=song.mp3_path
+            stem_path
         )
+        print(f"   → Clusters: {stem_clusters['n_clusters']}")
+        print(f"   → Segments: {len(stem_clusters['segments'])}")
+        print(f"   → Score: {stem_clusters['clusterization_score']}")
+
         print(f"  Adding {len(stem_clusters['clusters_timeline'])} clusters for {stem}...")
         song.add_patterns(stem, stem_clusters['clusters_timeline'])
 
@@ -94,8 +99,48 @@ def add_flash_preset(start_time:float=0.0, fixture:str="parcan_l", start_brightn
 
 
 if __name__ == "__main__":
+
+    songs_folder="/home/darkangel/ai-light-show/songs"
+
+    # get a list of mp3 files in the songs folder
+    import os
+    from glob import glob
+    mp3_files = glob(os.path.join(songs_folder, "*.mp3"))
+    if not mp3_files:
+        print("No MP3 files found in the songs folder.")
+        exit(1)
+
+    # remove .meta.json files if they exist
+    for meta_file in glob(os.path.join(songs_folder, "*.meta.json")):
+        try:
+            os.remove(meta_file)
+            print(f"Removed existing metadata file: {meta_file}")
+        except Exception as e:
+            print(f"Error removing {meta_file}: {e}")
+
+    for log_file in glob(os.path.join(songs_folder, "*.log")):
+        try:
+            os.remove(log_file)
+            print(f"Removed existing log file: {log_file}")
+        except Exception as e:
+            print(f"Error removing {log_file}: {e}")
+
+    for mp3_file in mp3_files:
+        song_name = os.path.splitext(os.path.basename(mp3_file))[0]
+        print(f"Analyzing song: {song_name} ({mp3_file})")
+        
+        # Create a SongMetadata instance
+        song = SongMetadata(song_name, songs_folder=songs_folder, ignore_existing=True)
+        
+        # Analyze the song
+        song = song_analyze(song)
+        
+        # Save the song metadata
+        song.save()
+
+
     # Example usage
-    song = SongMetadata("born_slippy", songs_folder="/home/darkangel/ai-light-show/songs", ignore_existing=True)
-    print(f"---------------------")
-    song = song_analyze(song)
-    song.save()
+    # song = SongMetadata("born_slippy", songs_folder="/home/darkangel/ai-light-show/songs", ignore_existing=True)
+    # print(f"---------------------")
+    # song = song_analyze(song)
+    # song.save()

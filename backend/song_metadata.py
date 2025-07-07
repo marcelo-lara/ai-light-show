@@ -339,6 +339,12 @@ class SongMetadata:
                 return
         print(f"⚠️ Beat at time {time} not found.")
 
+    def clear_patterns(self):
+        """
+        Clears all patterns from the song metadata.
+        """
+        self._patterns = []
+
     def add_patterns(self, stem_name:str, patterns:list[dict]):
         """
         Adds patterns for a given stem to the song metadata.
