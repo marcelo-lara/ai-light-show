@@ -1,3 +1,6 @@
+import warnings
+warnings.filterwarnings("ignore")
+
 import numpy as np
 import librosa
 import soundfile as sf
@@ -79,6 +82,8 @@ def get_stem_clusters(
     :param debug: If True, prints debug information.
     :return: Dictionary containing cluster labels, segments, and other analysis results.
     """
+    print(f"⛓️ Analyzing stem clusters")
+
     if not Path(stem_file).exists():
         raise FileNotFoundError(f"Stem file not found: {stem_file}")
         
@@ -100,7 +105,7 @@ def get_stem_clusters(
 
     for duration_beats in segment_beat_lengths:
         if debug:
-            print(f"\n⎱ Segment duration: {duration_beats} beats")
+            print(f"\n⎱Segment duration: {duration_beats} beats")
 
         hop_beats = int(max(1, duration_beats))
         segments = []
