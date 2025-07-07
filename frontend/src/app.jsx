@@ -6,6 +6,7 @@ import AudioPlayer from './AudioPlayer';
 import SongSelector from './SongSelector';
 import ChordsCard from './ChordsCard';
 import Chasers from './Chasers';
+import Fixtures from './Fixtures';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import SongAnalysis from './SongAnalysis';
@@ -239,26 +240,17 @@ export function App() {
         />
 
         <div className="bg-white/10 p-2 mb-6 rounded text-white text-sm">
-          <ChordsCard songData={songData} currentTime={currentTime} />
+          <ChordsCard songData={songData} currentTime={currentTime} setCurrentTime={setCurrentTime} />
         </div>
 
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Fixtures</h2>
-          {fixtures.length === 0 ? (
-            <div className="text-sm text-gray-500 italic">No fixtures loaded</div>
-          ) : (
-            fixtures.map((fixture) => (
-              <FixtureCard 
-                key={fixture.id} 
-                fixture={fixture}
-                currentTime={currentTime}
-                allPresets={fixturesPresets}
-                addCue={(cue)=>wsSend("addCue", {cue: cue})}
-                previewDmx={(cue) => wsSend("previewDmx", {cue: cue})}
-              />
-            ))
-          )}
-        </div>
+        <Fixtures
+          fixtures={fixtures}
+          currentTime={currentTime}
+          fixturesPresets={fixturesPresets}
+          addCue={(cue)=>wsSend("addCue", {cue: cue})}
+          previewDmx={(cue) => wsSend("previewDmx", {cue: cue})}
+        />
+
         <div className="mt-6">
           <Chasers
             currentTime={currentTime}

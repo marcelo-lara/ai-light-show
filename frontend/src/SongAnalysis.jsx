@@ -78,7 +78,6 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
       }
       // sort the cluster numbers
       uniquePatternNumbers.sort((a, b) => a - b);
-      console.log("uniquePatternNumbers", uniquePatternNumbers);
       return uniquePatternNumbers
     }
 

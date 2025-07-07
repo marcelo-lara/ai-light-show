@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 
-export default function ChordsCard({ songData, currentTime }) {
+export default function ChordsCard({ songData, currentTime, setCurrentTime }) {
   const containerRef = useRef(null);
   const [currentChordIndex, setCurrentChordIndex] = useState(-1);
 
@@ -58,11 +58,12 @@ export default function ChordsCard({ songData, currentTime }) {
               return (
                 <div
                   key={colIdx}
-                  className={`aspect-square flex items-center justify-center rounded text-xs font-semibold ${
+                  className={`aspect-square flex items-center justify-center rounded text-xs font-semibold cursor-pointer ${
                     isCurrent
                       ? 'bg-gray-200 text-black'
                       : 'bg-black/30 text-gray-300 hover:bg-black/50'
                   }`}
+                  onClick={() => setCurrentTime(entry.curr_beat_time)}
                 >
                   {entry.chord_simple_pop}
                 </div>
