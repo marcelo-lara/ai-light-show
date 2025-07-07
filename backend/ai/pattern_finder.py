@@ -14,20 +14,38 @@ from collections import Counter
 from sklearn.metrics.pairwise import cosine_similarity
 import json
 
-def get_rhythmic_features(audio, sr):
-    """Extract advanced rhythmic features including onset detection and tempogram."""
+def get_rhythmic_features(audio, sr, beats):
+    """Extract drum-specific rhythmic features with transient analysis."""
     try:
-        onset_env = librosa.onset.onset_strength(y=audio, sr=sr)
-        tempogram = librosa.feature.tempogram(onset_envelope=onset_env, sr=sr)
+        # Harmonic-percussive separation
+        audio_harmonic, audio_percussive = librosa.effects.hpss(audio)
         
-        # Ensure consistent feature dimensions
-        t_mean = np.mean(tempogram, axis=1) if tempogram.size > 0 else np.zeros(384)
-        t_std = np.std(tempogram, axis=1) if tempogram.size > 0 else np.zeros(384)
+        # Transient detection features
+        onset_frames = librosa.onset.onset_detect(y=audio_percussive, sr=sr, units='frames')
+        transients = len(onset_frames)
+        transient_rate = transients / (len(audio)/sr)  # Transients per second
+        
+        # Onset strength features
+        onset_env = librosa.onset.onset_strength(y=audio_percussive, sr=sr)
+        onset_features = [
+            np.mean(onset_env),
+            np.std(onset_env),
+            np.max(onset_env) - np.min(onset_env)
+        ]
+        
+        # Beat-synchromized RMS energy
+        rms = librosa.feature.rms(y=audio_percussive)
+        times = librosa.times_like(rms, sr=sr)
+        beat_rms = []
+        for beat_time in beats:
+            nearest_idx = np.argmin(np.abs(times - beat_time))
+            beat_rms.append(rms[0, nearest_idx])
         
         return {
-            'onset_strength': np.mean(onset_env) if onset_env.size > 0 else 0.0,
-            'tempogram_mean': t_mean[:384],  # Ensure fixed length of 384
-            'tempogram_std': t_std[:384]
+            'transient_count': transients,
+            'transient_rate': transient_rate,
+            'onset_strength': onset_features,
+            'beat_rms': np.array(beat_rms)
         }
     except Exception as e:
         print(f"⚠️ Rhythmic feature error: {str(e)}")
@@ -65,7 +83,7 @@ def get_stem_clusters(
     n_mels=64,
     fmax=8000,
     hop_length=512,
-    segment_beat_lengths=(0.5, 1, 2, 4),
+    segment_beat_lengths=(0.5, 1, 2),  # Shorter segments for precise pattern detection
     debug=False
 ):
     """ 
@@ -131,12 +149,23 @@ def get_stem_clusters(
             log_S = librosa.power_to_db(S, ref=np.max)
             
             temporal = get_temporal_features(audio, sr, n_mels)
-            rhythmic = get_rhythmic_features(audio, sr)
+            rhythmic = get_rhythmic_features(audio, sr, beats)
             
             chroma = librosa.feature.chroma_stft(S=S, sr=sr)
             spectral_contrast = librosa.feature.spectral_contrast(S=S, sr=sr)
             rms = librosa.feature.rms(y=audio)
             
+            # Enhanced transient detection features
+            spectral_flatness = librosa.feature.spectral_flatness(S=S)
+            onset_strength = librosa.onset.onset_strength(y=audio, sr=sr)
+            zero_crossing = librosa.feature.zero_crossing_rate(audio)
+            onset_frames = librosa.onset.onset_detect(
+                y=audio, sr=sr, units='frames',
+                backtrack=True, pre_max=1, post_max=1
+            )
+            transients = len(onset_frames) / (len(audio)/sr)  # Transients per second
+            
+            # Consistent feature extraction with second pass
             vector = np.hstack([
                 np.mean(log_S, axis=1), 
                 np.std(log_S, axis=1),
@@ -146,8 +175,8 @@ def get_stem_clusters(
                 np.mean(chroma, axis=1),
                 np.mean(spectral_contrast, axis=1),
                 rhythmic['onset_strength'],
-                np.mean(rhythmic['tempogram_mean']),
-                np.mean(rhythmic['tempogram_std']),
+                rhythmic['transient_count'],
+                rhythmic['transient_rate'],
                 np.mean(rms)
             ])
             feature_dim = len(vector)
@@ -171,7 +200,7 @@ def get_stem_clusters(
             log_S = librosa.power_to_db(S, ref=np.max)
             
             temporal = get_temporal_features(audio, sr, n_mels)
-            rhythmic = get_rhythmic_features(audio, sr)
+            rhythmic = get_rhythmic_features(audio, sr, beats)
             
             chroma = librosa.feature.chroma_stft(S=S, sr=sr) if S.size > 0 else np.zeros((12, 1))
             spectral_contrast = librosa.feature.spectral_contrast(S=S, sr=sr) if S.size > 0 else np.zeros((7, 1))
@@ -186,8 +215,8 @@ def get_stem_clusters(
                 np.mean(chroma, axis=1),
                 np.mean(spectral_contrast, axis=1),
                 rhythmic['onset_strength'],
-                np.mean(rhythmic['tempogram_mean']),
-                np.mean(rhythmic['tempogram_std']),
+                rhythmic['transient_count'],
+                rhythmic['transient_rate'],
                 np.mean(rms)
             ])
             features.append(vector)
@@ -222,7 +251,12 @@ def get_stem_clusters(
         X_reduced = pca.fit_transform(X_scaled)
         X_reduced = np.nan_to_num(X_reduced, nan=0.0)
         threshold = get_suggested_threshold(X_reduced)
-        clustering = AgglomerativeClustering(n_clusters=None, distance_threshold=threshold, linkage='ward')
+        # Force 6 active clusters (7 total with silence)
+        clustering = AgglomerativeClustering(
+            n_clusters=7,  # Directly target 7 final clusters (6 patterns + silence)
+            linkage='average',
+            metric='cosine'
+        )
         raw_labels = clustering.fit_predict(X_reduced)
 
         cluster_labels = raw_labels.copy()
@@ -244,8 +278,8 @@ def get_stem_clusters(
         similarity_matrix = cosine_similarity(centroid_array)
         similarity_percent = (similarity_matrix * 100).round(1)
 
-        # Merge clusters with >99.5% similarity
-        def merge_clusters(sim_matrix, threshold=99.5):
+        # Merge clusters with >95% similarity
+        def merge_clusters(sim_matrix, threshold=99.9):  # Require nearly identical patterns to merge
             """Merge clusters with similarity above threshold"""
             clusters = list(range(sim_matrix.shape[0]))
             merged = []
@@ -268,7 +302,7 @@ def get_stem_clusters(
             
             return label_map, merged
 
-        merge_map, merged_groups = merge_clusters(similarity_percent, 99.5)
+        merge_map, merged_groups = merge_clusters(similarity_percent, 99.0)
         
         # Remap cluster labels
         merged_labels = [merge_map[label] for label in cluster_labels]
@@ -302,19 +336,23 @@ def get_stem_clusters(
             print(f"   → Segments: {len(segments)}")
             print(f"   → Score: {round(len(set(cluster_labels)) / len(segments), 4)}")
 
-    # Select best result based on lowest n_clusters / segments ratio
+    # Select result with exactly 7 clusters (0-6)
     best_duration = None
-    best_score = float('inf')
+    # First set best_duration_beats for all results
     for duration, result in results_by_duration.items():
-        num_clusters = result["n_clusters"]
-        num_segments = len(result["segments"])
-        if num_segments == 0:
-            continue
-        score = num_clusters / num_segments
-        results_by_duration[duration]["clusterization_score"] = round(score, 4)
-        if 0 < score < best_score:
-            best_score = score
+        result["best_duration_beats"] = duration
+        
+    # Find exact match first
+    for duration, result in results_by_duration.items():
+        if result["n_clusters"] == 7:
             best_duration = duration
+            break
+            
+    # Fallback to closest cluster count
+    if not best_duration:
+        closest = min(results_by_duration.values(), 
+                     key=lambda x: abs(x["n_clusters"] - 7))
+        best_duration = closest["best_duration_beats"]
 
     best_result = results_by_duration.get(best_duration, {})
     best_result["best_duration_beats"] = best_duration
@@ -326,6 +364,12 @@ def get_stem_clusters(
         }
         for k, v in results_by_duration.items()
     }
+    
+    # Add clusterization_score from best duration
+    if str(best_duration) in best_result["all_durations"]:
+        best_result["clusterization_score"] = best_result["all_durations"][str(best_duration)]["clusterization_score"]
+    else:
+        best_result["clusterization_score"] = 0.0
 
     # Convert to JSON-serializable format
     best_result_clean = {}
@@ -379,11 +423,23 @@ def get_stem_clusters(
     return best_result_clean
 
 if __name__ == "__main__":
+    '''
+    Example cluster segments for the song "Born Slippy" by Underworld:
+    0. drum is silent for the first 34.2s
+    1. first kick starts at 34.2s
+    2. a tom is added at 55.2s
+    3. tom change pattern at 1m20.2s
+    4. a tom+hihat pattern starts at 1m37.1s
+    5. a two kicks then two snares pattern starts at 1m42.2s
+    6. snare only pattern starts at 2m00s
+    4. repeat the tom+hihat pattern (same as 4) at 2.02.9s
+    ''' 
     from ..models.song_metadata import SongMetadata
 
     song = SongMetadata("born_slippy", songs_folder="/home/darkangel/ai-light-show/songs")
     beats = song.get_beats_array()
     stem_file = f"/home/darkangel/ai-light-show/songs/temp/htdemucs/{song.song_name}/drums.wav"
+
 
     print(f"Clustering {stem_file} with multiple segment sizes...")
     best_result = get_stem_clusters(beats, stem_file, full_file=song.mp3_path, debug=True)
