@@ -103,7 +103,7 @@ class SongMetadata:
         
         if not songs_folder:
             from ..config import SONGS_DIR
-            self._songs_folder = SONGS_DIR
+            self._songs_folder = str(SONGS_DIR)
         else:
             self._songs_folder = songs_folder
 
