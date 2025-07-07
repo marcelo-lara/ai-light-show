@@ -1,8 +1,10 @@
-# song_analyzer.py
+"""Song metadata models for the AI Light Show system."""
 
 import json
 import os
 import numpy as np
+from typing import List, Dict, Any, Optional, Tuple
+
 
 def ensure_json_serializable(obj):
     """
@@ -23,72 +25,84 @@ def ensure_json_serializable(obj):
     else:
         return obj
 
+
 class Section:
-    def to_dict(self):
+    """Represents a section of a song (verse, chorus, bridge, etc.)."""
+    
+    def __init__(self, name: str, start: float, end: float, prompt: str):
+        self.name = name
+        self.start = start
+        self.end = end
+        self.prompt = prompt
+    
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "name": self.name,
             "start": float(self.start),
             "end": float(self.end),
             "prompt": self.prompt,
         }
-    
-    def __init__(self, name, start, end, prompt):
-        self.name = name
-        self.start = start
-        self.end = end
-        self.prompt = prompt
+
 
 class Segment:
+    """Represents a segment within a song cluster."""
+    
     def __init__(self, start: float, end: float, segment_id: str = ''):
         self.segment_id = segment_id
         self.start = start
         self.end = end
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "start": float(self.start),
             "end": float(self.end),
             "cluster": self.segment_id,
         }
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Segment(start={self.start}, end={self.end}, segment_id={self.segment_id})"
 
     def __iter__(self):
         return iter((self.start, self.end, self.segment_id))
 
+
 class Cluster:
-    def __init__(self, part:str, segments: list[Segment] ):
+    """Represents a cluster of segments in a song."""
+    
+    def __init__(self, part: str, segments: List[Segment]):
         self.part = part
         self.segments = segments if isinstance(segments, list) else [Segment(*seg) for seg in segments]
 
     def __iter__(self):
         return iter(self.segments)
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "part": self.part,
-            "segments": [seg.to_dict() for seg in self.segments]  # Convert Segment objects to dicts for JSON serialization
+            "segments": [seg.to_dict() for seg in self.segments]
         }
     
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Cluster(part={self.part}, segments={self.segments})"
 
-class SongMetadata:
 
-    def __init__(self, song_name, songs_folder=None, ignore_existing=False):
+class SongMetadata:
+    """Main class for managing song metadata including beats, chords, and arrangement."""
+
+    def __init__(self, song_name: str, songs_folder: Optional[str] = None, ignore_existing: bool = False):
         self._song_name = song_name[:-4] if song_name.endswith(".mp3") else song_name
         self._title = song_name.replace("_", " ")
         self._genre = "unknown"
         self._bpm = 120
-        self._beats = []
-        self._chords = []
-        self._patterns = []
-        self._arrangement = []
+        self._beats: List[Dict[str, Any]] = []
+        self._chords: List[Dict[str, Any]] = []
+        self._patterns: List[Dict[str, Any]] = []
+        self._arrangement: List[Section] = []
         self._duration = 0.0
-        self._drums = []
+        self._drums: List[Dict[str, Any]] = []
+        
         if not songs_folder:
-            from backend.config import SONGS_DIR
+            from ..config import SONGS_DIR
             self._songs_folder = SONGS_DIR
         else:
             self._songs_folder = songs_folder
@@ -102,11 +116,11 @@ class SongMetadata:
             self.initialize_song_metadata()
 
     @property
-    def song_name(self):
+    def song_name(self) -> str:
         return self._song_name
 
     @property
-    def songs_folder(self):
+    def songs_folder(self) -> str:
         return self._songs_folder
 
     @property
@@ -114,35 +128,35 @@ class SongMetadata:
         return self._mp3_path or 'PATH_NOT_FOUND'
 
     @property
-    def title(self):
+    def title(self) -> str:
         return self._title
 
     @title.setter
-    def title(self, value):
+    def title(self, value: str):
         self._title = value
 
     @property
-    def drums(self):
+    def drums(self) -> List[Dict[str, Any]]:
         return self._drums
 
     @drums.setter
-    def drums(self, value):
+    def drums(self, value: List[Dict[str, Any]]):
         self._drums = value
 
     @property
-    def genre(self):
+    def genre(self) -> str:
         return self._genre
 
     @genre.setter
-    def genre(self, value):
+    def genre(self, value: str):
         self._genre = value
 
     @property
-    def patterns(self):
+    def patterns(self) -> List[Dict[str, Any]]:
         return self._patterns
 
     @patterns.setter
-    def patterns(self, value):
+    def patterns(self, value: List[Dict[str, Any]]):
         self._patterns = value
 
     @property
@@ -154,42 +168,42 @@ class SongMetadata:
         self._duration = float(value)
 
     @property
-    def bpm(self):
+    def bpm(self) -> int:
         return self._bpm
 
     @bpm.setter
-    def bpm(self, value):
+    def bpm(self, value: int):
         self._bpm = value
 
     @property
-    def beats(self):
+    def beats(self) -> List[Dict[str, Any]]:
         return self._beats
 
     @beats.setter
-    def beats(self, value):
+    def beats(self, value: List[Dict[str, Any]]):
         self._beats = value
 
     @property
-    def chords(self):
+    def chords(self) -> List[Dict[str, Any]]:
         return self._chords
 
     @chords.setter
-    def chords(self, value):
+    def chords(self, value: List[Dict[str, Any]]):
         self._chords = value
 
     @property
-    def arrangement(self) -> list[Section]:
+    def arrangement(self) -> List[Section]:
         return self._arrangement
 
     @arrangement.setter
-    def arrangement(self, value):
+    def arrangement(self, value: List[Section]):
         if not isinstance(value, list):
             raise TypeError("Arrangement must be a list of Section objects.")
         if not all(isinstance(v, Section) for v in value):
             raise TypeError("All elements of arrangement must be Section objects.")
         self._arrangement = value
 
-    def _find_mp3_path(self):
+    def _find_mp3_path(self) -> Optional[str]:
         """Try to locate the MP3 file for this song."""
         song_file = f"{self._song_name}.mp3" if not self._song_name.endswith(".mp3") else self._song_name
 
@@ -200,7 +214,7 @@ class SongMetadata:
             print(f"⚠️ Warning: MP3 file not found for '{self._song_name}' at {mp3_path}")
             return None
 
-    def load_chords_from_hints(self):
+    def load_chords_from_hints(self) -> None:
         """Load chords from hints files if available."""
         hints_folder = os.path.join(self._songs_folder, "hints")
         chords_file = os.path.join(hints_folder, f"{self._song_name}.chords.json")
@@ -212,7 +226,7 @@ class SongMetadata:
         else:
             print(f"⚠️ Warning: Chords file not found for '{self._song_name}' at {chords_file}")
 
-    def load_arrangement_from_hints(self):
+    def load_arrangement_from_hints(self) -> bool:
         """Load arrangement from hints files if available."""
         hints_folder = os.path.join(self._songs_folder, "hints")
         segments_file = os.path.join(hints_folder, f"{self._song_name}.segments.json")
@@ -234,14 +248,14 @@ class SongMetadata:
         print(f"    .. {len(self._arrangement)} sections created")
         return True
 
-    def _load_hints_files(self):
+    def _load_hints_files(self) -> None:
         """Try to locate the hints files for this song."""
         hints_folder = os.path.join(self._songs_folder, "hints")
         if not os.path.isdir(hints_folder):
             print(f"⚠️ Warning: Hints folder not found for '{self._song_name}' at {hints_folder}")
-            return None
+            return
 
-        ## chords file
+        # chords file
         self.load_chords_from_hints()
 
         # lyrics file
@@ -254,13 +268,13 @@ class SongMetadata:
         # segments file
         self.load_arrangement_from_hints()
 
-    def get_metadata_path(self):
+    def get_metadata_path(self) -> str:
         return os.path.join(self._songs_folder, f"{self._song_name}.meta.json")
 
-    def exists(self):
+    def exists(self) -> bool:
         return os.path.isfile(self.get_metadata_path())
 
-    def load(self):
+    def load(self) -> None:
         with open(self.get_metadata_path(), "r") as f:
             data = json.load(f)
 
@@ -280,8 +294,8 @@ class SongMetadata:
         if len(self._arrangement) == 0:
             self.load_arrangement_from_hints()
 
-    def initialize_song_metadata(self):
-
+    def initialize_song_metadata(self) -> None:
+        """Initialize song metadata with default values."""
         # look for hints files
         self._load_hints_files()
         
@@ -302,16 +316,16 @@ class SongMetadata:
                 Section("outro", 2.5, 3.0, "Outro with fade-out or reduced energy.")
             ]
 
-    def add_beat(self, time, volume=0.0, energy=1.0):
+    def add_beat(self, time: float, volume: float = 0.0, energy: float = 1.0) -> None:
         self.beats.append({"time": time, "volume": volume, "energy": energy})
 
-    def clear_beats(self):
+    def clear_beats(self) -> None:
         self.beats = []
 
-    def get_beats_array(self):
+    def get_beats_array(self) -> List[float]:
         return [beat["time"] for beat in self.beats]
 
-    def set_beats_volume(self, beat_volume: list[tuple[float, float]]):
+    def set_beats_volume(self, beat_volume: List[Tuple[float, float]]) -> None:
         if len(beat_volume) != len(self.beats):
             print(f"⚠️ Warning: Volume list length {len(beat_volume)} does not match number of beats {len(self.beats)}.")
             return
@@ -320,7 +334,7 @@ class SongMetadata:
                 print(f"⚠️ Warning: Beat time mismatch at index {i}: expected {self.beats[i]['time']}, got {time}")
             self.beats[i]["volume"] = float(volume)
 
-    def set_beats_energy(self, beat_energy: list[tuple[float, float]]):
+    def set_beats_energy(self, beat_energy: List[Tuple[float, float]]) -> None:
         if len(beat_energy) != len(self.beats):
             print(f"⚠️ Warning: Energy list length {len(beat_energy)} does not match number of beats {len(self.beats)}.")
             return
@@ -329,7 +343,7 @@ class SongMetadata:
                 print(f"⚠️ Warning: Beat time mismatch at index {i}: expected {self.beats[i]['time']}, got {time}")
             self.beats[i]["energy"] = float(energy)
 
-    def update_beat(self, time, volume=None, energy=None):
+    def update_beat(self, time: float, volume: Optional[float] = None, energy: Optional[float] = None) -> None:
         for beat in self.beats:
             if beat["time"] == time:
                 if volume is not None:
@@ -339,21 +353,17 @@ class SongMetadata:
                 return
         print(f"⚠️ Beat at time {time} not found.")
 
-    def clear_patterns(self):
-        """
-        Clears all patterns from the song metadata.
-        """
+    def clear_patterns(self) -> None:
+        """Clears all patterns from the song metadata."""
         self._patterns = []
 
-    def add_patterns(self, stem_name:str, patterns:list[dict]):
-        """
-        Adds patterns for a given stem to the song metadata.
-        """
+    def add_patterns(self, stem_name: str, patterns: List[Dict[str, Any]]) -> None:
+        """Adds patterns for a given stem to the song metadata."""
         if not hasattr(self, "_patterns"):
             self._patterns = []
         self._patterns.append({"stem": stem_name, "clusters": patterns})
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         data = {
             "title": self.title,
             "genre": self.genre,
@@ -369,23 +379,14 @@ class SongMetadata:
         # Ensure all data is JSON serializable
         return ensure_json_serializable(data)
 
-    def to_json(self):
+    def to_json(self) -> str:
         return json.dumps(self.to_dict())
 
-    def save(self):
+    def save(self) -> None:
         os.makedirs(self._songs_folder, exist_ok=True)
         with open(self.get_metadata_path(), "w") as f:
             json.dump(self.to_dict(), f, indent=2)
         print(f"ℹ️ Metadata saved for '{self._song_name}' at {self.get_metadata_path()}")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"SongMetadata(song_name={self._song_name}, title={self.title}, genre={self.genre}, bpm={self.bpm}, duration={self.duration}, beats={len(self.beats)}, arrangement={len(self.arrangement)})"
-
-
-# Example usage
-if __name__ == "__main__":
-    song = SongMetadata("born_slippy", songs_folder="/home/darkangel/ai-light-show/songs", ignore_existing=True)
-    song.save()
-    print(f"Metadata saved to {song.get_metadata_path()}")
-    if song.mp3_path:
-        print(f"MP3 file located at: {song.mp3_path}")

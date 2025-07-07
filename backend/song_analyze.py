@@ -1,5 +1,5 @@
 from backend.ai.pattern_finder_ml import get_stem_clusters_with_model
-from backend.song_metadata import SongMetadata
+from backend.models.song_metadata import SongMetadata
 from backend.ai.essentia_analysis import extract_with_essentia
 from backend.ai.drums_infer import infer_drums
 from backend.ai.demucs_split import extract_stems
