@@ -47,15 +47,7 @@ def send_artnet(_dmx_universe=None):
     packet.extend((ARTNET_UNIVERSE & 0xFF, (ARTNET_UNIVERSE >> 8) & 0xFF))  # Universe
     packet.extend((0x02, 0x00))                            # Data length = 512
     packet.extend(bytes(full_data))
-
-    # # Debug: show only changes
-    # diffs = [(i + 1, v) for i, (v, old) in enumerate(zip(full_data, last_packet)) if v != old]
-    # if diffs:
-    #     print("🎚️ Changed DMX channels:")
-    #     for ch, val in diffs:
-    #         print(f"  CH {ch:03d}: {val}")
-    # else:
-    #     print("🟰 No DMX changes")
+    
     last_packet = full_data.copy()
 
     try:

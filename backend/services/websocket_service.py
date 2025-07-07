@@ -5,7 +5,6 @@ import time
 from typing import Dict, Any, List
 from fastapi import WebSocket, WebSocketDisconnect
 from ..models.app_state import app_state
-from ..song_utils import get_songs_list
 from ..chaser_utils import get_chasers
 from ..fixture_utils import load_fixtures_config
 from ..models.song_metadata import SongMetadata, Section
@@ -42,7 +41,7 @@ class WebSocketManager:
         # Send initial setup data
         await websocket.send_json({
             "type": "setup",
-            "songs": get_songs_list(),
+            "songs": app_state.get_songs_list(),
             "fixtures": app_state.fixture_config,
             "presets": app_state.fixture_presets,
             "chasers": get_chasers()

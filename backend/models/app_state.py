@@ -3,6 +3,7 @@
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, field
 from fastapi import WebSocket
+from ..config import SONGS_DIR
 
 
 @dataclass
@@ -43,7 +44,22 @@ class AppState:
         if websocket in self.websocket_clients:
             self.websocket_clients.remove(websocket)
     
+    # List of available songs in the songs folder
+    def get_songs_list(self) -> List[str]:
+        """
+        Returns a list of available songs in the songs folder.
+        """
+        from pathlib import Path
 
+        # Ensure the SONGS_DIR exists
+        if not SONGS_DIR.exists():
+            return []
+
+        # List all mp3 files in the SONGS_DIR
+        songs_list = list(SONGS_DIR.glob("*.mp3"))
+        
+        # Return a list of song names without the file extension
+        return [song.stem for song in songs_list if song.is_file()]
 
 # Global application state instance
 app_state = AppState()
