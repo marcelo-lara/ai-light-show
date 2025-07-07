@@ -1,5 +1,6 @@
 from backend.ai.pattern_finder_ml import get_stem_clusters_with_model
-from backend.models.song_metadata import SongMetadata
+from backend.models.song_metadata import SongMetadata, Section
+from backend.ai.arrangement_guess import guess_arrangement
 from backend.ai.essentia_analysis import extract_with_essentia
 from backend.ai.drums_infer import infer_drums
 from backend.ai.demucs_split import extract_stems
@@ -7,6 +8,19 @@ from backend.ai.pattern_finder import get_stem_clusters
 from backend.ai.audio_proccess import noise_gate
 
 def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
+
+    """
+    Analyze a song and extract its metadata, beats, BPM, and patterns.
+    This function uses Essentia for core analysis and Demucs for stem extraction.
+    :param song: SongMetadata object containing the song to analyze.
+    :param reset_file: If True, will re-create entire metadata.
+    :return: Updated SongMetadata object with analysis results.
+    """
+
+    analyze_patterns_using_model = False
+    infer_drums_using_model = False
+
+
     print(f"🔍 Analyzing song: {song.title} ({song.mp3_path})")
 
     if reset_file:
@@ -41,21 +55,23 @@ def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
         print(f"   → Clusters: {stem_clusters['n_clusters']}")
         print(f"   → Segments: {len(stem_clusters['segments'])}")
         print(f"   → Score: {stem_clusters['clusterization_score']}")
-
         print(f"  Adding {len(stem_clusters['clusters_timeline'])} clusters for {stem}...")
         song.add_patterns(stem, stem_clusters['clusters_timeline'])
 
         # get clusters (ML)
-        # stem_clusters = get_stem_clusters_with_model(
-        #     song.get_beats_array(), 
-        #     stem_path
-        # )
-        # song.add_patterns(f"{stem}_m", stem_clusters['clusters_timeline'])
+        if analyze_patterns_using_model:
+            stem_clusters = get_stem_clusters_with_model(
+                song.get_beats_array(), 
+                stem_path
+            )
+            song.add_patterns(f"{stem}_m", stem_clusters['clusters_timeline'])
 
-    ## infer drums
-    # drums_path = f"{stems_folder['output_folder']}/drums.wav"
-    # song.drums = infer_drums(drums_path)
+        ## infer drums
+        if infer_drums_using_model and stem == 'drums':
+            song.drums = infer_drums(stem_path)
 
+    if song.placeholder_prop:
+        guess_arrangement(song)
 
     return song
 
@@ -109,6 +125,21 @@ if __name__ == "__main__":
     if not mp3_files:
         print("No MP3 files found in the songs folder.")
         exit(1)
+
+    # remove all files that are not mp3 files
+    failed_to_remove = []
+    for file in os.listdir(songs_folder):
+        if not file.endswith(".mp3"):
+            file_path = os.path.join(songs_folder, file)
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                failed_to_remove.append(file_path)
+
+    if failed_to_remove:
+        print("Failed to remove the following files:")
+        for file in failed_to_remove:
+            print(f"  {file}")
 
     # remove .meta.json files if they exist
     for meta_file in glob(os.path.join(songs_folder, "*.meta.json")):

@@ -195,6 +195,14 @@ class SongMetadata:
     def arrangement(self) -> List[Section]:
         return self._arrangement
 
+    @property
+    def placeholder_prop(self) -> bool:
+        """True when the arrangement is a placeholder."""
+        if len(self._arrangement) > 0 and isinstance(self._arrangement[0], Section):
+            return "(placeholder)" in self._arrangement[0].prompt
+        return len(self._arrangement) == 0
+
+
     @arrangement.setter
     def arrangement(self, value: List[Section]):
         if not isinstance(value, list):
