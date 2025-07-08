@@ -3,9 +3,32 @@ services:
     build: .
     ports:
       - "5500:5500"
-    network_mode: host
+    networks:
+      - ailightshow
+
     volumes:
       - ./songs:/app/static/songs
       - ./fixtures:/app/static/fixtures
       - ./.cache:/root/.cache
     restart: unless-stopped
+
+  backend-llm:
+    image: ollama/ollama
+    networks:
+      - ailightshow
+    volumes:
+      - ollama:/root/.ollama
+    restart: unless-stopped
+    command: serve
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+volumes:
+  ollama:
+
+networks:
+  ailightshow:
+    driver: bridge

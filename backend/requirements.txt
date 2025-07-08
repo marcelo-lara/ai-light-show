@@ -12,3 +12,5 @@ torch
 kneed
 torchvision 
 torchaudio
+scipy
+scikit-learn
