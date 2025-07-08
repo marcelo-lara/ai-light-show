@@ -7,7 +7,7 @@ from backend.ai.demucs_split import extract_stems
 from backend.ai.pattern_finder import get_stem_clusters
 from backend.ai.audio_proccess import noise_gate
 
-def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
+def song_analyze(song: SongMetadata, reset_file: bool = True, debug: bool = False) -> SongMetadata:
 
     """
     Analyze a song and extract its metadata, beats, BPM, and patterns.
@@ -56,7 +56,8 @@ def song_analyze(song: SongMetadata, reset_file: bool = True) -> SongMetadata:
         try:
             stem_clusters = get_stem_clusters(
                 song.get_beats_array(),
-                stem_path
+                stem_path,
+                debug=debug
             )
             if not stem_clusters:
                 continue

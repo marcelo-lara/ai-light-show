@@ -1,6 +1,7 @@
 import warnings
 warnings.filterwarnings("ignore")
 
+import os
 import numpy as np
 import librosa
 import soundfile as sf
@@ -277,7 +278,7 @@ def get_stem_clusters(
         for label, vectors in cluster_vectors.items():
             cluster_centroids[label] = np.mean(vectors, axis=0)
 
-        # Calculate similarity matrix
+        # Calculate similarity matrix (but don't use it for merging - threshold removed)
         labels_sorted = sorted(cluster_centroids.keys())
         if len(labels_sorted) > 1:
             centroid_array = np.array([cluster_centroids[k] for k in labels_sorted])
@@ -285,6 +286,9 @@ def get_stem_clusters(
             similarity_percent = (similarity_matrix * 100).round(1)
         else:
             similarity_percent = np.array([[100.0]])
+
+        # REMOVED: Cluster similarity merging stage to avoid over-merging
+        # Keep all original clusters as detected by the algorithm
 
         results_by_duration[duration_beats] = {
             "cluster_labels": cluster_labels,
@@ -721,8 +725,21 @@ def get_stem_clusters_time_based(
     else:
         best_result["clusterization_score"] = 0.0
 
-    # Consolidate consecutive segments with same cluster
+    # Consolidate consecutive segments with same cluster and add beat alignment
     if best_result and "segments" in best_result and "cluster_labels" in best_result:
+        # Load beats if full file is available for beat alignment
+        beats = None
+        if full_file and os.path.exists(full_file):
+            try:
+                y_full, sr_full = librosa.load(full_file, sr=None)
+                tempo, beat_frames = librosa.beat.beat_track(y=y_full, sr=sr_full)
+                beats = librosa.frames_to_time(beat_frames, sr=sr_full)
+                if debug:
+                    print(f"   Loaded {len(beats)} beats for alignment (tempo: {round(float(tempo), 1)} BPM)")
+            except Exception as e:
+                if debug:
+                    print(f"   ⚠️ Could not extract beats for alignment: {e}")
+        
         consolidated_segments = []
         consolidated_labels = []
         
@@ -738,9 +755,27 @@ def get_stem_clusters_time_based(
                 if seg_label == current_label:
                     current_end = seg_end
                 else:
-                    consolidated_segments.append((current_start, current_end))
+                    # Pattern change detected - apply beat alignment
+                    if beats is not None and len(beats) > 0:
+                        # Find the nearest beat to the segment boundary
+                        beat_distances = np.abs(beats - seg_start)
+                        nearest_beat_idx = np.argmin(beat_distances)
+                        nearest_beat_time = beats[nearest_beat_idx]
+                        
+                        # Only align if the nearest beat is within reasonable distance (±2 seconds)
+                        if beat_distances[nearest_beat_idx] <= 2.0:
+                            aligned_boundary = nearest_beat_time
+                            if debug and abs(seg_start - aligned_boundary) > 0.5:
+                                print(f"   🎵 Beat alignment: {seg_start:.2f}s → {aligned_boundary:.2f}s (beat {nearest_beat_idx})")
+                        else:
+                            aligned_boundary = seg_start
+                    else:
+                        aligned_boundary = seg_start
+                    
+                    # Add segment with aligned boundary
+                    consolidated_segments.append((current_start, aligned_boundary))
                     consolidated_labels.append(current_label)
-                    current_start = seg_start
+                    current_start = aligned_boundary
                     current_end = seg_end
                     current_label = seg_label
             
@@ -796,8 +831,8 @@ def get_stem_clusters_sliding_window(
     full_file=None,
     n_mels=64,
     fmax=8000,
-    window_duration=8,  # Window size in seconds
-    hop_duration=2,     # Step size in seconds (smaller = more overlap)
+    window_duration=4,  # Smaller window size in seconds (was 8)
+    hop_duration=0.5,   # Much smaller step size in seconds (was 2)
     debug=False
 ):
     """
@@ -987,8 +1022,22 @@ def get_stem_clusters_sliding_window(
     if debug:
         print(f"   Converting {len(segments)} overlapping windows to regions...")
     
+    # Load beats if full file is available for beat alignment
+    beats = None
+    if full_file and os.path.exists(full_file):
+        try:
+            y_full, sr_full = librosa.load(full_file, sr=None)
+            tempo, beat_frames = librosa.beat.beat_track(y=y_full, sr=sr_full)
+            beats = librosa.frames_to_time(beat_frames, sr=sr_full)
+            if debug:
+                tempo_val = float(tempo) if hasattr(tempo, '__float__') else tempo
+                print(f"   Loaded {len(beats)} beats for alignment (tempo: {tempo_val:.1f} BPM)")
+        except Exception as e:
+            if debug:
+                print(f"   ⚠️ Could not extract beats for alignment: {e}")
+    
     # Find cluster transitions using majority voting in overlapping regions
-    time_resolution = 0.5  # Resolution for transition detection (seconds)
+    time_resolution = 0.25  # Finer resolution for transition detection (seconds) - was 0.5
     max_time = max(end for start, end in segments)
     time_points = np.arange(0, max_time, time_resolution)
     cluster_votes = []
@@ -1006,7 +1055,7 @@ def get_stem_clusters_sliding_window(
         else:
             cluster_votes.append(0)  # Default to silence
     
-    # Find cluster boundaries
+    # Find cluster boundaries with beat alignment
     consolidated_segments = []
     consolidated_labels = []
     
@@ -1016,11 +1065,30 @@ def get_stem_clusters_sliding_window(
         
         for i, cluster in enumerate(cluster_votes[1:], 1):
             if cluster != current_cluster:
-                # Cluster change detected
-                end_time = time_points[i]
-                consolidated_segments.append((current_start, end_time))
+                # Cluster change detected at time_points[i]
+                raw_change_time = time_points[i]
+                
+                # BEAT ALIGNMENT: Align pattern change to nearest beat
+                if beats is not None and len(beats) > 0:
+                    # Find the nearest beat to the detected change
+                    beat_distances = np.abs(beats - raw_change_time)
+                    nearest_beat_idx = np.argmin(beat_distances)
+                    nearest_beat_time = beats[nearest_beat_idx]
+                    
+                    # Only align if the nearest beat is within a reasonable distance (±2 seconds)
+                    if beat_distances[nearest_beat_idx] <= 2.0:
+                        aligned_change_time = nearest_beat_time
+                        if debug and abs(raw_change_time - aligned_change_time) > 0.5:
+                            print(f"   🎵 Beat alignment: {raw_change_time:.2f}s → {aligned_change_time:.2f}s (beat {nearest_beat_idx})")
+                    else:
+                        aligned_change_time = raw_change_time
+                else:
+                    aligned_change_time = raw_change_time
+                
+                # Add segment with aligned time
+                consolidated_segments.append((current_start, aligned_change_time))
                 consolidated_labels.append(current_cluster)
-                current_start = end_time
+                current_start = aligned_change_time
                 current_cluster = cluster
         
         # Add final segment
@@ -1094,16 +1162,16 @@ def get_stem_clusters_sliding_window(
 
 if __name__ == "__main__":
     '''
-    Example cluster segments for the song "Born Slippy" by Underworld:
-    time range | cluster | explanation
-    0-34.2       [0]       drum is silent
-    34.2-55.2    [1]       first kick
-    55.2-80.2    [2]       a tom is added
-    80.2-100.2   [3]       tom change pattern
-    100.2-117.1  [4]       a tom+hihat pattern
-    117.1-134.2  [5]       a two kicks then two snares pattern
-    134.2-200.0  [6]       snare only pattern
-    200.0-202.9  [4]       a tom+hihat pattern
+    Example drums patterns for the song "Born Slippy" by Underworld:
+    time range     | pattern | explanation
+    0s     - 34.2s  [0]  drum is silent (intro)
+    34.2s  - 55.2s  [1]  first kick 
+    55.2s  - 81.2s  [2]  a tom is added 
+    81.2s  - 97.1s  [3]  tom change pattern
+    97.1s  - 117.1s [4]  a tom+hihat pattern
+    102.3s - 120s   [5]  a two kicks then two snares pattern* (*could be two clusters, one for the kicks and one for the snares)
+    120.3s - 122s   [6]  snare only pattern
+    122s   - 130s   [4]  a tom+hihat pattern
     ''' 
     from ..models.song_metadata import SongMetadata
 
@@ -1136,6 +1204,37 @@ if __name__ == "__main__":
     print(f"   → Score: {time_result['clusterization_score']}")
 
     print("\n" + "="*60)
+    print("Testing SLIDING WINDOW clustering (multiple configurations):")
+    print("="*60)
+    
+    # Test different sliding window configurations
+    sliding_configs = [
+        {"window": 2, "hop": 0.25, "name": "Fine (2s/0.25s)"},
+        {"window": 4, "hop": 0.5, "name": "Medium (4s/0.5s)"},
+        {"window": 6, "hop": 1.0, "name": "Coarse (6s/1s)"},
+        {"window": 8, "hop": 2.0, "name": "Original (8s/2s)"}
+    ]
+    
+    sliding_results = []
+    for config in sliding_configs:
+        print(f"\nTesting {config['name']} configuration...")
+        print(f"Clustering {stem_file} with {config['window']}s window, {config['hop']}s hop...")
+        result = get_stem_clusters_sliding_window(
+            stem_file, 
+            full_file=song.mp3_path, 
+            window_duration=config['window'],
+            hop_duration=config['hop'],
+            debug=True
+        )
+        sliding_results.append((config['name'], result))
+        if result:
+            print(f"🏆 {config['name']} result:")
+            print(f"   → Window/Hop: {config['window']}s/{config['hop']}s")
+            print(f"   → Clusters: {result['n_clusters']}")
+            print(f"   → Segments: {len(result['segments'])}")
+            print(f"   → Score: {result['clusterization_score']}")
+
+    print("\n" + "="*60)
     print("Testing SLIDING WINDOW clustering:")
     print("="*60)
     print(f"Clustering {stem_file} with sliding window segments...")
@@ -1162,27 +1261,42 @@ if __name__ == "__main__":
         start, end, cluster = item['start'], item['end'], item['cluster']
         print(f"  {start:6.1f}-{end:6.1f} [{cluster}] ({end-start:5.1f}s)")
     
-    print("\nSliding window timeline:")
+    print("\nSliding window timeline (default config):")
     for item in sliding_result.get('clusters_timeline', []):
         start, end, cluster = item['start'], item['end'], item['cluster']
         print(f"  {start:6.1f}-{end:6.1f} [{cluster}] ({end-start:5.1f}s)")
     
+    # Show all sliding window configurations
+    for config_name, result in sliding_results:
+        if result and result != sliding_result:  # Don't repeat the default one
+            print(f"\n{config_name} timeline:")
+            for item in result.get('clusters_timeline', []):
+                start, end, cluster = item['start'], item['end'], item['cluster']
+                print(f"  {start:6.1f}-{end:6.1f} [{cluster}] ({end-start:5.1f}s)")
+    
     print("\nTarget human-perceived patterns:")
-    print("     0.0- 34.2 [0] drum is silent")
-    print("    34.2- 55.2 [1] first kick")
-    print("    55.2- 80.2 [2] a tom is added")
-    print("    80.2-100.2 [3] tom change pattern")
-    print("   100.2-117.1 [4] a tom+hihat pattern")
-    print("   117.1-134.2 [5] a two kicks then two snares pattern")
-    print("   134.2-200.0 [6] snare only pattern")
-    print("   200.0-202.9 [4] a tom+hihat pattern")
+    print("   time range      | pattern | explanation")
+    print("   0s     - 34.2s  | 0       | drum is silent (intro)")
+    print("   34.2s  - 55.2s  | 1       | 1 kick + 2 snare pattern")
+    print("   55.2s  - 81.2s  | 2       | a tom is added ")
+    print("   81.2s  - 97.1s  | 3       | tom change pattern")
+    print("   97.1s  - 117.1s | 4       | a tom+hihat pattern")
+    print("   102.3s - 120s   | 5       | a two kicks then two snares pattern* (*could be two clusters, one for the kicks and one for the snares)")
+    print("   120.3s - 122s   | 6       | snare only pattern")
+    print("   122s   - 130s   | 4       | a tom+hihat pattern")
 
-    # Choose the better result - prioritize sliding window for better transitions
+    # Choose the better result - prioritize medium sliding window for best balance
     best_candidates = [
-        ("sliding window", sliding_result),
+        ("sliding window (Medium 4s/0.5s)", sliding_results[1][1] if len(sliding_results) > 1 else sliding_result),
+        ("sliding window (default)", sliding_result),
         ("time-based", time_result),
         ("beat-based", beat_result)
     ]
+    
+    # Add all sliding window configurations to candidates
+    for config_name, result in sliding_results:
+        if result and result != sliding_result:  # Don't duplicate default
+            best_candidates.append((f"sliding window ({config_name})", result))
     
     # Pick the first valid result with reasonable cluster count
     best_result = None
@@ -1221,3 +1335,14 @@ if __name__ == "__main__":
         print(f"🎯 Saved best cluster result to {summary_path.name}")
     else:
         print("⚠️ No valid clustering results generated")
+
+
+    # time range     | cluster | explanation
+    # 0m0.0s  - 0m34.2s  [0]  drum is silent (intro)
+    # 0m34.2s - 0m55.2s  [1]  first kick 
+    # 0m55.2s - 1m21.2s  [2]  a tom is added 
+    # 1m21.2s - 1m37.1s  [3]  tom change pattern
+    # 1m37.1s - 117.1    [4]  a tom+hihat pattern
+    # 1m42.3s - 2m00s    [5]  a two kicks then two snares pattern* (*could be two clusters, one for the kicks and one for the snares)
+    # 2m00.3s - 2m2.0s   [6]  snare only pattern
+    # 2m02.0  - 2m10s    [4]  a tom+hihat pattern
