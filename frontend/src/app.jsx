@@ -222,7 +222,8 @@ export function App() {
       </div>
 
       {/* Right Panel */}
-      <div className="w-1/3 text-white p-6">
+      <div className="w-1/3 text-white p-6 space-y-6">
+        {/* Song Selection */}
         <div>
           <SongSelector 
             currentSongFile={currentSongFile} 
@@ -231,27 +232,35 @@ export function App() {
           />
         </div>
 
-        <SongArrangement
-          currentTime={currentTime}
-          setCurrentTime={setCurrentTime}
-          songData={songData}
-          seekTo={(time) => handleSeekTo(time)}
-          saveArrangement={(a) => {wsSend("saveArrangement", {arrangement: a})}}
-        />
+        {/* Song Arrangement */}
+        <div>
+          <SongArrangement
+            currentTime={currentTime}
+            setCurrentTime={setCurrentTime}
+            songData={songData}
+            seekTo={(time) => handleSeekTo(time)}
+            saveArrangement={(a) => {wsSend("saveArrangement", {arrangement: a})}}
+          />
+        </div>
 
-        <div className="bg-white/10 p-2 mb-6 rounded text-white text-sm">
+        {/* Chords Information */}
+        <div>
           <ChordsCard songData={songData} currentTime={currentTime} setCurrentTime={setCurrentTime} />
         </div>
 
-        <Fixtures
-          fixtures={fixtures}
-          currentTime={currentTime}
-          fixturesPresets={fixturesPresets}
-          addCue={(cue)=>wsSend("addCue", {cue: cue})}
-          previewDmx={(cue) => wsSend("previewDmx", {cue: cue})}
-        />
+        {/* Fixtures Control */}
+        <div>
+          <Fixtures
+            fixtures={fixtures}
+            currentTime={currentTime}
+            fixturesPresets={fixturesPresets}
+            addCue={(cue)=>wsSend("addCue", {cue: cue})}
+            previewDmx={(cue) => wsSend("previewDmx", {cue: cue})}
+          />
+        </div>
 
-        <div className="mt-6">
+        {/* Chasers Control */}
+        <div>
           <Chasers
             currentTime={currentTime}
             chasers={chasers}

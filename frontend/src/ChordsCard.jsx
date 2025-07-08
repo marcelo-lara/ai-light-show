@@ -38,8 +38,8 @@ export default function ChordsCard({ songData, currentTime, setCurrentTime }) {
   }
 
   return (
-    <div className="p-2 mb-6 rounded text-white text-sm">
-      <h2 className="text-xl font-semibold mb-3">🎼 Chords</h2>
+    <>
+      <h2 className="text-lg mb-2 font-semibold">Chords</h2>
       <div
         ref={containerRef}
         className="overflow-y-auto max-h-40 px-1 space-y-2"
@@ -72,6 +72,6 @@ export default function ChordsCard({ songData, currentTime, setCurrentTime }) {
           </div>
         ))}
       </div>
-    </div>
+    </>
   );
 }

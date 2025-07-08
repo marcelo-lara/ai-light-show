@@ -19,18 +19,18 @@ export default function SongSelector({ currentSongFile, songsList, setCurrentSon
         sortedSongsList.length === 0 ? (
           <div className="text-sm text-gray-500 italic">No songs available</div>
         ) : (
-          <ul className="pl-5">
+          <ul>
             {sortedSongsList.map((song) => (
               <li 
                 key={song} 
-                className={`cursor-pointer hover:text-blue-400 ${currentSongFile === song ? 'font-bold' : ''}`}
+                className={`cursor-pointer text-sm hover:text-blue-400 ${currentSongFile === song ? 'font-bold' : ''}`}
                 style={{ listStyleType: 'none' }}
                 onClick={() => {
                   setCurrentSongFile(song + ".mp3");
                   setIsSongsListExpanded(false);
                 }}
               >
-                <span className="mr-2">·</span>{song}
+                {song}
               </li>
             ))}
           </ul>

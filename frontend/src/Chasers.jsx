@@ -41,9 +41,9 @@ export default function Chasers({ currentTime, insertChaser, chasers, reloadFixt
   };
 
   return (
-    <div className="bg-white/10 p-2 mb-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">✨ Chaser</h2>
+    <>
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg mb-2 font-semibold">Chasers</h2>
         <div>
           <button
             className="bg-blue-600 hover:bg-blue-700 px-1 py-1 rounded text-white"
@@ -97,6 +97,6 @@ export default function Chasers({ currentTime, insertChaser, chasers, reloadFixt
           )}
         </div>
       )}
-    </div>
+    </>
   );
 }
