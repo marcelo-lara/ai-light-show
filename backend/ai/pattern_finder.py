@@ -1,66 +1,17 @@
-import warnings
-warnings.filterwarnings("ignore")
-
-import os
-import numpy as np
 import librosa
-import soundfile as sf
-from sklearn.cluster import AgglomerativeClustering
+import numpy as np
+import os
+from collections import Counter
+from pathlib import Path
+import json
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
-from sklearn.metrics import silhouette_score
 from sklearn.metrics.pairwise import cosine_similarity
-from scipy.cluster.hierarchy import linkage
-from kneed import KneeLocator
-from pathlib import Path
-from collections import Counter
-import json
 
-def get_rhythmic_features(audio, sr, beats):
-    """Extract drum-specific rhythmic features with transient analysis."""
-    try:
-        # Simplified rhythmic features to avoid potential infinite loops
-        onset_frames = librosa.onset.onset_detect(y=audio, sr=sr, units='frames')
-        transients = len(onset_frames)
-        transient_rate = transients / (len(audio)/sr) if len(audio) > 0 else 0
-        
-        # Simple onset strength
-        onset_env = librosa.onset.onset_strength(y=audio, sr=sr)
-        onset_mean = np.mean(onset_env) if len(onset_env) > 0 else 0
-        
-        return {
-            'transient_count': transients,
-            'transient_rate': transient_rate,
-            'onset_strength': [onset_mean, 0, 0]  # Simplified to avoid complex operations
-        }
-    except Exception as e:
-        print(f"⚠️ Rhythmic feature error: {str(e)}")
-        return {
-            'transient_count': 0,
-            'transient_rate': 0,
-            'onset_strength': [0, 0, 0]
-        }
-
-def get_temporal_features(audio, sr, n_mels=64):
-    """Extract temporal dynamics features with delta features."""
-    S = librosa.feature.melspectrogram(y=audio, sr=sr, n_mels=n_mels)
-    log_S = librosa.power_to_db(S, ref=np.max)
-    mfcc = librosa.feature.mfcc(S=log_S, n_mfcc=13)
-    delta_mfcc = librosa.feature.delta(mfcc)
-    delta2_mfcc = librosa.feature.delta(mfcc, order=2)
-    return {
-        'mfcc': mfcc,
-        'delta_mfcc': delta_mfcc,
-        'delta2_mfcc': delta2_mfcc
-    }
-
-def get_suggested_threshold(features, step=1):
-    features_sampled = features[::step]
-    Z = linkage(features_sampled, method='ward')
-    merge_distances = Z[:, 2]
-    x = np.arange(len(merge_distances))
-    knee = KneeLocator(x, merge_distances, curve='convex', direction='increasing')
-    return merge_distances[knee.knee] if knee.knee is not None else 20.0
+from .pattern_finder_utils import get_rhythmic_features, get_temporal_features, get_suggested_threshold
+from .pattern_finder_clustering import perform_clustering, calculate_similarity_matrix
+from .pattern_finder_time_based import get_stem_clusters_time_based
+from .pattern_finder_sliding_window import get_stem_clusters_sliding_window
 
 def get_stem_clusters(
     beats,
@@ -249,11 +200,7 @@ def get_stem_clusters(
                 best_n_clusters = min(6, max_clusters)
 
         # Perform final clustering
-        clustering = AgglomerativeClustering(
-            n_clusters=best_n_clusters,
-            linkage='ward'
-        )
-        non_silence_labels = clustering.fit_predict(X_reduced)
+        non_silence_labels = perform_clustering(X_reduced, best_n_clusters)
 
         # Map back to all segments (including silence)
         cluster_labels = []
@@ -631,11 +578,7 @@ def get_stem_clusters_time_based(
                 best_n_clusters = min(6, max_clusters)
 
         # Perform clustering
-        clustering = AgglomerativeClustering(
-            n_clusters=best_n_clusters,
-            linkage='ward'
-        )
-        non_silence_labels = clustering.fit_predict(X_reduced)
+        non_silence_labels = perform_clustering(X_reduced, best_n_clusters)
 
         # Map back to all segments (including silence)
         cluster_labels = []
@@ -799,6 +742,7 @@ def get_stem_clusters_time_based(
 
     # Convert to JSON-serializable format
     def make_json_serializable(obj):
+        """Convert numpy types and other non-serializable objects to JSON-compatible types."""
         if isinstance(obj, np.integer):
             return int(obj)
         elif isinstance(obj, np.floating):
@@ -985,7 +929,7 @@ def get_stem_clusters_sliding_window(
     X_reduced = np.nan_to_num(X_reduced, nan=0.0)
 
     # Determine optimal number of clusters
-    max_clusters = min(len(non_silence_features) - 1, 10)  # Allow more clusters for sliding window
+    max_clusters = min(len(non_silence_features) - 1, 10)
     best_n_clusters = 3  # Start with 3 for better pattern detection
     
     if max_clusters >= 4:
@@ -1002,11 +946,7 @@ def get_stem_clusters_sliding_window(
             best_n_clusters = min(10, max_clusters)
 
     # Perform clustering
-    clustering = AgglomerativeClustering(
-        n_clusters=best_n_clusters,
-        linkage='ward'
-    )
-    non_silence_labels = clustering.fit_predict(X_reduced)
+    non_silence_labels = perform_clustering(X_reduced, best_n_clusters)
 
     # Map back to all segments (including silence)
     cluster_labels = []
@@ -1122,7 +1062,7 @@ def get_stem_clusters_sliding_window(
         print(f"   → Segments: {len(consolidated_segments)}")
         print(f"   → Score: {round(len(set(consolidated_labels)) / len(consolidated_segments), 4)}")
 
-    # Create final result
+    # Create final result (keep schema for other functions)
     result = {
         "cluster_labels": consolidated_labels,
         "segments": consolidated_segments,
@@ -1159,6 +1099,23 @@ def get_stem_clusters_sliding_window(
             return obj
             
     return make_json_serializable(result)
+
+def get_pattern_cue_points(clusters_timeline):
+    """
+    Identifies the start of each pattern instance from the clusters timeline.
+    Each time a cluster appears after a different one, it's a new cue point.
+    """
+    cue_points = []
+    last_cluster = -1
+    for segment in clusters_timeline:
+        current_cluster = segment['cluster']
+        if current_cluster != 0 and current_cluster != last_cluster:
+            cue_points.append({
+                "cluster": current_cluster,
+                "start": segment['start']
+            })
+        last_cluster = current_cluster
+    return cue_points
 
 if __name__ == "__main__":
     '''
@@ -1325,6 +1282,12 @@ if __name__ == "__main__":
         with open(summary_path, "w") as f:
             json.dump(best_result, f, indent=4)
 
+        # --- NEW: Print cue points for DMX cues/chasers ---
+        cue_points = get_pattern_cue_points(best_result.get("clusters_timeline", []))
+        print("\n🎛️  Pattern cue points (for DMX cues/chasers):")
+        for cue in cue_points:
+            print(f"  Cluster {cue['cluster']} starts at {cue['start']:.2f}s")
+
         song.clear_patterns()
         song.add_patterns("drums", [
             {"start": float(start), "end": float(end), "cluster": int(cluster)}
@@ -1335,14 +1298,3 @@ if __name__ == "__main__":
         print(f"🎯 Saved best cluster result to {summary_path.name}")
     else:
         print("⚠️ No valid clustering results generated")
-
-
-    # time range     | cluster | explanation
-    # 0m0.0s  - 0m34.2s  [0]  drum is silent (intro)
-    # 0m34.2s - 0m55.2s  [1]  first kick 
-    # 0m55.2s - 1m21.2s  [2]  a tom is added 
-    # 1m21.2s - 1m37.1s  [3]  tom change pattern
-    # 1m37.1s - 117.1    [4]  a tom+hihat pattern
-    # 1m42.3s - 2m00s    [5]  a two kicks then two snares pattern* (*could be two clusters, one for the kicks and one for the snares)
-    # 2m00.3s - 2m2.0s   [6]  snare only pattern
-    # 2m02.0  - 2m10s    [4]  a tom+hihat pattern
