@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 from datetime import datetime
 from backend.config import AI_CACHE, MASTER_FIXTURE_CONFIG, FIXTURE_PRESETS, CHASER_TEMPLATE_PATH
+from backend.models.app_state import app_state
 
 # Store conversation history per user/session (instead of deprecated context)
 _conversation_histories = {}
@@ -30,9 +31,12 @@ def load_fixture_config():
         print(f"Warning: Could not load fixture configuration: {e}")
         return [], [], []
 
-def generate_system_instructions():
-    """Generate dynamic system instructions based on current fixture configuration."""
+def generate_system_instructions(session_id: str = "default"):
+    """Generate dynamic system instructions based on current fixture configuration and song context."""
     fixtures, presets, chasers = load_fixture_config()
+    
+    # Get current song from AppState
+    current_song = app_state.current_song
     
     # Build fixture summary
     fixture_summary = []
@@ -113,7 +117,46 @@ If users ask about unrelated topics, respond with:
 - All fixtures are connected and responsive
 - Audio analysis provides beat detection and spectral data
 - Real-time synchronization is active
-- Ready to create shows immediately
+- Ready to create shows immediately"""
+
+    # Add current song information if available
+    if current_song:
+        # Format arrangement sections for display
+        arrangement_info = "No arrangement sections"
+        if hasattr(current_song, 'arrangement') and current_song.arrangement:
+            sections = []
+            for section in current_song.arrangement[:5]:  # Limit for readability
+                if hasattr(section, 'name') and hasattr(section, 'start') and hasattr(section, 'end'):
+                    sections.append(f"{section.name} ({section.start:.1f}s-{section.end:.1f}s)")
+                elif isinstance(section, dict):
+                    sections.append(f"{section.get('name', 'Unknown')} ({section.get('start', 0):.1f}s-{section.get('end', 0):.1f}s)")
+            if sections:
+                arrangement_info = ", ".join(sections)
+                if len(current_song.arrangement) > 5:
+                    arrangement_info += f" (+{len(current_song.arrangement)-5} more sections)"
+
+        base_instructions += f"""
+
+**CURRENT SONG:**
+- **Title**: {current_song.title}
+- **Genre**: {current_song.genre}
+- **BPM**: {current_song.bpm}
+- **Duration**: {current_song.duration:.1f}s
+- **Beats**: {len(current_song.beats)} beats detected
+- **Arrangement**: {arrangement_info}
+
+**SONG ANALYSIS:**
+- **Musical Elements**: Use the {len(current_song.beats)} beat markers for precise timing
+- **Recommended Approach**: Match lighting intensity to the {current_song.bpm} BPM rhythm
+- **Genre-Based Palette**: Optimize colors and effects for {current_song.genre} style"""
+    else:
+        base_instructions += """
+
+**CURRENT SONG:**
+- No song currently loaded
+- Ready to receive song information for synchronized lighting"""
+
+    base_instructions += """
 
 **DESIGN APPROACH:**
 - **For energetic music**: Use fast chasers, bright colors, strobes
@@ -121,7 +164,7 @@ If users ask about unrelated topics, respond with:
 - **For drops/builds**: Build intensity with color temperature and speed
 - **For vocals**: Highlight with specific fixtures or color changes
 
-**IMPORTANT:** Only suggest effects using the fixtures, presets, and chasers listed above. Assume everything is working - focus purely on creative light show design and musical synchronization.
+**IMPORTANT:** Only suggest effects using the fixtures, presets, and chasers listed above. Use the current song information to tailor your lighting suggestions. Assume everything is working - focus purely on creative light show design and musical synchronization.
 """
     
     # Save the generated instructions to debug file
@@ -129,9 +172,9 @@ If users ask about unrelated topics, respond with:
     
     return base_instructions
 
-def get_system_message():
-    """Get the system message for conversations with current fixture configuration."""
-    return {"role": "system", "content": generate_system_instructions()}
+def get_system_message(session_id: str = "default"):
+    """Get the system message for conversations with current fixture configuration and song context."""
+    return {"role": "system", "content": generate_system_instructions(session_id)}
 
 def query_ollama_mistral(prompt: str, session_id: str = "default", base_url: str = "http://backend-llm:11434"):
     """Send a prompt to the ollama/mistral model and return the response text with conversation history."""
@@ -141,7 +184,7 @@ def query_ollama_mistral(prompt: str, session_id: str = "default", base_url: str
     
     # Add system message if this is a new conversation
     if not messages:
-        messages.append(get_system_message())
+        messages.append(get_system_message(session_id))
     
     # Add the new user message
     messages.append({"role": "user", "content": prompt})
@@ -192,7 +235,7 @@ async def query_ollama_mistral_streaming(prompt: str, session_id: str = "default
     
     # Add system message if this is a new conversation
     if not messages:
-        messages.append(get_system_message())
+        messages.append(get_system_message(session_id))
     
     # Add the new user message
     messages.append({"role": "user", "content": prompt})
@@ -248,7 +291,7 @@ def get_conversation_history(session_id: str = "default"):
 
 def reset_conversation_with_system(session_id: str = "default"):
     """Reset conversation and start fresh with system message."""
-    _conversation_histories[session_id] = [get_system_message()]
+    _conversation_histories[session_id] = [get_system_message(session_id)]
 
 def refresh_system_configuration():
     """Refresh system configuration by reloading fixture data and clearing conversations."""
@@ -269,6 +312,33 @@ def get_current_chasers():
     """Get current chaser templates for external use."""
     _, _, chasers = load_fixture_config()
     return chasers
+
+def set_current_song(session_id: str, song_info: dict):
+    """Legacy function for compatibility - song context now managed by AppState."""
+    # Note: Song context is now managed directly through AppState.current_song
+    # This function is kept for backward compatibility but does nothing
+    # System instructions will automatically reflect AppState.current_song
+    pass
+
+def get_current_song(session_id: str = "default"):
+    """Get the current song context from AppState."""
+    if app_state.current_song:
+        return {
+            'title': app_state.current_song.title,
+            'genre': app_state.current_song.genre,
+            'bpm': app_state.current_song.bpm,
+            'duration': app_state.current_song.duration,
+            'beats': len(app_state.current_song.beats),
+            'arrangement_sections': len(app_state.current_song.arrangement) if app_state.current_song.arrangement else 0
+        }
+    return {}
+
+def clear_current_song(session_id: str = "default"):
+    """Legacy function for compatibility - song context now managed by AppState."""
+    # Note: Song context is now managed directly through AppState.current_song
+    # This function is kept for backward compatibility but does nothing
+    # To clear the current song, set AppState.current_song = None
+    pass
 
 def _save_system_instructions(instructions: str):
     """Save the current system instructions to a debug file."""

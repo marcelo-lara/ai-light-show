@@ -14,4 +14,4 @@ SONGS_TEMP_DIR = BASE_DIR / "songs/temp"
 LOCAL_TEST_SONG_PATH = "/home/darkangel/ai-light-show/songs/born_slippy.mp3"
 
 ## AI Related
-AI_CACHE =  Path("/root/.cache") if Path("/root/.cache").exists() else BASE_DIR / ".cache"
+AI_CACHE =  Path("/root/.cache") if Path("/app/static").exists() else BASE_DIR / ".cache"
