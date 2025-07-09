@@ -122,6 +122,24 @@ export function App() {
             setLastResponse(msg.response || "(no response?)");
             break;
           }
+          case "chatResponseStart": {
+            if (window._chatAssistantStartStreaming) {
+              window._chatAssistantStartStreaming();
+            }
+            break;
+          }
+          case "chatResponseChunk": {
+            if (msg.chunk && window._chatAssistantAppendChunk) {
+              window._chatAssistantAppendChunk(msg.chunk);
+            }
+            break;
+          }
+          case "chatResponseEnd": {
+            if (window._chatAssistantEndStreaming) {
+              window._chatAssistantEndStreaming();
+            }
+            break;
+          }
           default:
             console.warn("Unhandled message type:", msg.type);
         }

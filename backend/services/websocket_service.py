@@ -40,21 +40,36 @@ class WebSocketManager:
         }
 
     async def _handle_user_prompt(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
-        """Handle userPrompt by sending to ollama/mistral and returning the response."""
-        from ..ai.ollama_client import query_ollama_mistral
+        """Handle userPrompt by sending to ollama/mistral and streaming the response."""
+        from ..ai.ollama_client import query_ollama_mistral_streaming
         prompt = message.get("text", "") or message.get("prompt", "")
         if not prompt:
             await websocket.send_json({"type": "chatResponse", "response": "No prompt provided."})
             return
+        
         try:
-            # Use websocket object id as session ID for conversation context
             session_id = str(id(websocket))
             
-            # Run in thread executor to avoid blocking event loop
+            # Send chunk callback
+            async def send_chunk(chunk):
+                await websocket.send_json({
+                    "type": "chatResponseChunk", 
+                    "chunk": chunk
+                })
+            
+            # Start streaming
+            await websocket.send_json({"type": "chatResponseStart"})
+            
+            # Stream the response
             import asyncio
             loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(None, query_ollama_mistral, prompt, session_id)
-            await websocket.send_json({"type": "chatResponse", "response": response})
+            await loop.run_in_executor(None, lambda: asyncio.run(
+                query_ollama_mistral_streaming(prompt, session_id, callback=send_chunk)
+            ))
+            
+            # End streaming
+            await websocket.send_json({"type": "chatResponseEnd"})
+            
         except Exception as e:
             await websocket.send_json({"type": "chatResponse", "response": f"Error: {e}"})
     

@@ -1,4 +1,5 @@
 import requests
+import json
 
 # Store conversation context per user/session
 _conversation_contexts = {}
@@ -12,7 +13,7 @@ def query_ollama_mistral(prompt: str, session_id: str = "default", base_url: str
     request_data = {
         "model": "mistral",
         "prompt": prompt,
-        "stream": False
+        "stream": True  # Enable streaming
     }
     
     # Include context if we have it
@@ -22,17 +23,75 @@ def query_ollama_mistral(prompt: str, session_id: str = "default", base_url: str
     response = requests.post(
         f"{base_url}/api/generate",
         json=request_data,
-        timeout=60
+        timeout=60,
+        stream=True
     )
     response.raise_for_status()
-    data = response.json()
+    
+    full_response = ""
+    final_context = None
+    
+    # Process streaming response
+    for line in response.iter_lines():
+        if line:
+            try:
+                data = json.loads(line)
+                chunk = data.get("response", "")
+                if chunk:
+                    full_response += chunk
+                
+                # Store context when done
+                if data.get("done", False):
+                    final_context = data.get("context")
+                    break
+            except json.JSONDecodeError:
+                continue
     
     # Store the new context for future messages
-    if data.get("context"):
-        _conversation_contexts[session_id] = data["context"]
+    if final_context:
+        _conversation_contexts[session_id] = final_context
     
-    print(f"Response from Ollama: {data}")  # Debugging line to see the response structure
-    return data.get("response", "")
+    return full_response
+
+async def query_ollama_mistral_streaming(prompt: str, session_id: str = "default", base_url: str = "http://backend-llm:11434", callback=None):
+    """Send a prompt to ollama/mistral and call callback for each chunk."""
+    context = _conversation_contexts.get(session_id)
+    
+    request_data = {
+        "model": "mistral",
+        "prompt": prompt,
+        "stream": True
+    }
+    
+    if context:
+        request_data["context"] = context
+    
+    response = requests.post(
+        f"{base_url}/api/generate",
+        json=request_data,
+        timeout=60,
+        stream=True
+    )
+    response.raise_for_status()
+    
+    final_context = None
+    
+    for line in response.iter_lines():
+        if line:
+            try:
+                data = json.loads(line)
+                chunk = data.get("response", "")
+                if chunk and callback:
+                    await callback(chunk)
+                
+                if data.get("done", False):
+                    final_context = data.get("context")
+                    break
+            except json.JSONDecodeError:
+                continue
+    
+    if final_context:
+        _conversation_contexts[session_id] = final_context
 
 def clear_conversation(session_id: str = "default"):
     """Clear conversation context for a session."""

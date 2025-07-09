@@ -4,6 +4,24 @@ import { useEffect } from 'react';
 export default function ChatAssistant({ wsSend, lastResponse }) {
   const [message, setMessage] = useState("");
   const [chat, setChat] = useState([]);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [currentStreamingMessage, setCurrentStreamingMessage] = useState("");
+
+  // Expose streaming handlers globally
+  window._chatAssistantStartStreaming = () => {
+    setIsStreaming(true);
+    setCurrentStreamingMessage("");
+  };
+  
+  window._chatAssistantAppendChunk = (chunk) => {
+    setCurrentStreamingMessage(prev => prev + chunk);
+  };
+  
+  window._chatAssistantEndStreaming = () => {
+    setChat(prev => [...prev, { sender: 'assistant', text: currentStreamingMessage }]);
+    setCurrentStreamingMessage("");
+    setIsStreaming(false);
+  };
 
   const sendMessage = () => {
     if (!message.trim()) return;
@@ -41,6 +59,14 @@ export default function ChatAssistant({ wsSend, lastResponse }) {
             {msg.text}
           </p>
         ))}
+        {isStreaming && (
+          <p
+            className="max-w-[75%] px-4 py-2 rounded-lg text-sm bg-gray-200 text-gray-900 self-start mr-auto text-left"
+            style={{ alignSelf: 'flex-start' }}
+          >
+            {currentStreamingMessage}<span className="animate-pulse">|</span>
+          </p>
+        )}
       </div>
       <div className="mt-4 flex gap-2 items-end">
         <textarea
