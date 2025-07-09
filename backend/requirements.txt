@@ -14,3 +14,4 @@ torchvision
 torchaudio
 scipy
 scikit-learn
+aiohttp
