@@ -110,7 +110,13 @@ If the user asks about topics unrelated to lighting/music/DMX, respond with:
 - Web-based control interface
 - Support for various fixture types (RGB, moving heads, strobes, etc.)
 
-**IMPORTANT:** Always suggest solutions using the actual fixtures, presets, and chasers listed above. Do not recommend fixtures or presets that aren't available in the current configuration.
+**NETWORK SETUP:**
+- All DMX fixtures are connected and properly addressed
+- Art-Net network is configured and operational
+- Fixtures are ready to receive Art-Net packets immediately
+- No additional network configuration is required
+
+**IMPORTANT:** Always suggest solutions using the actual fixtures, presets, and chasers listed above. Do not recommend fixtures or presets that aren't available in the current configuration. Assume all fixtures are connected and ready to respond to commands.
 """
     
     return base_instructions
