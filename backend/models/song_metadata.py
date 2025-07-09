@@ -336,10 +336,10 @@ class SongMetadata:
 
         if len(self._key_moments) == 0:
             self.key_moments = [
-                {"time": 0.0, "name": "Song Start", "description": "Beginning of the song"},
-                {"time": 1.0, "name": "Drop", "description": "Main drop or beat drop"},
-                {"time": 2.0, "name": "Break", "description": "Breakdown or break section"},
-                {"time": 2.5, "name": "Build", "description": "Build-up section"},
+                {"time": 0.0, "name": "Song Start", "description": "Beginning of the song", "duration": 0},
+                {"time": 1.0, "name": "Drop", "description": "Main drop or beat drop", "duration": 0},
+                {"time": 2.0, "name": "Break", "description": "Breakdown or break section", "duration": 0},
+                {"time": 2.5, "name": "Build", "description": "Build-up section", "duration": 0},
             ]
 
     def add_beat(self, time: float, volume: float = 0.0, energy: float = 1.0) -> None:
