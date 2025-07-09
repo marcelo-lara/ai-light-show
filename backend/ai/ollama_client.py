@@ -4,6 +4,7 @@ import aiohttp
 import os
 from pathlib import Path
 from datetime import datetime
+from typing import Dict, List, Tuple, Optional
 from backend.config import AI_CACHE, MASTER_FIXTURE_CONFIG, FIXTURE_PRESETS, CHASER_TEMPLATE_PATH
 from backend.models.app_state import app_state
 
@@ -69,9 +70,12 @@ def generate_system_instructions(session_id: str = "default"):
 
 **RESPONSE STYLE:**
 - For greetings (hi, hello, hey): Respond with just "Hey! Ready to create some light magic? What's the vibe?"
-- For general questions: Keep responses under 3 sentences
-- For specific requests: Give direct, actionable advice
+- For general questions: Keep responses under 3 sentences and END with specific ACTION suggestions
+- For specific requests: Give direct, actionable advice with precise ACTION commands
 - Don't repeat or explain your role unless specifically asked
+- ALWAYS end lighting discussions with concrete ACTION commands the user can execute
+- Be creative but practical - suggest effects that will actually look good
+- Focus on ACTIONABLE specificity - every response should move toward executable lighting commands
 
 **CREATIVE GUIDELINES:**
 - Focus on visual storytelling and artistic expression through lighting
@@ -80,6 +84,15 @@ def generate_system_instructions(session_id: str = "default"):
 - Be SHORT and CONCISE - give actionable creative direction
 - Always use the actual fixtures, presets, and chasers available below
 - Think like a lighting designer, not a technician
+- PRIORITIZE SPECIFICITY: Always include exact timing, fixture names, and effect details
+
+**COMMUNICATION PRINCIPLES:**
+- When users describe what they want, IMMEDIATELY translate it into specific, executable ACTION commands
+- Use musical analysis data to suggest precise timing for effects
+- Reference actual fixture names and preset names from the configuration
+- Consider the genre and energy level when suggesting colors and effects
+- Default to using multiple fixtures for bigger impact unless specifically asked otherwise
+- Provide 2-3 ACTION options when possible to give users choices
 
 **OFF-TOPIC HANDLING:**
 If users ask about unrelated topics, respond with:
@@ -135,6 +148,132 @@ If users ask about unrelated topics, respond with:
                 if len(current_song.arrangement) > 5:
                     arrangement_info += f" (+{len(current_song.arrangement)-5} more sections)"
 
+        # Format key moments
+        key_moments_info = "None detected"
+        if hasattr(current_song, 'key_moments') and current_song.key_moments:
+            moments = []
+            for moment in current_song.key_moments[:8]:  # Limit for readability
+                if isinstance(moment, dict):
+                    time_str = f"{moment.get('time', 0):.1f}s"
+                    name = moment.get('name', 'Unknown')
+                    desc = moment.get('description', '')
+                    moments.append(f"{name} ({time_str}): {desc}")
+            if moments:
+                key_moments_info = " | ".join(moments)
+                if len(current_song.key_moments) > 8:
+                    key_moments_info += f" (+{len(current_song.key_moments)-8} more)"
+
+        # Format chord progression summary
+        chord_info = "No chord data"
+        if hasattr(current_song, 'chords') and current_song.chords:
+            # Get unique chords from the progression
+            unique_chords = set()
+            for chord_data in current_song.chords[:50]:  # Sample first 50 for analysis
+                if isinstance(chord_data, dict) and 'chord_basic_nashville' in chord_data:
+                    chord = chord_data['chord_basic_nashville']
+                    if chord != 'N':  # Skip "No chord" markers
+                        unique_chords.add(chord)
+            
+            if unique_chords:
+                chord_info = f"Key chords: {', '.join(sorted(unique_chords))} ({len(current_song.chords)} total chord changes)"
+            else:
+                chord_info = f"{len(current_song.chords)} chord changes detected"
+
+        # Format beat energy analysis with timing insights
+        beat_analysis = "No beat data"
+        if hasattr(current_song, 'beats') and current_song.beats:
+            total_beats = len(current_song.beats)
+            
+            # Calculate energy and volume statistics
+            energy_levels = []
+            volume_levels = []
+            beat_times = []
+            
+            for beat in current_song.beats:
+                if isinstance(beat, dict):
+                    if 'energy' in beat:
+                        energy_levels.append(beat['energy'])
+                    if 'volume' in beat:
+                        volume_levels.append(beat['volume'])
+                    if 'time' in beat:
+                        beat_times.append(beat['time'])
+            
+            beat_analysis = f"{total_beats} beats detected"
+            
+            # Add energy analysis
+            if energy_levels:
+                avg_energy = sum(energy_levels) / len(energy_levels)
+                max_energy = max(energy_levels)
+                min_energy = min(energy_levels)
+                
+                # Find peak energy moments for highlighting
+                peak_threshold = avg_energy + (max_energy - avg_energy) * 0.7
+                peak_moments = []
+                for i, (beat, energy) in enumerate(zip(current_song.beats, energy_levels)):
+                    if energy >= peak_threshold and isinstance(beat, dict) and 'time' in beat:
+                        peak_moments.append(f"{beat['time']:.1f}s")
+                
+                beat_analysis += f" | Energy: avg={avg_energy:.2f}, peak={max_energy:.2f}"
+                if peak_moments:
+                    beat_analysis += f" | High energy at: {', '.join(peak_moments[:5])}"
+                    if len(peak_moments) > 5:
+                        beat_analysis += f" (+{len(peak_moments)-5} more)"
+            
+            # Add volume analysis
+            if volume_levels:
+                avg_volume = sum(volume_levels) / len(volume_levels)
+                max_volume = max(volume_levels)
+                beat_analysis += f" | Volume: avg={avg_volume:.2f}, peak={max_volume:.2f}"
+            
+            # Add tempo consistency analysis
+            if len(beat_times) > 3:
+                intervals = [beat_times[i+1] - beat_times[i] for i in range(len(beat_times)-1)]
+                avg_interval = sum(intervals) / len(intervals)
+                tempo_variance = sum((interval - avg_interval)**2 for interval in intervals) / len(intervals)
+                
+                if tempo_variance < 0.01:
+                    beat_analysis += " | Tempo: steady"
+                elif tempo_variance < 0.05:
+                    beat_analysis += " | Tempo: minor variations"
+                else:
+                    beat_analysis += " | Tempo: significant variations"
+
+        # Format drum patterns if available
+        drum_info = "No drum data"
+        if hasattr(current_song, 'drums') and current_song.drums:
+            drum_info = f"{len(current_song.drums)} drum events detected"
+
+        # Generate intelligent lighting suggestions
+        lighting_suggestions = ""
+        if energy_levels:
+            avg_energy = sum(energy_levels) / len(energy_levels)
+            max_energy = max(energy_levels)
+            high_energy_threshold = avg_energy + (max_energy - avg_energy) * 0.7
+            
+            # Genre-specific advice
+            genre_advice = {
+                'electronic': 'Sync strobes to synthetic beats, use cool colors (blue/cyan), fast chases',
+                'rock': 'Strong beat emphasis, warm colors (red/orange), dramatic lighting changes',
+                'ambient': 'Slow transitions, soft colors, minimal movement, atmospheric effects',
+                'pop': 'Bright colors, synchronized to vocals, crowd-pleasing effects',
+                'techno': 'Repetitive patterns, industrial colors, precise beat sync',
+                'unknown': 'Adapt lighting to detected energy levels and musical structure'
+            }
+            
+            current_genre_advice = genre_advice.get(current_song.genre.lower(), genre_advice['unknown'])
+            key_moment_count = len([m for m in current_song.key_moments if isinstance(m, dict)]) if hasattr(current_song, 'key_moments') and current_song.key_moments else 0
+            
+            lighting_suggestions = f"""
+
+**INTELLIGENT LIGHTING SUGGESTIONS:**
+Based on the current song analysis, here are contextual recommendations:
+- **For high-energy moments** (energy > {high_energy_threshold:.2f}): Use fast strobes, bright colors, quick chases
+- **For build-ups**: Gradually increase intensity, use rising patterns, warm to cool color transitions  
+- **For breakdowns**: Minimal lighting, single colors, slow movements
+- **For {current_song.genre} genre**: {current_genre_advice}
+- **Sync Strategy**: Match major lighting changes to the {key_moment_count} key moments identified
+- **Timing Precision**: Use {60/current_song.bpm*1000:.0f}ms per beat intervals for perfect sync"""
+
         base_instructions += f"""
 
 **CURRENT SONG:**
@@ -142,13 +281,15 @@ If users ask about unrelated topics, respond with:
 - **Genre**: {current_song.genre}
 - **BPM**: {current_song.bpm}
 - **Duration**: {current_song.duration:.1f}s
-- **Beats**: {len(current_song.beats)} beats detected
-- **Arrangement**: {arrangement_info}
 
-**SONG ANALYSIS:**
-- **Musical Elements**: Use the {len(current_song.beats)} beat markers for precise timing
-- **Recommended Approach**: Match lighting intensity to the {current_song.bpm} BPM rhythm
-- **Genre-Based Palette**: Optimize colors and effects for {current_song.genre} style"""
+**MUSICAL STRUCTURE:**
+- **Arrangement**: {arrangement_info}
+- **Key Moments**: {key_moments_info}
+- **Chord Progression**: {chord_info}
+
+**RHYTHMIC ANALYSIS:**
+- **Beat Analysis**: {beat_analysis}
+- **Drum Patterns**: {drum_info}{lighting_suggestions}"""
     else:
         base_instructions += """
 
@@ -164,7 +305,137 @@ If users ask about unrelated topics, respond with:
 - **For drops/builds**: Build intensity with color temperature and speed
 - **For vocals**: Highlight with specific fixtures or color changes
 
-**IMPORTANT:** Only suggest effects using the fixtures, presets, and chasers listed above. Use the current song information to tailor your lighting suggestions. Assume everything is working - focus purely on creative light show design and musical synchronization.
+**MUSICAL SYNCHRONIZATION STRATEGY:**
+Use the song analysis data to create perfectly timed lighting:
+
+**Energy-Based Effects:**
+- High energy moments (>0.7): Bright whites, strobes, fast effects, multiple fixtures
+- Medium energy (0.4-0.7): Colored effects, moderate pace, chase sequences
+- Low energy (<0.4): Single colors, slow fades, minimal movement, warm tones
+
+**Beat-Synchronized Effects:**
+- Use exact beat timing for strobes and flashes
+- Align chase sequences to measure boundaries  
+- Match color changes to chord progressions
+- Time major effects to arrangement sections
+
+**Genre-Specific Approaches:**
+- **Electronic/EDM**: Sharp contrasts, cool colors (blue/cyan/white), precise beat sync
+- **Rock/Metal**: Warm colors (red/orange/yellow), dramatic changes, energy emphasis
+- **Pop**: Bright, accessible colors, vocal highlighting, crowd-pleasing effects
+- **Ambient/Chill**: Soft transitions, warm colors, atmospheric effects, minimal movement
+
+**Effect Selection Guidelines:**
+- **Flash preset**: Perfect for beat hits, drops, accent moments
+- **Strobe preset**: High-energy sections, build-ups, electronic music
+- **Pulse preset**: Medium energy, rhythmic emphasis, sustained sections
+- **Chase sequences**: Build-ups, verses, maintaining energy between hits
+- **Color washes**: Mood setting, breakdowns, ambient sections
+- **Moving head movements**: Dramatic moments, solos, special highlights
+
+**Timing Precision Rules:**
+- Reference exact beat times for critical effects
+- Use musical sections for sustained effects
+- Consider effect duration relative to song structure
+- Layer multiple effects for complex moments
+
+**CUE MANAGEMENT COMMANDS:**
+You can help users add, remove, or modify lighting cues using natural language. When users request lighting changes:
+
+1. **Acknowledge the request** - Confirm what they want to do
+2. **Suggest the implementation** - Describe the specific cues/effects you'd create  
+3. **Use ACTION syntax** - End responses with: `ACTION: [command description]` to propose cue operations
+
+**CONFIRMATION WORKFLOW:**
+- When you include ACTION commands, they will be extracted and presented to the user for confirmation
+- The user will be asked "Do you want me to execute these changes? Please reply 'yes' to confirm or 'no' to cancel."
+- Only confirmed actions will be executed - DO NOT assume actions are automatically executed
+- Be descriptive in your ACTION commands so users understand what will happen
+
+**ACTION COMMAND GUIDELINES:**
+When creating ACTION commands, be SPECIFIC and UNAMBIGUOUS. Every ACTION must include ALL required elements:
+
+**MANDATORY COMMAND STRUCTURE:**
+Each ACTION must specify: [OPERATION] [EFFECT] [TIMING] [FIXTURES]
+
+**Operation Types:**
+- "Add" - Create new lighting cue
+- "Remove" - Delete existing cues
+- "Change" - Modify existing cues
+
+**Timing Specifications (REQUIRED):**
+- Exact times: "at 45.2s", "from 30s to 60s"
+- Musical sections: "during the drop", "at the chorus", "during the bridge", "in the breakdown", "during the verse", "at the intro"
+- Relative timing: "for the next 4 beats", "for 8 seconds", "until the next section"
+- Beat-based: "on beat 32", "every 4 beats", "for 16 beats"
+
+**Fixture Specifications (REQUIRED):**
+- Exact names: "ParCan L", "ParCan R", "Head EL-150", "Proton L", "Proton R"
+- Logical groups: "all parcans", "both parcans", "moving heads", "both protons"
+- Positional groups: "left side lights", "right side lights", "all RGB fixtures"
+- When unsure, default to "all RGB fixtures"
+
+**Effect Specifications (REQUIRED):**
+- Preset names: "flash", "pulse", "strobe", "rainbow", "fire", "warm", "cool"
+- Custom colors: "bright red", "deep blue", "warm white", "green and blue", "purple and orange"
+- Intensity: "full brightness", "50% intensity", "dim", "bright"
+- Speed/Duration: "quick flash", "slow fade", "2-second pulse", "fast strobe", "instant"
+
+**ENHANCED ACTION EXAMPLES:**
+- "ACTION: Add bright white flash preset at 67.3s using both parcans"
+- "ACTION: Add red and blue pulse effect during the drop using all RGB fixtures"
+- "ACTION: Add fast white strobe for 8 beats during the breakdown using Head EL-150"
+- "ACTION: Add warm orange glow from 90s to 120s using left side lights"
+- "ACTION: Remove all lighting cues between 45s and 60s"
+- "ACTION: Add rainbow chase effect during the chorus using all fixtures"
+- "ACTION: Add green flash on beat hits during the verse using both protons"
+- "ACTION: Add slow blue fade for 16 beats at the bridge using moving heads"
+
+**CRITICAL REQUIREMENTS - EVERY ACTION MUST:**
+1. Start with "ACTION:" followed by a single, complete command
+2. Include an operation verb (Add/Remove/Change)
+3. Specify the exact effect/preset OR custom colors and intensity
+4. Include precise timing (time, section, or duration)
+5. Name specific fixtures OR use logical groups like "all RGB fixtures"
+6. Use fixture names and preset names from the available configuration
+7. Be executable as a single lighting command
+8. Consider the musical context and energy level for appropriate effects
+
+**TIMING INTELLIGENCE:**
+- Match effect duration to musical phrases (typically 4, 8, or 16 beats)
+- Use high-energy effects (strobe, flash) for drops and peaks
+- Use smooth effects (fade, pulse) for builds and verses
+- Align major changes with arrangement section boundaries
+- Consider BPM for beat-synchronized effects
+
+**ACTION COMMAND SUCCESS TIPS:**
+1. **BE CONCRETE**: Instead of "cool effect", specify "blue strobe" or "rainbow chase"
+2. **BE MUSICAL**: Use song structure - "during the chorus" is better than "at 60s"
+3. **BE FIXTURE-SPECIFIC**: Name actual fixtures like "ParCan L" instead of just "lights"
+4. **BE TIMING-AWARE**: Consider effect duration relative to musical phrases
+5. **BE ENERGY-MATCHED**: High energy = strobes/flashes, low energy = fades/pulses
+6. **BE PRACTICAL**: Suggest effects that will actually enhance the music, not distract
+7. **BE CONSISTENT**: Use the same format for all ACTION commands
+8. **BE COMPLETE**: Every ACTION must have operation + effect + timing + fixtures
+9. **BE SPECIFIC**: Avoid vague terms like "some", "cool", "nice" - use precise descriptors
+
+**COMMAND QUALITY EXAMPLES:**
+❌ BAD: "ACTION: Add some cool lights during the good part"
+✅ GOOD: "ACTION: Add bright white strobe effect during the drop using all RGB fixtures"
+
+❌ BAD: "ACTION: Make it colorful when it gets exciting"
+✅ GOOD: "ACTION: Add multi-colored chase effect during the chorus using parcans"
+
+❌ BAD: "ACTION: Do something with the moving lights"
+✅ GOOD: "ACTION: Add slow blue pulse effect during the breakdown using moving heads"
+
+**TIMING BEST PRACTICES:**
+- Use musical sections: "during the drop", "at the chorus", "in the breakdown"
+- Specify duration: "for 8 beats", "for 16 seconds", "until next section"
+- Avoid vague references: "when it gets good", "during the exciting part"
+- Use exact times when known: "at 45.2s", "from 30s to 60s"
+
+Remember: Your job is to make the music VISUALLY EXCITING. Every response should move the user closer to having an amazing light show!
 """
     
     # Save the generated instructions to debug file
@@ -357,6 +628,244 @@ def _save_system_instructions(instructions: str):
             f.write(f"\n\n---\n*Last updated: {current_time}*\n")
     except Exception as e:
         print(f"Warning: Could not save system instructions: {e}")
+
+def extract_action_proposals(ai_response: str, session_id: str = "default"):
+    """Extract ACTION commands from AI response and prepare them for user confirmation."""
+    
+    import re
+    
+    # Extract ACTION commands from response and remove them from display
+    action_pattern = r'ACTION:\s*(.+?)(?:\n|$)'
+    actions = re.findall(action_pattern, ai_response, re.IGNORECASE | re.MULTILINE)
+    
+    # Remove ACTION lines from the response that will be shown to user
+    cleaned_response = re.sub(action_pattern, '', ai_response, flags=re.IGNORECASE | re.MULTILINE).strip()
+    
+    if not actions:
+        return cleaned_response, []
+    
+    # Get current context
+    current_song = app_state.current_song
+    if not current_song:
+        return cleaned_response, [{"error": "No song loaded - cannot create lighting actions"}]
+    
+    fixtures, presets, chasers = load_fixture_config()
+    
+    proposals = []
+    for action_text in actions:
+        try:
+            # Create a more detailed proposal with better description
+            proposal = {
+                "id": f"action_{len(proposals)}",
+                "command": action_text.strip(),
+                "description": _generate_friendly_description(action_text.strip(), fixtures, presets),
+                "confidence": 0.8,  # Default confidence
+                "can_execute": True,
+                "raw_command": action_text.strip()
+            }
+            proposals.append(proposal)
+            
+        except Exception as e:
+            proposals.append({
+                "id": f"action_{len(proposals)}",
+                "command": action_text.strip(),
+                "error": str(e),
+                "description": f"Could not interpret command: {action_text}",
+                "confidence": 0.0,
+                "can_execute": False
+            })
+    
+    return cleaned_response, proposals
+
+def _generate_friendly_description(command: str, fixtures: List[Dict], presets: List[Dict]) -> str:
+    """Generate a user-friendly description of what the command will do."""
+    
+    command_lower = command.lower()
+    
+    # Extract common patterns from the command
+    description_parts = []
+    
+    # Look for operation type
+    if any(word in command_lower for word in ['add', 'create', 'make']):
+        description_parts.append("Add")
+    elif any(word in command_lower for word in ['remove', 'delete', 'clear']):
+        description_parts.append("Remove")
+    elif any(word in command_lower for word in ['change', 'update', 'modify']):
+        description_parts.append("Change")
+    else:
+        description_parts.append("Create")
+    
+    # Look for colors
+    colors_found = []
+    color_map = {
+        'red': 'red', 'blue': 'blue', 'green': 'green', 'white': 'white', 
+        'yellow': 'yellow', 'purple': 'purple', 'orange': 'orange', 
+        'cyan': 'cyan', 'magenta': 'magenta', 'pink': 'pink'
+    }
+    
+    for color_word, color_name in color_map.items():
+        if color_word in command_lower:
+            colors_found.append(color_name)
+    
+    # Look for effects
+    effects_found = []
+    effect_keywords = {
+        'flash': 'flash effect', 'strobe': 'strobe effect', 'pulse': 'pulse effect',
+        'fade': 'fade effect', 'chase': 'chase sequence', 'sweep': 'sweep effect',
+        'dim': 'dimming', 'bright': 'bright lights', 'slow': 'slow effect',
+        'fast': 'fast effect', 'smooth': 'smooth transition'
+    }
+    
+    for keyword, effect_name in effect_keywords.items():
+        if keyword in command_lower:
+            effects_found.append(effect_name)
+    
+    # Look for timing references
+    timing_found = []
+    if any(word in command_lower for word in ['drop', 'bass drop']):
+        timing_found.append("at the drop")
+    elif any(word in command_lower for word in ['chorus']):
+        timing_found.append("during the chorus")
+    elif any(word in command_lower for word in ['verse']):
+        timing_found.append("during the verse")
+    elif any(word in command_lower for word in ['bridge']):
+        timing_found.append("during the bridge")
+    elif any(word in command_lower for word in ['intro']):
+        timing_found.append("during the intro")
+    elif any(word in command_lower for word in ['outro', 'ending']):
+        timing_found.append("at the ending")
+    
+    # Look for fixture types
+    fixtures_found = []
+    fixture_keywords = {
+        'parcan': 'parcan lights', 'moving': 'moving head lights', 'head': 'moving head lights',
+        'spot': 'spotlight', 'wash': 'wash lights', 'strobe': 'strobe lights',
+        'led': 'LED lights', 'laser': 'laser lights'
+    }
+    
+    for keyword, fixture_name in fixture_keywords.items():
+        if keyword in command_lower:
+            fixtures_found.append(fixture_name)
+    
+    # Look for preset names
+    preset_names = []
+    for preset in presets[:10]:  # Check first 10 presets
+        preset_name = preset.get('name', '').lower()
+        if preset_name and preset_name in command_lower:
+            preset_names.append(f"'{preset['name']}' preset")
+    
+    # Build the description
+    description = description_parts[0]
+    
+    if colors_found:
+        description += f" {' and '.join(colors_found)}"
+    
+    if effects_found:
+        description += f" {' and '.join(effects_found)}"
+    elif preset_names:
+        description += f" {' and '.join(preset_names)}"
+    
+    if fixtures_found:
+        description += f" using {' and '.join(fixtures_found)}"
+    
+    if timing_found:
+        description += f" {' and '.join(timing_found)}"
+    
+    # Fallback to command text if description is too minimal
+    if len(description.split()) < 3:
+        description = f"Execute lighting command: {command}"
+    
+    return description
+
+def _format_action_description(interpretation: Dict) -> str:
+    """Format an action interpretation into a user-friendly description."""
+    
+    operation = interpretation.get('operation', 'unknown')
+    time_ref = interpretation.get('time')
+    fixtures = interpretation.get('fixtures', [])
+    preset = interpretation.get('preset')
+    params = interpretation.get('parameters', {})
+    
+    description = f"{operation.title()} "
+    
+    # Add effect description
+    if preset:
+        description += f"'{preset}' effect "
+    
+    # Add color info if available
+    colors = []
+    if params.get('red') == 255 and params.get('green') == 0 and params.get('blue') == 0:
+        colors.append("red")
+    elif params.get('red') == 0 and params.get('green') == 0 and params.get('blue') == 255:
+        colors.append("blue")
+    elif params.get('red') == 0 and params.get('green') == 255 and params.get('blue') == 0:
+        colors.append("green")
+    elif params.get('red') == 255 and params.get('green') == 255 and params.get('blue') == 255:
+        colors.append("white")
+    
+    if colors:
+        description += f"in {', '.join(colors)} "
+    
+    # Add fixture info
+    if len(fixtures) == 1:
+        description += f"on {fixtures[0]} "
+    elif len(fixtures) > 1:
+        description += f"on {len(fixtures)} fixtures "
+    
+    # Add timing info
+    if time_ref is not None:
+        description += f"at {time_ref:.1f}s"
+    
+    return description.strip()
+
+def execute_confirmed_action(action_id: str, proposals: List[Dict]) -> Tuple[bool, str]:
+    """Execute a confirmed action from the proposals list."""
+    
+    # Find the action by ID
+    action = next((p for p in proposals if p.get('id') == action_id), None)
+    if not action:
+        return False, f"Action {action_id} not found"
+    
+    if not action.get('can_execute', False):
+        return False, f"Action cannot be executed: {action.get('error', 'Unknown error')}"
+    
+    # Get current context
+    current_song = app_state.current_song
+    if not current_song:
+        return False, "No song loaded"
+    
+    fixtures, presets, chasers = load_fixture_config()
+    
+    try:
+        # Import here to avoid circular imports
+        from ..services.cue_service import CueManager
+        from .cue_interpreter import CueInterpreter
+        
+        cue_manager = CueManager()
+        interpreter = CueInterpreter(cue_manager)
+        
+        # Execute the command
+        success, message = interpreter.execute_command(
+            action['command'],
+            current_song,
+            fixtures,
+            presets
+        )
+        return success, message
+        
+    except Exception as e:
+        return False, f"Execution error: {str(e)}"
+
+async def query_ollama_with_actions(prompt: str, session_id: str = "default", base_url: str = "http://backend-llm:11434"):
+    """Enhanced query function that processes AI actions for user confirmation."""
+    
+    # Get AI response
+    ai_response = query_ollama_mistral(prompt, session_id, base_url)
+    
+    # Extract action proposals (removes ACTION: lines from response)
+    cleaned_response, action_proposals = extract_action_proposals(ai_response, session_id)
+    
+    return cleaned_response, action_proposals
 
 #
 # Example response from modern Ollama /api/chat endpoint:

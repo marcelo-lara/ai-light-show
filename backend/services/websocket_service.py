@@ -41,8 +41,9 @@ class WebSocketManager:
         }
 
     async def _handle_user_prompt(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
-        """Handle userPrompt by sending to ollama/mistral and streaming the response."""
-        from ..ai.ollama_client import query_ollama_mistral_streaming
+        """Handle userPrompt with streaming and action proposals/confirmation flow."""
+        from ..ai.ollama_client import query_ollama_mistral_streaming, extract_action_proposals, execute_confirmed_action
+        
         prompt = message.get("text", "") or message.get("prompt", "")
         if not prompt:
             await websocket.send_json({"type": "chatResponse", "response": "No prompt provided."})
@@ -51,27 +52,99 @@ class WebSocketManager:
         try:
             session_id = str(id(websocket))
             
-            # Send chunk callback
+            # Check if this is a confirmation message for pending actions
+            # Store pending actions in a class attribute keyed by websocket ID
+            if not hasattr(self, '_pending_actions_store'):
+                self._pending_actions_store = {}
+            
+            pending_actions = self._pending_actions_store.get(session_id)
+            if pending_actions:
+                # Parse confirmation response
+                prompt_lower = prompt.lower().strip()
+                is_confirmation = any(word in prompt_lower for word in ['yes', 'confirm', 'do it', 'execute', 'go ahead'])
+                is_rejection = any(word in prompt_lower for word in ['no', 'cancel', 'stop', 'nevermind', 'don\'t'])
+                
+                if is_confirmation:
+                    # Execute all pending actions
+                    results = []
+                    for action in pending_actions:
+                        success, message_result = execute_confirmed_action(action['id'], pending_actions)
+                        results.append(f"✓ {message_result}" if success else f"✗ {message_result}")
+                        print(f"🎭 ACTION EXECUTED: {action['command']} -> {'SUCCESS' if success else 'FAILED'}: {message_result}")
+                    
+                    response_text = "Actions executed:\n" + "\n".join(results)
+                    await websocket.send_json({
+                        "type": "chatResponse", 
+                        "response": response_text,
+                        "action_proposals": []
+                    })
+                    
+                    # Clear pending actions
+                    del self._pending_actions_store[session_id]
+                    return
+                    
+                elif is_rejection:
+                    await websocket.send_json({
+                        "type": "chatResponse", 
+                        "response": "Actions cancelled.",
+                        "action_proposals": []
+                    })
+                    
+                    # Clear pending actions
+                    del self._pending_actions_store[session_id]
+                    return
+            
+            # Start streaming response
+            await websocket.send_json({"type": "chatResponseStart"})
+            
+            # Collect full response for action processing
+            full_ai_response = ""
+            
+            # Send chunk callback for streaming
             async def send_chunk(chunk):
+                nonlocal full_ai_response
+                full_ai_response += chunk
                 await websocket.send_json({
                     "type": "chatResponseChunk", 
                     "chunk": chunk
                 })
             
-            # Start streaming
-            await websocket.send_json({"type": "chatResponseStart"})
-            
-            # Stream the response
-            import asyncio
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, lambda: asyncio.run(
-                query_ollama_mistral_streaming(prompt, session_id, callback=send_chunk)
-            ))
+            # Stream the AI response
+            await query_ollama_mistral_streaming(prompt, session_id, callback=send_chunk)
             
             # End streaming
             await websocket.send_json({"type": "chatResponseEnd"})
             
+            # Process action proposals from the full response
+            cleaned_response, action_proposals = extract_action_proposals(full_ai_response, session_id)
+            
+            # If there are action proposals, store them and ask for confirmation
+            if action_proposals:
+                self._pending_actions_store[session_id] = action_proposals
+                
+                # Create confirmation prompt
+                action_descriptions = []
+                for action in action_proposals:
+                    if action.get('can_execute', False):
+                        action_descriptions.append(f"• {action.get('description', action.get('command', 'Unknown action'))}")
+                
+                if action_descriptions:
+                    confirmation_text = f"\n\n**I want to make these lighting changes:**\n" + "\n".join(action_descriptions)
+                    confirmation_text += f"\n\nDo you want me to execute these changes? Please reply 'yes' to confirm or 'no' to cancel."
+                    
+                    # Send the confirmation prompt as a follow-up message
+                    await websocket.send_json({
+                        "type": "chatResponse", 
+                        "response": confirmation_text,
+                        "action_proposals": action_proposals
+                    })
+                    
+                    print(f"🎭 ACTION PROPOSALS: {len(action_proposals)} actions proposed for session {session_id}")
+                    for action in action_proposals:
+                        print(f"   - {action.get('description', action.get('command', 'Unknown'))}")
+            
         except Exception as e:
+            print(f"❌ Error in _handle_user_prompt: {e}")
             await websocket.send_json({"type": "chatResponse", "response": f"Error: {e}"})
     
     async def connect(self, websocket: WebSocket) -> None:
@@ -92,6 +165,12 @@ class WebSocketManager:
     async def disconnect(self, websocket: WebSocket) -> None:
         """Handle WebSocket disconnection."""
         app_state.remove_client(websocket)
+        
+        # Clean up pending actions for this websocket
+        session_id = str(id(websocket))
+        if hasattr(self, '_pending_actions_store') and session_id in self._pending_actions_store:
+            del self._pending_actions_store[session_id]
+        
         print(f"👋 Client disconnected: {websocket.client}")
     
     async def handle_message(self, websocket: WebSocket, message: Dict[str, Any]) -> None:

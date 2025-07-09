@@ -31,14 +31,51 @@ class CueManager:
     
     def add_cue(self, cue: Dict[str, Any]) -> None:
         """Add a cue and sort the list."""
+        # Set default type if not provided
+        if 'type' not in cue:
+            cue['type'] = 'preset'
+            
+        # Duration will be calculated during rendering, so we set a placeholder
         if 'duration' not in cue:
             if 'parameters' in cue and 'loop_duration' in cue['parameters']:
                 cue['duration'] = cue['parameters']['loop_duration']
+            elif 'parameters' in cue and 'fade_duration' in cue['parameters']:
+                cue['duration'] = cue['parameters']['fade_duration']
             else:
-                cue['duration'] = cue['parameters'].get('fade_duration', 0)
+                # Duration will be calculated during render_engine processing
+                cue['duration'] = 0  # Placeholder
+        
+        # Log cue addition with detailed information
+        fixture_name = cue.get('fixture', 'Unknown')
+        time_val = cue.get('time', 0)
+        cue_type = cue.get('type', 'preset')
+        duration = cue.get('duration', 0)
+        
+        print(f"🎯 CUE ADDED:")
+        print(f"   Fixture: {fixture_name}")
+        print(f"   Time: {time_val:.2f}s")
+        print(f"   Type: {cue_type}")
+        print(f"   Duration: {duration:.2f}s {'(calculated during render)' if duration == 0 else ''}")
+        
+        # Log parameters if available
+        if 'parameters' in cue:
+            params = cue['parameters']
+            param_summary = []
+            for key, value in params.items():
+                if key in ['red', 'green', 'blue', 'dimmer', 'strobe']:
+                    param_summary.append(f"{key}={value}")
+            if param_summary:
+                print(f"   Parameters: {', '.join(param_summary)}")
+        
+        # Log preset info if available
+        if 'preset' in cue:
+            print(f"   Preset: {cue['preset']}")
         
         self._cue_list.append(cue)
         self._cue_list.sort(key=lambda c: (c["fixture"], c["time"]))
+        
+        print(f"   Total cues now: {len(self._cue_list)}")
+        print("---")
     
     def update_cues(self, cues: List[Dict[str, Any]]) -> None:
         """Replace all cues with new list."""
