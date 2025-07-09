@@ -1,6 +1,7 @@
 import { useRef, useState } from 'preact/hooks';
+import { useEffect } from 'react';
 
-export default function ChatAssistant({ wsSend }) {
+export default function ChatAssistant({ wsSend, lastResponse }) {
   const [message, setMessage] = useState("");
   const [chat, setChat] = useState([]);
 
@@ -13,6 +14,12 @@ export default function ChatAssistant({ wsSend }) {
     setMessage("");
   };
 
+  useEffect(() => {
+    if (lastResponse) {
+      setChat((prev) => [...prev, { sender: 'assistant', text: lastResponse }]);
+    }
+  }, [lastResponse]);
+  
   return (
     <div>
       <h2 className="text-lg mb-2 font-semibold">Assistant</h2>

@@ -27,6 +27,9 @@ export function App() {
   const [songsList, setSongsList] = useState([]);
   const [seekToTime, setSeekToTime] = useState(0);
 
+  // model chat
+  const [lastResponse, setLastResponse] = useState(null);
+
   // Song Analysis state
   const [analysisResult, setAnalysisResult] = useState({});
 
@@ -113,6 +116,10 @@ export function App() {
           }
           case "syncAck": {
             // keepalive message to acknowledge sync
+            break;
+          }
+          case "chatResponse": {
+            setLastResponse(msg.response || "(no response?)");
             break;
           }
           default:
@@ -205,6 +212,7 @@ export function App() {
           <div className="bg-white/10 rounded-2xl p-6 mb-6">
             <ChatAssistant 
               wsSend={wsSend} 
+              lastResponse={lastResponse}
             />
           </div>
 
