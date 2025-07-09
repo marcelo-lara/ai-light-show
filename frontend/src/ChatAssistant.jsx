@@ -1,11 +1,29 @@
 import { useRef, useState } from 'preact/hooks';
 import { useEffect } from 'react';
+import { marked } from 'marked';
 
 export default function ChatAssistant({ wsSend, lastResponse }) {
   const [message, setMessage] = useState("");
   const [chat, setChat] = useState([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentStreamingMessage, setCurrentStreamingMessage] = useState("");
+
+  // Configure marked for safer HTML output
+  marked.setOptions({
+    breaks: true, // Convert line breaks to <br>
+    gfm: true,    // GitHub flavored markdown
+  });
+
+  // Function to render markdown safely
+  const renderMarkdown = (text) => {
+    try {
+      const html = marked.parse(text);
+      return { __html: html };
+    } catch (error) {
+      console.error('Markdown parsing error:', error);
+      return { __html: text }; // Fallback to plain text
+    }
+  };
 
   // Expose streaming handlers globally
   window._chatAssistantStartStreaming = () => {
@@ -46,7 +64,7 @@ export default function ChatAssistant({ wsSend, lastResponse }) {
           <p className="text-sm text-gray-400">No messages yet.</p>
         )}
         {chat.map((msg, idx) => (
-          <p
+          <div
             key={idx}
             className={
               'max-w-[75%] px-4 py-2 rounded-lg text-sm ' +
@@ -56,16 +74,27 @@ export default function ChatAssistant({ wsSend, lastResponse }) {
             }
             style={{ alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}
           >
-            {msg.text}
-          </p>
+            {msg.sender === 'assistant' ? (
+              <div 
+                className="prose prose-sm max-w-none prose-headings:text-gray-900 prose-strong:text-gray-900 prose-code:text-gray-800 prose-code:bg-gray-100 prose-code:px-1 prose-code:rounded prose-pre:bg-gray-100 prose-pre:text-gray-800"
+                dangerouslySetInnerHTML={renderMarkdown(msg.text)}
+              />
+            ) : (
+              msg.text
+            )}
+          </div>
         ))}
         {isStreaming && (
-          <p
+          <div
             className="max-w-[75%] px-4 py-2 rounded-lg text-sm bg-gray-200 text-gray-900 self-start mr-auto text-left"
             style={{ alignSelf: 'flex-start' }}
           >
-            {currentStreamingMessage}<span className="animate-pulse">|</span>
-          </p>
+            <div 
+              className="prose prose-sm max-w-none prose-headings:text-gray-900 prose-strong:text-gray-900 prose-code:text-gray-800 prose-code:bg-gray-100 prose-code:px-1 prose-code:rounded prose-pre:bg-gray-100 prose-pre:text-gray-800"
+              dangerouslySetInnerHTML={renderMarkdown(currentStreamingMessage)}
+            />
+            <span className="animate-pulse">|</span>
+          </div>
         )}
       </div>
       <div className="mt-4 flex gap-2 items-end">
