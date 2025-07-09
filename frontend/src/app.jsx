@@ -280,6 +280,7 @@ export function App() {
             fixturesPresets={fixturesPresets}
             addCue={(cue)=>wsSend("addCue", {cue: cue})}
             previewDmx={(cue) => wsSend("previewDmx", {cue: cue})}
+            wsSend={wsSend}
           />
         </div>
 

@@ -4,7 +4,7 @@ import PresetSelector from "./PresetSelector";
 import FixtureDmxChannels from "./FixtureDmxChannels";
 import { useState, useEffect, useRef } from "preact/hooks";
 
-export default function FixtureCard({ fixture, currentTime, addCue, allPresets, previewDmx }) {
+export default function FixtureCard({ fixture, currentTime, addCue, allPresets, previewDmx, wsSend }) {
   const [values, setValues] = useState({ ...fixture.current_values });
   const { name, channels, presets } = fixture;
   const [expandedMap, setExpandedMap] = useState({});
@@ -23,17 +23,9 @@ export default function FixtureCard({ fixture, currentTime, addCue, allPresets, 
       : '#000';
   const previewDim = channels.dim !== undefined ? values.dim : 255;
 
-  const sendDMXUpdate = async (channelMap) => {
-    try {
-      const res = await fetch("/dmx/set", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ values: channelMap }),
-      });
-      const result = await res.json();
-      console.log("sendDMX update", result);
-    } catch (err) {
-      console.error("DMX update failed:", err);
+  const sendDMXUpdate = (channelMap) => {
+    if (wsSend) {
+      wsSend("setDmx", { values: channelMap });
     }
   };  
 

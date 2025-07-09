@@ -17,6 +17,11 @@ class WebSocketManager:
     """Manages WebSocket connections and message handling."""
     
     def __init__(self):
+        # Debouncing for DMX updates
+        self._dmx_update_task = None
+        self._dmx_pending_updates = {}
+        self._dmx_debounce_delay = 0.5  # 500ms
+        
         self.message_handlers = {
             "sync": self._handle_sync,
             "loadSong": self._handle_load_song,
@@ -30,6 +35,7 @@ class WebSocketManager:
             "insertChaser": self._handle_insert_chaser,
             "analyzeSong": self._handle_analyze_song,
             "reloadFixtures": self._handle_reload_fixtures,
+            "setDmx": self._handle_set_dmx,
         }
     
     async def connect(self, websocket: WebSocket) -> None:
@@ -294,6 +300,67 @@ class WebSocketManager:
             "presets": fixture_presets,
             "chasers": chasers
         })
+    
+    async def _handle_set_dmx(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
+        """Handle DMX channel value updates with debouncing."""
+        from ..dmx_controller import set_channel, get_universe, send_artnet
+        
+        values = message.get("values", {})
+        
+        # Update pending changes
+        for ch_str, val in values.items():
+            try:
+                ch = int(ch_str)
+                val = int(val)
+                if 0 <= ch <= 512 and 0 <= val <= 255:
+                    self._dmx_pending_updates[ch] = val
+            except (ValueError, TypeError):
+                print(f"❌ Invalid DMX channel or value: {ch_str}={val}")
+                continue
+        
+        # Cancel existing debounce task if any
+        if self._dmx_update_task:
+            self._dmx_update_task.cancel()
+        
+        # Start new debounce task
+        self._dmx_update_task = asyncio.create_task(self._debounced_dmx_update())
+    
+    async def _debounced_dmx_update(self) -> None:
+        """Execute DMX updates after debounce delay."""
+        try:
+            # Wait for debounce delay
+            await asyncio.sleep(self._dmx_debounce_delay)
+            
+            # Apply all pending updates
+            if self._dmx_pending_updates:
+                from ..dmx_controller import set_channel, get_universe, send_artnet
+                
+                updates = {}
+                for ch, val in self._dmx_pending_updates.items():
+                    if set_channel(ch, val):
+                        updates[ch] = val
+                
+                # Send ArtNet update
+                send_artnet()
+                
+                # Broadcast to all WebSocket clients
+                await broadcast_to_all({
+                    "type": "dmx_update",
+                    "universe": get_universe()
+                })
+                
+                print(f"🎛️ DMX updated: {len(updates)} channels")
+                
+                # Clear pending updates
+                self._dmx_pending_updates.clear()
+                
+        except asyncio.CancelledError:
+            # Task was cancelled, this is expected behavior
+            pass
+        except Exception as e:
+            print(f"❌ Error in debounced DMX update: {e}")
+        finally:
+            self._dmx_update_task = None
 
 
 # Global WebSocket manager instance

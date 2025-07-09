@@ -14,41 +14,6 @@ async def get_dmx_universe() -> Dict[str, Any]:
     return {"universe": get_universe()}
 
 
-@router.post("/set")
-async def set_dmx_values(request: Request) -> Dict[str, Any]:
-    """Set DMX channel values."""
-    try:
-        data = await request.json()
-        values = data.get("values", {})
-        updates = {}
-        
-        for ch_str, val in values.items():
-            try:
-                ch = int(ch_str)
-                val = int(val)
-                if set_channel(ch, val):
-                    updates[ch] = val
-            except ValueError as e:
-                raise HTTPException(
-                    status_code=400, 
-                    detail=f"Invalid channel or value: {ch_str}={val}"
-                )
-        
-        send_artnet()
-        
-        # Broadcast update to all WebSocket clients
-        from ..services.websocket_service import broadcast_to_all
-        await broadcast_to_all({
-            "type": "dmx_update", 
-            "universe": get_universe()
-        })
-        
-        return {"updated": updates}
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 @router.get("/test/artnet")
 async def test_artnet_send() -> Dict[str, bool]:
     """Test ArtNet communication by setting specific channels."""
