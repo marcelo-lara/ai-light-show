@@ -5,11 +5,47 @@ import aiohttp
 # Store conversation history per user/session (instead of deprecated context)
 _conversation_histories = {}
 
+# System instructions for the AI light show assistant
+SYSTEM_INSTRUCTIONS = """You are an AI assistant for a light show system that controls DMX lighting fixtures synchronized to music. Your role is to help users:
+
+1. **Configure lighting fixtures** - Help set up DMX channels, fixture types, and positioning
+2. **Create light shows** - Assist with programming chasers, effects, and synchronized sequences
+3. **Music analysis** - Help with beat detection, tempo analysis, and audio-reactive programming
+4. **Troubleshoot issues** - Debug DMX communication, fixture problems, and timing issues
+5. **Optimize performances** - Suggest improvements for visual impact and synchronization
+
+**IMPORTANT GUIDELINES:**
+- Stay focused on lighting, DMX, music synchronization, and related technical topics
+- If users ask about unrelated topics, politely redirect them back to light show assistance
+- Provide specific, actionable advice for lighting control and programming
+- Ask clarifying questions about their setup (fixture types, DMX addresses, software, etc.)
+- Be concise but thorough in your technical explanations
+
+**OFF-TOPIC HANDLING:**
+If the user asks about topics unrelated to lighting/music/DMX, respond with:
+"I'm specifically designed to help with light shows, DMX lighting, and music synchronization. Let's focus on that! What lighting or music-related question can I help you with?"
+
+**CURRENT CONTEXT:** You're working with a system that includes:
+- DMX fixture control via Art-Net
+- Audio analysis with beat detection and spectral analysis  
+- Real-time light show rendering and timeline engines
+- Web-based control interface
+- Support for various fixture types (RGB, moving heads, strobes, etc.)
+"""
+
+def get_system_message():
+    """Get the system message for conversations."""
+    return {"role": "system", "content": SYSTEM_INSTRUCTIONS}
+
 def query_ollama_mistral(prompt: str, session_id: str = "default", base_url: str = "http://backend-llm:11434"):
     """Send a prompt to the ollama/mistral model and return the response text with conversation history."""
     
     # Get existing conversation history for this session
     messages = _conversation_histories.get(session_id, [])
+    
+    # Add system message if this is a new conversation
+    if not messages:
+        messages.append(get_system_message())
     
     # Add the new user message
     messages.append({"role": "user", "content": prompt})
@@ -54,8 +90,13 @@ def query_ollama_mistral(prompt: str, session_id: str = "default", base_url: str
 
 async def query_ollama_mistral_streaming(prompt: str, session_id: str = "default", base_url: str = "http://backend-llm:11434", callback=None):
     """Send a prompt to ollama/mistral and call callback for each chunk."""
+    
     # Get existing conversation history for this session
     messages = _conversation_histories.get(session_id, [])
+    
+    # Add system message if this is a new conversation
+    if not messages:
+        messages.append(get_system_message())
     
     # Add the new user message
     messages.append({"role": "user", "content": prompt})
@@ -105,5 +146,36 @@ def get_active_sessions():
     """Get list of active conversation sessions."""
     return list(_conversation_histories.keys())
 
+def get_conversation_history(session_id: str = "default"):
+    """Get the conversation history for a session."""
+    return _conversation_histories.get(session_id, [])
+
+def reset_conversation_with_system(session_id: str = "default"):
+    """Reset conversation and start fresh with system message."""
+    _conversation_histories[session_id] = [get_system_message()]
+
+def update_system_instructions(new_instructions: str):
+    """Update the system instructions and reset all conversations."""
+    global SYSTEM_INSTRUCTIONS
+    SYSTEM_INSTRUCTIONS = new_instructions
+    # Clear all conversations to apply new instructions
+    _conversation_histories.clear()
+
 #
-# Response from Ollama: {'model': 'mistral', 'created_at': '2025-07-09T01:40:50.111488497Z', 'response': " Hello! How can I help you today?\n\nIf you have any questions or need assistance with something, feel free to ask. I'm here to help! If you just want to chat or share some thoughts, we can do that too. Let me know what you'd like to talk about. :)", 'done': True, 'done_reason': 'stop', 'context': [3, 29473, 12782, 4, 29473, 23325, 29576, 2370, 1309, 1083, 2084, 1136, 3922, 29572, 781, 781, 4149, 1136, 1274, 1475, 4992, 1210, 1695, 12379, 1163, 2313, 29493, 2369, 2701, 1066, 2228, 29491, 1083, 29510, 29487, 2004, 1066, 2084, 29576, 1815, 1136, 1544, 1715, 1066, 11474, 1210, 4866, 1509, 8171, 29493, 1246, 1309, 1279, 1137, 2136, 29491, 3937, 1296, 1641, 1535, 1136, 29510, 29483, 1505, 1066, 2753, 1452, 29491, 15876], 'total_duration': 5738611868, 'load_duration': 1137774303, 'prompt_eval_count': 5, 'prompt_eval_duration': 156982143, 'eval_count': 65, 'eval_duration': 4443280613}
+# Example response from modern Ollama /api/chat endpoint:
+# {
+#   'model': 'mistral',
+#   'created_at': '2025-07-09T15:26:02.111Z',
+#   'message': {
+#     'role': 'assistant',
+#     'content': 'Hello! I can help you with DMX lighting, fixture setup, and music synchronization...'
+#   },
+#   'done': True,
+#   'done_reason': 'stop',
+#   'total_duration': 5738611868,
+#   'load_duration': 1137774303,
+#   'prompt_eval_count': 15,
+#   'prompt_eval_duration': 156982143,
+#   'eval_count': 65,
+#   'eval_duration': 4443280613
+# }
