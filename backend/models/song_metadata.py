@@ -100,6 +100,7 @@ class SongMetadata:
         self._arrangement: List[Section] = []
         self._duration = 0.0
         self._drums: List[Dict[str, Any]] = []
+        self._key_moments: List[Dict[str, Any]] = []
         
         if not songs_folder:
             from ..config import SONGS_DIR
@@ -190,6 +191,14 @@ class SongMetadata:
     @chords.setter
     def chords(self, value: List[Dict[str, Any]]):
         self._chords = value
+
+    @property
+    def key_moments(self) -> List[Dict[str, Any]]:
+        return self._key_moments
+
+    @key_moments.setter
+    def key_moments(self, value: List[Dict[str, Any]]):
+        self._key_moments = value
 
     @property
     def arrangement(self) -> List[Section]:
@@ -295,6 +304,7 @@ class SongMetadata:
         self._drums = data.get("drums", [])
         self._duration = data.get("duration", 0.0)
         self._arrangement = data.get("arrangement", [])
+        self._key_moments = data.get("key_moments", [])
 
         # attempt to load hints files if not already done
         if len(self.beats) == 0:
@@ -322,6 +332,14 @@ class SongMetadata:
                 Section("chorus", 1.5, 2.0, "Chorus with full energy and instrumentation."),
                 Section("bridge", 2.0, 2.5, "Bridge section with rhythmic variation."),
                 Section("outro", 2.5, 3.0, "Outro with fade-out or reduced energy.")
+            ]
+
+        if len(self._key_moments) == 0:
+            self.key_moments = [
+                {"time": 0.0, "name": "Song Start", "description": "Beginning of the song"},
+                {"time": 1.0, "name": "Drop", "description": "Main drop or beat drop"},
+                {"time": 2.0, "name": "Break", "description": "Breakdown or break section"},
+                {"time": 2.5, "name": "Build", "description": "Build-up section"},
             ]
 
     def add_beat(self, time: float, volume: float = 0.0, energy: float = 1.0) -> None:
@@ -383,6 +401,7 @@ class SongMetadata:
             "patterns": self._patterns,
             # Serialize arrangement as list of dicts
             "arrangement": [s.to_dict() if isinstance(s, Section) else s for s in self.arrangement],
+            "key_moments": self.key_moments,
         }
         # Ensure all data is JSON serializable
         return ensure_json_serializable(data)

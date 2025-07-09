@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import FixtureCard from './FixtureCard';
 import SongArrangement from './SongArrangement';
+import SongKeyMoments from './SongKeyMoments';
 import SongCues from './SongCues';
 import AudioPlayer from './AudioPlayer'; 
 import SongSelector from './SongSelector';
@@ -259,12 +260,24 @@ export function App() {
 
       {/* Right Panel */}
       <div className="w-1/3 text-white p-6 space-y-6">
+
         {/* Song Selection */}
         <div>
           <SongSelector 
             currentSongFile={currentSongFile} 
             songsList={songsList} 
             setCurrentSongFile={setCurrentSongFile} 
+          />
+        </div>
+
+        {/* Song Key Moments */}
+        <div>
+          <SongKeyMoments
+            currentTime={currentTime}
+            setCurrentTime={setCurrentTime}
+            songData={songData}
+            seekTo={(time) => handleSeekTo(time)}
+            saveKeyMoments={(km) => {wsSend("saveKeyMoments", {key_moments: km})}}
           />
         </div>
 

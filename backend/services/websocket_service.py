@@ -32,6 +32,7 @@ class WebSocketManager:
             "deleteCue": self._handle_delete_cue,
             "previewDmx": self._handle_preview_dmx,
             "saveArrangement": self._handle_save_arrangement,
+            "saveKeyMoments": self._handle_save_key_moments,
             "insertChaser": self._handle_insert_chaser,
             "analyzeSong": self._handle_analyze_song,
             "reloadFixtures": self._handle_reload_fixtures,
@@ -258,6 +259,16 @@ class WebSocketManager:
         else:
             print("No song object loaded; cannot save arrangement.")
     
+    async def _handle_save_key_moments(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
+        """Handle saving song key moments."""
+        key_moments = message["key_moments"]
+        if app_state.current_song is not None:
+            app_state.current_song.key_moments = key_moments
+            app_state.current_song.save()
+            print(f"✅ Saved {len(key_moments)} key moments for {app_state.current_song.song_name}")
+        else:
+            print("No song object loaded; cannot save key moments.")
+
     async def _handle_insert_chaser(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
         """Handle chaser insertion."""
         from ..chaser_utils import expand_chaser_template
