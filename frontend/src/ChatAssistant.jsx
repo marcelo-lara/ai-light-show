@@ -1,15 +1,39 @@
-import { useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 
-export default function ChatAssistant() {
+export default function ChatAssistant({ wsSend }) {
   const [message, setMessage] = useState("");
-  // Placeholder for chat response, can be replaced with state/props
-  const chatResponse = "chat response placeholder";
+  const [chat, setChat] = useState([]);
+
+  const sendMessage = () => {
+    if (!message.trim()) return;
+    setChat((prev) => [...prev, { sender: 'user', text: message }]);
+    if (wsSend) {
+      wsSend('userPrompt', { prompt: message });
+    }
+    setMessage("");
+  };
 
   return (
     <div>
       <h2 className="text-lg mb-2 font-semibold">Assistant</h2>
-      <div className="text-sm text-gray-400">
-        <p>{chatResponse}</p>
+      <div className="flex flex-col gap-2 mb-4">
+        {chat.length === 0 && (
+          <p className="text-sm text-gray-400">No messages yet.</p>
+        )}
+        {chat.map((msg, idx) => (
+          <p
+            key={idx}
+            className={
+              'max-w-[75%] px-4 py-2 rounded-lg text-sm ' +
+              (msg.sender === 'user'
+                ? 'bg-blue-600 text-white self-end ml-auto text-right'
+                : 'bg-gray-200 text-gray-900 self-start mr-auto text-left')
+            }
+            style={{ alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}
+          >
+            {msg.text}
+          </p>
+        ))}
       </div>
       <div className="mt-4 flex gap-2 items-end">
         <textarea
@@ -22,8 +46,18 @@ export default function ChatAssistant() {
             e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
             setMessage(e.target.value);
           }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage();
+              setMessage("");
+            }
+          }}
         ></textarea>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded whitespace-nowrap">
+        <button
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded whitespace-nowrap"
+          onClick={sendMessage}
+        >
           Send ➤
         </button>
       </div>

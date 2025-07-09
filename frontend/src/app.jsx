@@ -203,8 +203,9 @@ export function App() {
 
           {/* Chat Card */}
           <div className="bg-white/10 rounded-2xl p-6 mb-6">
-            <ChatAssistant />
-          </div>
+            <ChatAssistant 
+              wsSend={wsSend} 
+            />
           </div>
 
           {songData && songData?.bpm && ( 

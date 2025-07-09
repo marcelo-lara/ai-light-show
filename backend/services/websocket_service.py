@@ -73,6 +73,7 @@ class WebSocketManager:
                 })
         else:
             print(f"❓ Unknown message type: {msg_type}")
+            print(f"  Message content: {message}")            
             await websocket.send_json({
                 "type": "error", 
                 "message": "Unknown message type"
