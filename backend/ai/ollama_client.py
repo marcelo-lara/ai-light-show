@@ -1,12 +1,61 @@
 import requests
 import json
 import aiohttp
+import os
+from pathlib import Path
+from backend.config import MASTER_FIXTURE_CONFIG, FIXTURE_PRESETS, CHASER_TEMPLATE_PATH
 
 # Store conversation history per user/session (instead of deprecated context)
 _conversation_histories = {}
 
-# System instructions for the AI light show assistant
-SYSTEM_INSTRUCTIONS = """You are an AI assistant for a light show system that controls DMX lighting fixtures synchronized to music. Your role is to help users:
+def load_fixture_config():
+    """Load the current fixture configuration, presets, and chaser templates."""
+    
+    try:
+        # Load master fixture config
+        with open(MASTER_FIXTURE_CONFIG, 'r') as f:
+            fixtures = json.load(f)
+        
+        # Load fixture presets
+        with open(FIXTURE_PRESETS, 'r') as f:
+            presets = json.load(f)
+        
+        # Load chaser templates
+        with open(CHASER_TEMPLATE_PATH, 'r') as f:
+            chasers = json.load(f)
+        
+        return fixtures, presets, chasers
+    except Exception as e:
+        print(f"Warning: Could not load fixture configuration: {e}")
+        return [], [], []
+
+def generate_system_instructions():
+    """Generate dynamic system instructions based on current fixture configuration."""
+    fixtures, presets, chasers = load_fixture_config()
+    
+    # Build fixture summary
+    fixture_summary = []
+    for fixture in fixtures:
+        fixture_info = f"- **{fixture['name']}** (ID: {fixture['id']}, Type: {fixture['type']})"
+        if 'channels' in fixture:
+            channels = list(fixture['channels'].keys())
+            fixture_info += f" - Channels: {', '.join(channels[:5])}" # Limit for readability
+            if len(channels) > 5:
+                fixture_info += f" (+{len(channels)-5} more)"
+        fixture_summary.append(fixture_info)
+    
+    # Build preset summary
+    preset_summary = []
+    for preset in presets[:10]:  # Limit for readability
+        preset_summary.append(f"- **{preset['name']}**: {preset.get('description', 'No description')}")
+    
+    # Build chaser summary
+    chaser_summary = []
+    for chaser in chasers[:10]:  # Limit for readability
+        fixture_ids = chaser.get('fixture_ids', [])
+        chaser_summary.append(f"- **{chaser['name']}**: {chaser.get('description', 'No description')} (Fixtures: {', '.join(fixture_ids)})")
+    
+    base_instructions = """You are an AI assistant for a light show system that controls DMX lighting fixtures synchronized to music. Your role is to help users:
 
 1. **Configure lighting fixtures** - Help set up DMX channels, fixture types, and positioning
 2. **Create light shows** - Assist with programming chasers, effects, and synchronized sequences
@@ -20,22 +69,55 @@ SYSTEM_INSTRUCTIONS = """You are an AI assistant for a light show system that co
 - Provide specific, actionable advice for lighting control and programming
 - Ask clarifying questions about their setup (fixture types, DMX addresses, software, etc.)
 - Be concise but thorough in your technical explanations
+- Always reference the actual fixtures, presets, and chasers available in the current configuration
 
 **OFF-TOPIC HANDLING:**
 If the user asks about topics unrelated to lighting/music/DMX, respond with:
 "I'm specifically designed to help with light shows, DMX lighting, and music synchronization. Let's focus on that! What lighting or music-related question can I help you with?"
 
-**CURRENT CONTEXT:** You're working with a system that includes:
+**CURRENT SYSTEM CONFIGURATION:**
+
+**Available Fixtures:**
+"""
+    
+    if fixture_summary:
+        base_instructions += "\n".join(fixture_summary)
+    else:
+        base_instructions += "No fixtures currently configured."
+    
+    base_instructions += "\n\n**Available Presets:**\n"
+    if preset_summary:
+        base_instructions += "\n".join(preset_summary)
+        if len(presets) > 10:
+            base_instructions += f"\n... and {len(presets)-10} more presets available"
+    else:
+        base_instructions += "No presets currently configured."
+    
+    base_instructions += "\n\n**Available Chaser Templates:**\n"
+    if chaser_summary:
+        base_instructions += "\n".join(chaser_summary)
+        if len(chasers) > 10:
+            base_instructions += f"\n... and {len(chasers)-10} more chaser templates available"
+    else:
+        base_instructions += "No chaser templates currently configured."
+    
+    base_instructions += """
+
+**SYSTEM FEATURES:**
 - DMX fixture control via Art-Net
-- Audio analysis with beat detection and spectral analysis  
+- Audio analysis with beat detection and spectral analysis of drums, bass, and music tracks.
 - Real-time light show rendering and timeline engines
 - Web-based control interface
 - Support for various fixture types (RGB, moving heads, strobes, etc.)
+
+**IMPORTANT:** Always suggest solutions using the actual fixtures, presets, and chasers listed above. Do not recommend fixtures or presets that aren't available in the current configuration.
 """
+    
+    return base_instructions
 
 def get_system_message():
-    """Get the system message for conversations."""
-    return {"role": "system", "content": SYSTEM_INSTRUCTIONS}
+    """Get the system message for conversations with current fixture configuration."""
+    return {"role": "system", "content": generate_system_instructions()}
 
 def query_ollama_mistral(prompt: str, session_id: str = "default", base_url: str = "http://backend-llm:11434"):
     """Send a prompt to the ollama/mistral model and return the response text with conversation history."""
@@ -154,12 +236,25 @@ def reset_conversation_with_system(session_id: str = "default"):
     """Reset conversation and start fresh with system message."""
     _conversation_histories[session_id] = [get_system_message()]
 
-def update_system_instructions(new_instructions: str):
-    """Update the system instructions and reset all conversations."""
-    global SYSTEM_INSTRUCTIONS
-    SYSTEM_INSTRUCTIONS = new_instructions
-    # Clear all conversations to apply new instructions
+def refresh_system_configuration():
+    """Refresh system configuration by reloading fixture data and clearing conversations."""
+    # Clear all conversations to apply new configuration
     _conversation_histories.clear()
+
+def get_current_fixtures():
+    """Get current fixture configuration for external use."""
+    fixtures, _, _ = load_fixture_config()
+    return fixtures
+
+def get_current_presets():
+    """Get current presets for external use."""
+    _, presets, _ = load_fixture_config()
+    return presets
+
+def get_current_chasers():
+    """Get current chaser templates for external use."""
+    _, _, chasers = load_fixture_config()
+    return chasers
 
 #
 # Example response from modern Ollama /api/chat endpoint:
