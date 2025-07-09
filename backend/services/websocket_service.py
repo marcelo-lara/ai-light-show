@@ -36,7 +36,24 @@ class WebSocketManager:
             "analyzeSong": self._handle_analyze_song,
             "reloadFixtures": self._handle_reload_fixtures,
             "setDmx": self._handle_set_dmx,
+            "userPrompt": self._handle_user_prompt,
         }
+
+    async def _handle_user_prompt(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
+        """Handle userPrompt by sending to ollama/mistral and returning the response."""
+        from ..ai.ollama_client import query_ollama_mistral
+        prompt = message.get("prompt", "")
+        if not prompt:
+            await websocket.send_json({"type": "chatResponse", "response": "No prompt provided."})
+            return
+        try:
+            # Run in thread executor to avoid blocking event loop
+            import asyncio
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(None, query_ollama_mistral, prompt)
+            await websocket.send_json({"type": "chatResponse", "response": response})
+        except Exception as e:
+            await websocket.send_json({"type": "chatResponse", "response": f"Error: {e}"})
     
     async def connect(self, websocket: WebSocket) -> None:
         """Accept a new WebSocket connection."""
