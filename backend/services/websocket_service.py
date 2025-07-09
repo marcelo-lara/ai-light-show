@@ -67,9 +67,12 @@ class WebSocketManager:
                 if is_confirmation:
                     # Execute all pending actions
                     results = []
+                    any_success = False
                     for action in pending_actions:
                         success, message_result = execute_confirmed_action(action['id'], pending_actions)
                         results.append(f"✓ {message_result}" if success else f"✗ {message_result}")
+                        if success:
+                            any_success = True
                         print(f"🎭 ACTION EXECUTED: {action['command']} -> {'SUCCESS' if success else 'FAILED'}: {message_result}")
                     
                     response_text = "Actions executed:\n" + "\n".join(results)
@@ -78,6 +81,13 @@ class WebSocketManager:
                         "response": response_text,
                         "action_proposals": []
                     })
+                    
+                    # Broadcast cue updates to all clients if any action succeeded
+                    if any_success:
+                        await broadcast_to_all({
+                            "type": "cuesUpdated",
+                            "cues": cue_manager.cue_list
+                        })
                     
                     # Clear pending actions
                     del self._pending_actions_store[session_id]

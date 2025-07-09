@@ -838,10 +838,9 @@ def execute_confirmed_action(action_id: str, proposals: List[Dict]) -> Tuple[boo
     
     try:
         # Import here to avoid circular imports
-        from ..services.cue_service import CueManager
+        from ..services.cue_service import cue_manager
         from .cue_interpreter import CueInterpreter
         
-        cue_manager = CueManager()
         interpreter = CueInterpreter(cue_manager)
         
         # Execute the command
@@ -851,6 +850,11 @@ def execute_confirmed_action(action_id: str, proposals: List[Dict]) -> Tuple[boo
             fixtures,
             presets
         )
+        
+        # Save cues after successful execution (same as _handle_add_cue)
+        if success:
+            cue_manager.save_cues()
+        
         return success, message
         
     except Exception as e:
