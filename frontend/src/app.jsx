@@ -220,8 +220,6 @@ export function App() {
               setIsPlaying={setIsPlaying}
               currentTime={currentTime}
               setCurrentTime={setCurrentTime}
-              analyzeSong={(data)=>{setAnalysisResult(undefined); wsSend("analyzeSong", data)}}
-              analysisResult={analysisResult}
               songData={songData}
               seekTo={seekToTime}
             />
@@ -241,6 +239,9 @@ export function App() {
               songData={songData} 
               currentTime={currentTime}
               setCurrentTime={setCurrentTime}
+              analyzeSong={(data)=>{setAnalysisResult(undefined); wsSend("analyzeSong", data)}}
+              analysisResult={analysisResult}
+              currentSongFile={currentSongFile}
             />
           </div>
           )}

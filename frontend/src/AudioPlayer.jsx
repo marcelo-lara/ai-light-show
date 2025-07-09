@@ -10,7 +10,6 @@ export default function AudioPlayer({
   currentSongFile, 
   isPlaying, setIsPlaying,
   currentTime, setCurrentTime, 
-  analyzeSong, analysisResult,
   seekTo,
   songData
  }) {
@@ -18,7 +17,6 @@ export default function AudioPlayer({
   const wavesurferRef = useRef(null);
   const songDataRef = useRef(songData);
   const [showSpectrogram] = useState(false);
-  const [generateCues, setGenerateCues] = useState(false);
 
   const regions = RegionsPlugin.create()
 
@@ -128,10 +126,6 @@ export default function AudioPlayer({
     wavesurferRef.current.seekTo(seekTo / wavesurferRef.current.getDuration());
   }, [seekTo]);
 
-  const handleAnalyzeSong = () => {
-      analyzeSong({songFile: currentSongFile, renderTestCues: generateCues});
-  }
-
   // WaveSurfer Markers helper
   const clearMarkers = () => {
     regions.clearRegions();
@@ -176,17 +170,6 @@ export default function AudioPlayer({
             }
             <button onClick={() => { wavesurferRef.current?.pause(); wavesurferRef.current?.seekTo(0); }} className="bg-gray-700 hover:bg-gray-800 px-4 py-2 rounded">⏹️ Stop</button>
             <span className="ml-4 w-6 text-gray-400">{formatTime(currentTime)}</span>
-          </div>
-          <div id="ai-controls" className="flex items-center">
-            <button onClick={() => handleAnalyzeSong()} className={`px-4 py-2 rounded ${!analysisResult ? 'bg-gray-900 text-gray-400 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600'}`} disabled={!analysisResult}>🔍 Analyze</button>
-            <label className="ml-4 flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={generateCues}
-                onChange={e => setGenerateCues(e.target.checked)}
-              />
-              <span className="text-gray-300">Generate Cues</span>
-            </label>
           </div>
         </div>
       </div>

@@ -3,7 +3,7 @@ import { use, useEffect } from "react";
 import Bar from "./Bar";
 import PatternsTimeline from "./PatternsTimeline";
 
-export default function SongAnalysis({ songData, currentTime, setCurrentTime }) {
+export default function SongAnalysis({ songData, currentTime, setCurrentTime, analyzeSong, analysisResult, currentSongFile }) {
 
     const [beats, setBeats] = useState([]);
     const [patterns, setPatterns] = useState([]);
@@ -14,6 +14,7 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
     const [showPatterns, setShowPatterns] = useState(true);
     const [showPatternsTimeline, setShowPatternsTimeline] = useState(false);
     const [showBeats, setShowBeats] = useState(false);
+    const [generateCues, setGenerateCues] = useState(false);
     const currentBeatRef = useRef(null);
     const currentClusterBeatRef = useRef(null);
 
@@ -92,6 +93,10 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
       return null;
     }
 
+    const handleAnalyzeSong = () => {
+      analyzeSong({songFile: currentSongFile, renderTestCues: generateCues});
+    }
+
     return (
     <>
       <div className="flex items-center justify-between mb-4">
@@ -127,6 +132,25 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime }) 
               />
               <span className="text-sm">Beats</span>
             </label>
+
+            {/* Analysis controls */}
+            <button 
+              onClick={() => handleAnalyzeSong()} 
+              className={`px-3 py-1 rounded text-sm ${!currentSongFile ? 'bg-gray-900 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`} 
+              disabled={!currentSongFile}
+            >
+              🔍 Analyze Song
+            </button>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={generateCues}
+                onChange={e => setGenerateCues(e.target.checked)}
+                className="form-checkbox h-4 w-4 text-blue-600"
+              />
+              <span className="text-sm">Generate Cues</span>
+            </label>
+
           </div>
         </div>
       </div>
