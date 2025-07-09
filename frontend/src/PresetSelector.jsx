@@ -18,7 +18,7 @@ export default function PresetSelector({ fixture, presets, currentTime, onAddCue
   };
 
   return (
-    <div className="text-sm text-white p-2">
+    <>
       <h3 className="font-semibold mb-2">Presets for {fixture.name}</h3>
       <ul className="mb-4 flex flex-row flex-wrap gap-2">
         {applicablePresets.map(p => (
@@ -76,6 +76,6 @@ export default function PresetSelector({ fixture, presets, currentTime, onAddCue
           </button>          
         </div>
       )}
-    </div>
+    </>
   );
 }

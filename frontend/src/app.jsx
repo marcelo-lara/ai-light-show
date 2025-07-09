@@ -198,6 +198,30 @@ export function App() {
               seekTo={seekToTime}
             />
           </div>
+
+          {/* Chat Card */}
+          <div className="bg-white/10 rounded-2xl p-6 mb-6">
+            <h2 className="text-lg mb-2 font-semibold">Assistant</h2>
+            <div className="text-sm text-gray-400">
+              <p>chat response placeholder</p>
+            </div>
+            <div className="mt-4 flex gap-2 items-end">
+              <textarea
+                className="flex-1 min-h-[2.5rem] max-h-32 p-2 bg-gray-800 text-white rounded resize-none"
+                placeholder="Type your message here..."
+                rows="1"
+                onInput={(e) => {
+                  e.target.style.height = 'auto';
+                  e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
+                }}
+              ></textarea>
+              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded whitespace-nowrap">
+                Send ➤
+              </button>
+            </div>
+
+          </div>
+
           {songData && songData?.bpm && ( 
           <div className="bg-white/10 rounded-2xl p-6 mb-6">
             <SongAnalysis 

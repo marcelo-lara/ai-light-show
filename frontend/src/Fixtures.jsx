@@ -10,7 +10,6 @@ export default function Fixtures({ fixtures, currentTime, fixturesPresets, addCu
         className="text-lg mb-2 font-semibold cursor-pointer hover:text-gray-300 flex items-center gap-2"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <span className="text-sm">{isExpanded ? '⌄' : '⌃'}</span>
         Fixtures
       </h2>
       {isExpanded && (

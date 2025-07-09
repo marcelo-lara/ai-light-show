@@ -36,7 +36,7 @@ export default function FixtureCard({ fixture, currentTime, addCue, allPresets, 
     }
   };  
 
-  function DmxChannels({ channels, values, sendDMXUpdate }) {
+  function FixtureDmxChannels({ channels, values, sendDMXUpdate }) {
     const handleValueChange = (key, dmx, val) => {
       const n = parseInt(val, 10);
       if (!isNaN(n) && n >= 0 && n <= 255) {
@@ -45,7 +45,6 @@ export default function FixtureCard({ fixture, currentTime, addCue, allPresets, 
     };
     
     return (
-      <div className="mb-2">
         <table className="text-xs w-full border-collapse">
           <thead>
             <tr className="text-gray-400">
@@ -95,24 +94,23 @@ export default function FixtureCard({ fixture, currentTime, addCue, allPresets, 
             })}
           </tbody>
         </table>
-      </div>
     );
   }
 
   return (
-    <div className="border border-white/10 mb-4 bg-white/5 shadow-sm">
+    <div>
       <div
-        className="flex items-center justify-between p-3 cursor-pointer"
+        className="flex items-center justify-between mb-2 cursor-pointer"
         onClick={() => toggleExpanded(fixture.id)}
       >
         <div className="flex items-center gap-2">
+          <h3 className="text-white font-normal">{name}</h3>
           <div
             className="w-6 h-6 rounded border border-white"
             style={{ backgroundColor: previewColor, opacity: previewDim / 255 }}
           ></div>
-          <div className="font-semibold text-white">{name}</div>
         </div>
-        <div className="text-white">{expanded ? '⌵' : ''}</div>
+        <div className="text-white">{expanded ? '' : '⌵'}</div>
       </div>
 
       {expanded && (
@@ -142,7 +140,7 @@ export default function FixtureCard({ fixture, currentTime, addCue, allPresets, 
             </div>
           )}
 
-          <DmxChannels
+          <FixtureDmxChannels
             channels={channels}
             values={values}
             sendDMXUpdate={sendDMXUpdate}
