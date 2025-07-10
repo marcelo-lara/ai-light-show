@@ -121,13 +121,23 @@ class WebSocketManager:
                 })
             
             # Stream the AI response
-            await query_ollama_mistral_streaming(prompt, session_id, callback=send_chunk)
+            try:
+                await query_ollama_mistral_streaming(prompt, session_id, callback=send_chunk)
+                # Process action proposals from the full response only if AI succeeded
+                cleaned_response, action_proposals = extract_action_proposals(full_ai_response, session_id)
+            except (ConnectionError, TimeoutError, ValueError, RuntimeError) as ai_error:
+                # Handle AI service errors gracefully
+                print(f"🤖 AI Service Error: {ai_error}")
+                
+                # Send a helpful error message as a chunk
+                error_chunk = f"\n\nSorry, I'm having trouble connecting to the AI service. {str(ai_error)}\n\nPlease check that Ollama is running and the 'mistral' model is installed."
+                await send_chunk(error_chunk)
+                
+                # Don't process action proposals if AI failed
+                action_proposals = []
             
             # End streaming
             await websocket.send_json({"type": "chatResponseEnd"})
-            
-            # Process action proposals from the full response
-            cleaned_response, action_proposals = extract_action_proposals(full_ai_response, session_id)
             
             # If there are action proposals, store them and ask for confirmation
             if action_proposals:
@@ -156,7 +166,29 @@ class WebSocketManager:
             
         except Exception as e:
             print(f"❌ Error in _handle_user_prompt: {e}")
-            await websocket.send_json({"type": "chatResponse", "response": f"Error: {e}"})
+            
+            # Provide user-friendly error messages
+            error_message = "Sorry, I'm having trouble connecting to the AI service right now. Please check if the Ollama service is running and try again."
+            
+            # Check for specific error types
+            if "Connection" in str(e) or "connect" in str(e).lower():
+                error_message = "Can't connect to the AI service. Please make sure Ollama is running on http://backend-llm:11434"
+            elif "timeout" in str(e).lower():
+                error_message = "The AI service is taking too long to respond. Please try again in a moment."
+            elif "model" in str(e).lower():
+                error_message = "The 'mistral' model is not available. Please check that it's installed in Ollama."
+            
+            # Send streaming end if we started streaming
+            try:
+                await websocket.send_json({"type": "chatResponseEnd"})
+            except:
+                pass
+            
+            # Send the error as a chat response
+            await websocket.send_json({
+                "type": "chatResponse", 
+                "response": error_message
+            })
     
     async def connect(self, websocket: WebSocket) -> None:
         """Accept a new WebSocket connection."""
@@ -503,6 +535,26 @@ class WebSocketManager:
             print(f"❌ Error in debounced DMX update: {e}")
         finally:
             self._dmx_update_task = None
+
+    async def _check_ai_service_health(self) -> tuple[bool, str]:
+        """Check if the AI service (Ollama) is available and return status."""
+        try:
+            from ..ai.ollama_client import query_ollama_mistral_streaming
+            
+            # Try a simple test prompt
+            test_response = ""
+            async def test_callback(chunk):
+                nonlocal test_response
+                test_response += chunk
+            
+            await query_ollama_mistral_streaming("Hi", "health_check", callback=test_callback)
+            return True, "AI service is ready"
+        except ConnectionError:
+            return False, "Cannot connect to Ollama service. Please ensure Ollama is running on http://backend-llm:11434"
+        except ValueError:
+            return False, "Mistral model not found. Please install it with: ollama pull mistral"
+        except Exception as e:
+            return False, f"AI service error: {str(e)}"
 
 
 # Global WebSocket manager instance

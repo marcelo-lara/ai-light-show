@@ -7,6 +7,7 @@ export default function ChatAssistant({ wsSend, lastResponse }) {
   const [chat, setChat] = useState([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentStreamingMessage, setCurrentStreamingMessage] = useState("");
+  const chatContainerRef = useRef(null);
 
   // Configure marked for safer HTML output
   marked.setOptions({
@@ -22,6 +23,13 @@ export default function ChatAssistant({ wsSend, lastResponse }) {
     } catch (error) {
       console.error('Markdown parsing error:', error);
       return { __html: text }; // Fallback to plain text
+    }
+  };
+
+  // Function to scroll to bottom
+  const scrollToBottom = () => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   };
 
@@ -41,6 +49,11 @@ export default function ChatAssistant({ wsSend, lastResponse }) {
     setIsStreaming(false);
   };
 
+  // Auto-scroll when chat updates
+  useEffect(() => {
+    scrollToBottom();
+  }, [chat, currentStreamingMessage]);
+
   const sendMessage = () => {
     if (!message.trim()) return;
     setChat((prev) => [...prev, { sender: 'user', text: message }]);
@@ -59,7 +72,7 @@ export default function ChatAssistant({ wsSend, lastResponse }) {
   return (
     <div>
       <h2 className="text-lg mb-2 font-semibold">Assistant</h2>
-      <div className="flex flex-col gap-2 mb-4 max-h-60 overflow-y-auto">
+      <div className="flex flex-col gap-2 mb-4 max-h-60 overflow-y-auto" ref={chatContainerRef}>
         {chat.length === 0 && (
           <p className="text-sm text-gray-400">No messages yet.</p>
         )}
