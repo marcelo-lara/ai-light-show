@@ -195,56 +195,182 @@ class CueInterpreter:
         
         params = {}
         
-        # Colors
-        color_patterns = [
-            (r'\b(?:bright\s+|deep\s+|light\s+)?red\b', {'red': 255, 'green': 0, 'blue': 0}),
-            (r'\b(?:bright\s+|deep\s+|light\s+)?blue\b', {'red': 0, 'green': 0, 'blue': 255}),
-            (r'\b(?:bright\s+|deep\s+|light\s+)?green\b', {'red': 0, 'green': 255, 'blue': 0}),
-            (r'\b(?:bright\s+|deep\s+|light\s+)?white\b', {'red': 255, 'green': 255, 'blue': 255}),
-            (r'\b(?:bright\s+|deep\s+|light\s+)?yellow\b', {'red': 255, 'green': 255, 'blue': 0}),
-            (r'\b(?:bright\s+|deep\s+|light\s+)?purple\b', {'red': 255, 'green': 0, 'blue': 255}),
-            (r'\b(?:bright\s+|deep\s+|light\s+)?cyan\b', {'red': 0, 'green': 255, 'blue': 255}),
+        # Direct channel value specifications
+        channel_patterns = [
+            (r'\bred\s+(?:to\s+|at\s+)?(\d+)', 'red'),
+            (r'\bgreen\s+(?:to\s+|at\s+)?(\d+)', 'green'),
+            (r'\bblue\s+(?:to\s+|at\s+)?(\d+)', 'blue'),
+            (r'\bdim(?:mer)?\s+(?:to\s+|at\s+)?(\d+)', 'dim'),
+            (r'\bstrobe\s+(?:to\s+|at\s+)?(\d+)', 'strobe'),
+            (r'\bpan\s+(?:to\s+|at\s+)?(\d+)', 'pan'),
+            (r'\btilt\s+(?:to\s+|at\s+)?(\d+)', 'tilt'),
         ]
         
-        for pattern, color_values in color_patterns:
-            if re.search(pattern, text, re.IGNORECASE):
-                params.update(color_values)
+        for pattern, channel in channel_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                params[f'channel_{channel}'] = int(match.group(1))
+        
+        # Percentage-based channel values
+        percentage_patterns = [
+            (r'\bred\s+(?:to\s+|at\s+)?(\d+)%', 'red'),
+            (r'\bgreen\s+(?:to\s+|at\s+)?(\d+)%', 'green'),
+            (r'\bblue\s+(?:to\s+|at\s+)?(\d+)%', 'blue'),
+            (r'\bdim(?:mer)?\s+(?:to\s+|at\s+)?(\d+)%', 'dim'),
+            (r'\bbrightness\s+(?:to\s+|at\s+)?(\d+)%', 'dim'),
+            (r'\bintensity\s+(?:to\s+|at\s+)?(\d+)%', 'dim'),
+        ]
+        
+        for pattern, channel in percentage_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                percentage = int(match.group(1))
+                params[f'channel_{channel}'] = int(255 * percentage / 100)
+        
+        # Color names with automatic RGB channel mapping
+        # Only apply these if there's an explicit "set" command or direct channel specification
+        explicit_channel_commands = [
+            r'\bset\s+.*(?:red|green|blue|white|yellow|purple|cyan|orange|pink)\b',
+            r'\b(?:red|green|blue|white|yellow|purple|cyan|orange|pink)\s+(?:to\s+|at\s+)?\d+',
+            r'\b(?:red|green|blue|white|yellow|purple|cyan|orange|pink)\s+(?:to\s+|at\s+)?\d+%',
+        ]
+        
+        has_explicit_channel_command = any(re.search(pattern, text, re.IGNORECASE) for pattern in explicit_channel_commands)
+        
+        color_patterns = [
+            (r'\b(?:bright\s+|deep\s+|light\s+)?red\b', {'channel_red': 255, 'channel_green': 0, 'channel_blue': 0}),
+            (r'\b(?:bright\s+|deep\s+|light\s+)?blue\b', {'channel_red': 0, 'channel_green': 0, 'channel_blue': 255}),
+            (r'\b(?:bright\s+|deep\s+|light\s+)?green\b', {'channel_red': 0, 'channel_green': 255, 'channel_blue': 0}),
+            (r'\b(?:bright\s+|deep\s+|light\s+)?white\b', {'channel_red': 255, 'channel_green': 255, 'channel_blue': 255}),
+            (r'\b(?:bright\s+|deep\s+|light\s+)?yellow\b', {'channel_red': 255, 'channel_green': 255, 'channel_blue': 0}),
+            (r'\b(?:bright\s+|deep\s+|light\s+)?purple\b', {'channel_red': 255, 'channel_green': 0, 'channel_blue': 255}),
+            (r'\b(?:bright\s+|deep\s+|light\s+)?cyan\b', {'channel_red': 0, 'channel_green': 255, 'channel_blue': 255}),
+            (r'\b(?:bright\s+|deep\s+|light\s+)?orange\b', {'channel_red': 255, 'channel_green': 165, 'channel_blue': 0}),
+            (r'\b(?:bright\s+|deep\s+|light\s+)?pink\b', {'channel_red': 255, 'channel_green': 192, 'channel_blue': 203}),
+        ]
+        
+        # Only apply channel-based color mapping if there's an explicit channel command
+        should_apply_channel_colors = (
+            not any(key.startswith('channel_') for key in params.keys()) and
+            has_explicit_channel_command
+        )
+        
+        if should_apply_channel_colors:
+            for pattern, color_values in color_patterns:
+                if re.search(pattern, text, re.IGNORECASE):
+                    params.update(color_values)
+                    # Auto-set dimmer for colored lights
+                    if 'channel_dim' not in params:
+                        params['channel_dim'] = 255
+                    break
+        
+        # Add strobe channel for explicit strobe commands
+        if re.search(r'\bstrobe\b', text, re.IGNORECASE) and 'channel_strobe' not in params:
+            # Only add automatic strobe channel if we're in channel mode
+            if any(key.startswith('channel_') for key in params.keys()):
+                params['channel_strobe'] = 150  # Default strobe value
+        
+        # Position specifications for moving heads
+        position_patterns = [
+            (r'\bpan\s+(?:to\s+)?(\d+)\s*(?:degrees?|deg|°)', 'pan'),
+            (r'\btilt\s+(?:to\s+)?(\d+)\s*(?:degrees?|deg|°)', 'tilt'),
+            (r'\bposition\s+(\d+),\s*(\d+)', 'pan_tilt'),  # pan,tilt format
+        ]
+        
+        for pattern, pos_type in position_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                if pos_type == 'pan_tilt':
+                    params['channel_pan'] = int(255 * int(match.group(1)) / 360)  # Convert degrees to 0-255
+                    params['channel_tilt'] = int(255 * int(match.group(2)) / 360)
+                elif pos_type == 'pan':
+                    params['channel_pan'] = int(255 * int(match.group(1)) / 360)
+                elif pos_type == 'tilt':
+                    params['channel_tilt'] = int(255 * int(match.group(1)) / 360)
+        
+        # Duration and repeat patterns
+        duration_patterns = [
+            (r'(?:for|lasting)\s+(\d+)\s+beats?', 'beat_duration'),
+            (r'(?:for|lasting)\s+(\d+)\s+(?:seconds?|s)', 'time_duration'),
+            (r'every\s+(\d+)\s+beats?', 'beat_interval'),
+            (r'every\s+beat', 'beat_interval_1'),
+            (r'(?:during|throughout)\s+(?:the\s+)?(?:entire\s+)?(?:drop|chorus|verse|bridge|section)', 'section_duration'),
+        ]
+        
+        for pattern, duration_type in duration_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                if duration_type == 'beat_duration':
+                    params['duration_beats'] = int(match.group(1))
+                    params['repeat_mode'] = 'duration'
+                elif duration_type == 'time_duration':
+                    params['duration_seconds'] = float(match.group(1))
+                    params['repeat_mode'] = 'duration'
+                elif duration_type == 'beat_interval':
+                    params['beat_interval'] = int(match.group(1))
+                    params['repeat_mode'] = 'interval'
+                elif duration_type == 'beat_interval_1':
+                    params['beat_interval'] = 1
+                    params['repeat_mode'] = 'interval'
+                elif duration_type == 'section_duration':
+                    params['repeat_mode'] = 'section'
                 break
         
-        # Intensity modifiers
-        if re.search(r'\b(?:bright|intense|full|maximum)\b', text, re.IGNORECASE):
-            params['intensity'] = 1.0
-        elif re.search(r'\b(?:dim|low|soft|gentle)\b', text, re.IGNORECASE):
-            params['intensity'] = 0.3
-        elif re.search(r'\b(?:medium|normal)\b', text, re.IGNORECASE):
-            params['intensity'] = 0.6
+        # Repeating effect indicators
+        if re.search(r'\b(?:repeatedly|continuously|constantly|throughout)\b', text, re.IGNORECASE):
+            params['repeat_mode'] = params.get('repeat_mode', 'continuous')
         
-        # Speed modifiers
-        if re.search(r'\b(?:fast|quick|rapid)\b', text, re.IGNORECASE):
+        # Intensity modifiers (apply to dimmer if no specific channel set)
+        if 'channel_dim' not in params:
+            if re.search(r'\b(?:bright|intense|full|maximum)\b', text, re.IGNORECASE):
+                params['channel_dim'] = 255
+            elif re.search(r'\b(?:dim|low|soft|gentle)\b', text, re.IGNORECASE):
+                params['channel_dim'] = 77  # 30% of 255
+            elif re.search(r'\b(?:medium|normal)\b', text, re.IGNORECASE):
+                params['channel_dim'] = 153  # 60% of 255
+        
+        # Speed modifiers for strobe
+        if re.search(r'\b(?:fast|quick|rapid)\s+strobe\b', text, re.IGNORECASE):
+            params['channel_strobe'] = 200
             params['speed'] = 'fast'
-        elif re.search(r'\b(?:slow|gentle|gradual)\b', text, re.IGNORECASE):
+        elif re.search(r'\b(?:slow|gentle|gradual)\s+strobe\b', text, re.IGNORECASE):
+            params['channel_strobe'] = 100
             params['speed'] = 'slow'
+        elif re.search(r'\bstrobe\b', text, re.IGNORECASE) and 'channel_strobe' not in params:
+            params['channel_strobe'] = 150  # Medium strobe
         
-        # Effect types
+        # Effect types for fallback to presets
         if re.search(r'\b(?:flash|strobe|blink)\b', text, re.IGNORECASE):
             params['effect_type'] = 'flash'
+            # Flash effects often imply repetition if no specific mode set
+            if 'repeat_mode' not in params:
+                params['repeat_mode'] = 'beat_sync'
         elif re.search(r'\b(?:fade|transition)\b', text, re.IGNORECASE):
             params['effect_type'] = 'fade'
         elif re.search(r'\b(?:chase|sequence|chasers?)\b', text, re.IGNORECASE):
             params['effect_type'] = 'chase'
+            # Chase effects are inherently repeating
+            if 'repeat_mode' not in params:
+                params['repeat_mode'] = 'continuous'
         elif re.search(r'\bpulse\b', text, re.IGNORECASE):
             params['effect_type'] = 'flash'  # Pulse can use flash preset
+            if 'repeat_mode' not in params:
+                params['repeat_mode'] = 'beat_sync'
         elif re.search(r'\bmulti[-\s]?colored?\b', text, re.IGNORECASE):
             params['effect_type'] = 'chase'  # Multi-colored often implies sequence
+            if 'repeat_mode' not in params:
+                params['repeat_mode'] = 'continuous'
         
         # Handle specific effect combinations
         if re.search(r'\bmulti[-\s]?colored?\s+strobes?\b', text, re.IGNORECASE):
             params['effect_type'] = 'flash'
             params['multi_color'] = True
+            params['repeat_mode'] = 'beat_sync'
         
         if re.search(r'\bfast\s+chasers?\b', text, re.IGNORECASE):
             params['effect_type'] = 'chase'
             params['speed'] = 'fast'
+            params['repeat_mode'] = 'continuous'
         
         return params
     
@@ -269,9 +395,9 @@ class CueInterpreter:
         # Determine operation type
         if any(word in command for word in ['add', 'create', 'set', 'turn on', 'activate']):
             operation = 'add'
-        elif any(word in command for word in ['remove', 'delete', 'turn off', 'stop']):
+        elif any(word in command for word in ['remove', 'delete', 'turn off', 'stop', 'clear']):
             operation = 'remove'
-        elif any(word in command for word in ['change', 'modify', 'update', 'adjust']):
+        elif any(word in command for word in ['change', 'modify', 'update', 'adjust', 'replace', 'switch']):
             operation = 'modify'
         else:
             operation = 'add'  # Default to add
@@ -398,21 +524,264 @@ class CueInterpreter:
         if not interpretation['fixtures']:
             return False, "Could not identify which fixtures to control"
         
-        if not interpretation['preset']:
-            return False, "Could not find a suitable preset"
+        params = interpretation['parameters']
+        repeat_mode = params.get('repeat_mode')
         
-        cues_added = 0
+        # Check if we have direct channel commands
+        has_channel_commands = any(key.startswith('channel_') for key in params.keys())
+        
+        if has_channel_commands:
+            # Direct channel control - don't need a preset
+            return self._create_channel_cues(interpretation)
+        elif interpretation['preset']:
+            # Preset-based control
+            if repeat_mode and repeat_mode != 'single':
+                return self._create_repeating_cues(interpretation)
+            else:
+                # Single cue execution
+                cues_added = 0
+                for fixture_id in interpretation['fixtures']:
+                    cue = {
+                        'time': interpretation['time'],
+                        'fixture': fixture_id,
+                        'preset': interpretation['preset'],
+                        'parameters': interpretation['parameters']
+                    }
+                    self.cue_manager.add_cue(cue)
+                    cues_added += 1
+                
+                return True, f"Added {cues_added} cue(s) at {interpretation['time']:.1f}s using preset '{interpretation['preset']}'"
+        else:
+            return False, "Could not find a suitable preset or channel commands"
+    
+    def _create_channel_cues(self, interpretation: Dict) -> Tuple[bool, str]:
+        """Create cues with direct channel control instead of presets."""
+        
+        params = interpretation['parameters']
+        repeat_mode = params.get('repeat_mode')
+        
+        if repeat_mode and repeat_mode != 'single':
+            return self._create_repeating_channel_cues(interpretation)
+        else:
+            # Single channel-based cue
+            cues_added = 0
+            channel_summary = []
+            
+            for fixture_id in interpretation['fixtures']:
+                # Get fixture definition to map channel names to values
+                fixtures, _, _ = self._get_fixture_config()
+                fixture_def = next((f for f in fixtures if f['id'] == fixture_id), None)
+                
+                if not fixture_def:
+                    continue
+                
+                # Build channel values for this fixture
+                channel_values = {}
+                for param_key, param_value in params.items():
+                    if param_key.startswith('channel_'):
+                        channel_name = param_key[8:]  # Remove 'channel_' prefix
+                        if channel_name in fixture_def.get('channels', {}):
+                            channel_values[channel_name] = param_value
+                            if channel_name not in [item.split('=')[0] for item in channel_summary]:
+                                channel_summary.append(f"{channel_name}={param_value}")
+                
+                if channel_values:
+                    cue = {
+                        'time': interpretation['time'],
+                        'fixture': fixture_id,
+                        'type': 'channel',  # Mark as direct channel control
+                        'channels': channel_values,
+                        'parameters': params
+                    }
+                    self.cue_manager.add_cue(cue)
+                    cues_added += 1
+            
+            channel_desc = f" ({', '.join(channel_summary)})" if channel_summary else ""
+            return True, f"Added {cues_added} channel cue(s) at {interpretation['time']:.1f}s{channel_desc}"
+    
+    def _create_repeating_channel_cues(self, interpretation: Dict) -> Tuple[bool, str]:
+        """Create multiple channel-based cues for repeating effects."""
+        
+        params = interpretation['parameters']
+        repeat_mode = params.get('repeat_mode')
+        start_time = interpretation['time']
+        
+        # Get song info for beat calculations
+        from ..models.app_state import app_state
+        current_song = app_state.current_song
+        bpm = getattr(current_song, 'bpm', 120) if current_song else 120
+        beat_duration = 60.0 / bpm  # seconds per beat
+        
+        cue_times = []
+        
+        if repeat_mode == 'beat_sync':
+            duration_beats = params.get('duration_beats', 8)
+            for i in range(duration_beats):
+                cue_times.append(start_time + (i * beat_duration))
+        elif repeat_mode == 'interval':
+            beat_interval = params.get('beat_interval', 1)
+            duration_beats = params.get('duration_beats', 8)
+            for i in range(0, duration_beats, beat_interval):
+                cue_times.append(start_time + (i * beat_duration))
+        elif repeat_mode == 'duration':
+            if 'duration_beats' in params:
+                total_duration = params['duration_beats'] * beat_duration
+            elif 'duration_seconds' in params:
+                total_duration = params['duration_seconds']
+            else:
+                total_duration = 8 * beat_duration
+            
+            beat_interval = params.get('beat_interval', 1)
+            current_time = start_time
+            while current_time < start_time + total_duration:
+                cue_times.append(current_time)
+                current_time += beat_interval * beat_duration
+        else:
+            cue_times = [start_time]
+        
+        # Create all the channel cues
+        total_cues_added = 0
+        channel_summary = []
+        
         for fixture_id in interpretation['fixtures']:
-            cue = {
-                'time': interpretation['time'],
-                'fixture': fixture_id,
-                'preset': interpretation['preset'],
-                'parameters': interpretation['parameters']
-            }
-            self.cue_manager.add_cue(cue)
-            cues_added += 1
+            # Get fixture definition
+            fixtures, _, _ = self._get_fixture_config()
+            fixture_def = next((f for f in fixtures if f['id'] == fixture_id), None)
+            
+            if not fixture_def:
+                continue
+            
+            # Build channel values
+            channel_values = {}
+            for param_key, param_value in params.items():
+                if param_key.startswith('channel_'):
+                    channel_name = param_key[8:]
+                    if channel_name in fixture_def.get('channels', {}):
+                        channel_values[channel_name] = param_value
+                        if channel_name not in [item.split('=')[0] for item in channel_summary]:
+                            channel_summary.append(f"{channel_name}={param_value}")
+            
+            for cue_time in cue_times:
+                cue = {
+                    'time': cue_time,
+                    'fixture': fixture_id,
+                    'type': 'channel',
+                    'channels': channel_values.copy(),
+                    'parameters': params.copy(),
+                    'chaser': 'ai_repeating_channel',
+                    'chaser_id': f"ai_ch_repeat_{fixture_id}_{start_time}"
+                }
+                self.cue_manager.add_cue(cue)
+                total_cues_added += 1
         
-        return True, f"Added {cues_added} cue(s) at {interpretation['time']:.1f}s using preset '{interpretation['preset']}'"
+        channel_desc = f" ({', '.join(channel_summary)})" if channel_summary else ""
+        return True, f"Added {total_cues_added} repeating channel cues{channel_desc} starting at {start_time:.1f}s"
+    
+    def _get_fixture_config(self):
+        """Helper to get fixture configuration - imports here to avoid circular deps."""
+        try:
+            from ..fixture_utils import load_fixtures_config
+            return load_fixtures_config()
+        except ImportError:
+            # Fallback for testing
+            return [], [], []
+    
+    def _create_repeating_cues(self, interpretation: Dict) -> Tuple[bool, str]:
+        """Create multiple cues for repeating effects like strobes or beat-synced flashes."""
+        
+        params = interpretation['parameters']
+        repeat_mode = params.get('repeat_mode')
+        start_time = interpretation['time']
+        
+        # Get song info for beat calculations
+        from ..models.app_state import app_state
+        current_song = app_state.current_song
+        bpm = getattr(current_song, 'bpm', 120) if current_song else 120
+        beat_duration = 60.0 / bpm  # seconds per beat
+        
+        cue_times = []
+        
+        if repeat_mode == 'beat_sync':
+            # Default beat-sync: flash every beat for 8 beats
+            duration_beats = params.get('duration_beats', 8)
+            for i in range(duration_beats):
+                cue_times.append(start_time + (i * beat_duration))
+                
+        elif repeat_mode == 'interval':
+            # Repeat at specified beat intervals
+            beat_interval = params.get('beat_interval', 1)
+            duration_beats = params.get('duration_beats', 8)  # Default duration
+            
+            for i in range(0, duration_beats, beat_interval):
+                cue_times.append(start_time + (i * beat_duration))
+                
+        elif repeat_mode == 'duration':
+            # Repeat for a specific duration
+            if 'duration_beats' in params:
+                total_duration = params['duration_beats'] * beat_duration
+            elif 'duration_seconds' in params:
+                total_duration = params['duration_seconds']
+            else:
+                total_duration = 8 * beat_duration  # Default 8 beats
+            
+            # Flash every beat within the duration
+            beat_interval = params.get('beat_interval', 1)
+            current_time = start_time
+            while current_time < start_time + total_duration:
+                cue_times.append(current_time)
+                current_time += beat_interval * beat_duration
+                
+        elif repeat_mode == 'continuous':
+            # Continuous effect (e.g., for chase sequences)
+            # Create a longer-duration single cue with loop parameters
+            duration_beats = params.get('duration_beats', 16)
+            end_time = start_time + (duration_beats * beat_duration)
+            cue_times = [start_time]
+            
+            # Add loop parameters to the preset
+            params['loop_duration'] = duration_beats * beat_duration
+            params['fade_beats'] = duration_beats
+            
+        elif repeat_mode == 'section':
+            # Repeat throughout a musical section
+            # This would need section timing analysis - for now, default to 16 beats
+            duration_beats = 16
+            for i in range(duration_beats):
+                cue_times.append(start_time + (i * beat_duration))
+        
+        else:
+            # Fallback: single cue
+            cue_times = [start_time]
+        
+        # Create all the cues
+        total_cues_added = 0
+        for fixture_id in interpretation['fixtures']:
+            for cue_time in cue_times:
+                cue = {
+                    'time': cue_time,
+                    'fixture': fixture_id,
+                    'preset': interpretation['preset'],
+                    'parameters': params.copy(),  # Copy to avoid shared references
+                    'chaser': 'ai_repeating',
+                    'chaser_id': f"ai_repeat_{fixture_id}_{start_time}"
+                }
+                self.cue_manager.add_cue(cue)
+                total_cues_added += 1
+        
+        # Generate descriptive message
+        if repeat_mode == 'beat_sync':
+            return True, f"Added {total_cues_added} beat-synced cues ({len(cue_times)} beats) starting at {start_time:.1f}s using '{interpretation['preset']}'"
+        elif repeat_mode == 'interval':
+            beat_interval = params.get('beat_interval', 1)
+            return True, f"Added {total_cues_added} cues (every {beat_interval} beat{'s' if beat_interval > 1 else ''}) starting at {start_time:.1f}s"
+        elif repeat_mode == 'duration':
+            duration = params.get('duration_beats', params.get('duration_seconds', 8))
+            unit = 'beats' if 'duration_beats' in params else 'seconds'
+            return True, f"Added {total_cues_added} repeating cues for {duration} {unit} starting at {start_time:.1f}s"
+        elif repeat_mode == 'continuous':
+            return True, f"Added {total_cues_added} continuous effect cues starting at {start_time:.1f}s"
+        else:
+            return True, f"Added {total_cues_added} cues starting at {start_time:.1f}s"
     
     def _execute_remove_command(self, interpretation: Dict) -> Tuple[bool, str]:
         """Execute a remove cue command."""
@@ -429,10 +798,65 @@ class CueInterpreter:
         return True, f"Removed {removed_count} cue(s)"
     
     def _execute_modify_command(self, interpretation: Dict) -> Tuple[bool, str]:
-        """Execute a modify cue command."""
+        """Execute a modify cue command using replacement strategy."""
         
-        # This would require more sophisticated cue modification logic
-        return False, "Cue modification not yet implemented"
+        print(f"🔍 Executing modify command:")
+        print(f"   Time: {interpretation['time']}")
+        print(f"   Fixtures: {interpretation['fixtures']}")
+        print(f"   Preset: {interpretation['preset']}")
+        print(f"   Parameters: {interpretation['parameters']}")
+        
+        if not interpretation['time']:
+            return False, "Could not determine timing for the modification"
+        
+        if not interpretation['fixtures']:
+            return False, "Could not identify which fixtures to modify"
+        
+        # Strategy: Replace existing cues with new ones
+        # This effectively "modifies" by removing old and adding new
+        
+        modifications_made = 0
+        time_tolerance = 0.5  # Allow 0.5 second tolerance for matching existing cues
+        
+        for fixture_id in interpretation['fixtures']:
+            # Find existing cues near this time for this fixture
+            existing_cues = []
+            for cue in self.cue_manager.cue_list:
+                if (cue.get('fixture') == fixture_id and 
+                    abs(cue.get('time', 0) - interpretation['time']) <= time_tolerance):
+                    existing_cues.append(cue)
+            
+            if existing_cues:
+                # Remove existing cues first
+                for old_cue in existing_cues:
+                    try:
+                        # Use the correct CueManager delete method
+                        self.cue_manager.delete_cue(old_cue.get('fixture'), old_cue.get('time'))
+                    except Exception as e:
+                        print(f"   Warning: Could not delete cue: {e}")
+                        # Fallback: remove from list directly
+                        if old_cue in self.cue_manager.cue_list:
+                            self.cue_manager.cue_list.remove(old_cue)
+                
+                print(f"   Removed {len(existing_cues)} existing cue(s) for {fixture_id}")
+            
+            # Add new cue with modified parameters
+            if interpretation['preset']:
+                new_cue = {
+                    'time': interpretation['time'],
+                    'fixture': fixture_id,
+                    'preset': interpretation['preset'],
+                    'parameters': interpretation['parameters']
+                }
+                self.cue_manager.add_cue(new_cue)
+                modifications_made += 1
+                print(f"   Added replacement cue for {fixture_id}")
+        
+        if modifications_made > 0:
+            return True, f"Modified {modifications_made} cue(s) at {interpretation['time']:.1f}s - replaced with '{interpretation['preset']}' preset"
+        else:
+            # No existing cues found, treat as add command
+            return self._execute_add_command(interpretation)
     
     def _calculate_confidence(self, command: str, time_ref: Optional[float], fixture_ids: List[str], preset_name: Optional[str]) -> float:
         """Calculate confidence score for command interpretation (0.0 to 1.0)."""
