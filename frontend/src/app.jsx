@@ -222,6 +222,9 @@ export function App() {
               setCurrentTime={setCurrentTime}
               songData={songData}
               seekTo={seekToTime}
+              onStop={() => {
+                wsSend("blackout", {});
+              }}
             />
           </div>
 

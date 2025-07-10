@@ -59,7 +59,7 @@ export default function ChatAssistant({ wsSend, lastResponse }) {
   return (
     <div>
       <h2 className="text-lg mb-2 font-semibold">Assistant</h2>
-      <div className="flex flex-col gap-2 mb-4">
+      <div className="flex flex-col gap-2 mb-4 max-h-60 overflow-y-auto">
         {chat.length === 0 && (
           <p className="text-sm text-gray-400">No messages yet.</p>
         )}

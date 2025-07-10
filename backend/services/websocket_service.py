@@ -38,6 +38,7 @@ class WebSocketManager:
             "reloadFixtures": self._handle_reload_fixtures,
             "setDmx": self._handle_set_dmx,
             "userPrompt": self._handle_user_prompt,
+            "blackout": self._handle_blackout,
         }
 
     async def _handle_user_prompt(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
@@ -218,7 +219,12 @@ class WebSocketManager:
             "isPlaying": app_state.playback.is_playing,
             "currentTime": app_state.playback.playback_time
         })
-    
+
+    async def _handle_blackout(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
+        """Handle blackout request."""
+        from ..dmx_controller import send_blackout
+        send_blackout()        
+
     async def _handle_load_song(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
         """Handle song loading."""
         song_file = message["file"]

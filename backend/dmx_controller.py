@@ -22,6 +22,12 @@ def set_channel(ch: int, val: int) -> bool:
         return True
     return False
 
+def send_blackout():
+    global dmx_universe
+    dmx_universe = [0] * DMX_CHANNELS
+    print("🔴 Blackout sent to DMX universe")
+    send_artnet()
+
 def get_universe():
     return dmx_universe.copy()
 

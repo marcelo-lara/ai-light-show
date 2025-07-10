@@ -11,7 +11,8 @@ export default function AudioPlayer({
   isPlaying, setIsPlaying,
   currentTime, setCurrentTime, 
   seekTo,
-  songData
+  songData,
+  onStop
  }) {
   const containerRef = useRef(null);
   const wavesurferRef = useRef(null);
@@ -157,6 +158,15 @@ export default function AudioPlayer({
     if (!wavesurferRef.current) return;
   }, [songData]);
   
+  const handleStop = () => {
+    if (wavesurferRef.current) {
+      wavesurferRef.current.pause();
+      wavesurferRef.current.seekTo(0);
+      setIsPlaying(false);
+      setCurrentTime(0);
+      onStop();
+    }
+  };
 
   return (
     <>
@@ -168,7 +178,7 @@ export default function AudioPlayer({
               (<button onClick={() => wavesurferRef.current?.pause()} className="bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded">⏸️ Pause</button>) : 
               (<button onClick={() => wavesurferRef.current?.play()} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">▶️ Start</button>)
             }
-            <button onClick={() => { wavesurferRef.current?.pause(); wavesurferRef.current?.seekTo(0); }} className="bg-gray-700 hover:bg-gray-800 px-4 py-2 rounded">⏹️ Stop</button>
+            <button onClick={handleStop} className="bg-gray-700 hover:bg-gray-800 px-4 py-2 rounded">⏹️ Stop</button>
             <span className="ml-4 w-6 text-gray-400">{formatTime(currentTime)}</span>
           </div>
         </div>
