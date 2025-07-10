@@ -18,6 +18,13 @@ const handleCueTimeChage = (cue) => {
   console.log("Updating cue time to", cue.time);
 }
 
+const handleRemoveAllCues = () => {
+  if (confirm("Are you sure you want to remove all cues? This action cannot be undone.")) {
+    updateCues([]);
+    console.log("Removed all cues");
+  }
+}
+
 return (
         <>
             <h2 className="text-x2 font-semibold mb-4">🎯 Song Cue</h2>
@@ -68,6 +75,16 @@ return (
                   ))}
                 </tbody>
               </table>
+              {cues.length > 0 && (
+                <div className="mt-4 flex justify-end">
+                  <button 
+                    onClick={handleRemoveAllCues}
+                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded flex items-center"
+                  >
+                    <span className="mr-2">🗑️</span> Remove All Cues
+                  </button>
+                </div>
+              )}
             </div>
         </>
     );
