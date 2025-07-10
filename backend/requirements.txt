@@ -15,3 +15,9 @@ torchaudio
 scipy
 scikit-learn
 aiohttp
+
+# Development and type checking
+mypy
+black
+isort
+pylint

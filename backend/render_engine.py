@@ -1,3 +1,5 @@
+from typing import cast
+
 def pre_render_cues(cues, fixture_config, fixture_presets, bpm=120.0, fps=120): 
     timeline = {}
     print(f"🔄 PreRendering timeline for {len(cues)} cues at {fps} FPS with BPM {bpm}")
@@ -33,21 +35,60 @@ def pre_render_cues(cues, fixture_config, fixture_presets, bpm=120.0, fps=120):
     channel_last_values = {}
 
     for cue in cues:
-        start_time = cue["time"]
-        fixture = find_fixture(cue["fixture"])
-        if not fixture:
+        # Validate cue structure
+        if not all(key in cue for key in ["fixture", "time", "preset"]):
+            print(f"❌ Skipping invalid cue - missing required fields: {cue}")
+            continue
+            
+        try:
+            start_time = cue["time"]
+            fixture = find_fixture(cue["fixture"])
+            if not fixture:
+                print(f"⚠️ Skipping cue - fixture not found: {cue['fixture']}")
+                continue
+
+            preset_name = cue["preset"]
+            # Validate fixture has required properties
+            if not fixture or "type" not in fixture:
+                print(f"❌ Invalid fixture configuration: {fixture}")
+                continue
+                
+            preset = find_preset(preset_name, fixture["type"])
+            
+            if not preset:
+                print(f"⚠️ Preset not found: '{preset_name}' for {fixture.get('type', 'unknown')} fixture")
+                continue
+
+        except KeyError as ke:
+            print(f"❌ Invalid cue structure: {str(ke)} in cue: {cue}")
+            continue
+        except Exception as e:
+            print(f"❌ Error processing cue: {str(e)}")
             continue
 
-        preset = find_preset(cue["preset"], fixture["type"])
-        if not preset:
+        # Only process if we have valid fixture and preset
+        if not fixture or not preset:
             continue
 
-        print(f":: Processing cue: {cue['preset']} at {start_time}s for fixture {fixture['name']} with preset {preset['name']}")
-        ch_map = fixture["channels"]
+        # Validate fixture configuration structure and types
+        if not all(key in fixture for key in ["name", "channels", "meta"]):
+            print(f"❌ Invalid fixture configuration - missing required fields: {fixture}")
+            continue
+            
+        if not isinstance(fixture["channels"], dict) or not fixture["channels"]:
+            print(f"❌ Invalid channels configuration for fixture {fixture['name']}")
+            continue
+            
+        if not isinstance(fixture["meta"], dict):
+            print(f"❌ Invalid meta configuration for fixture {fixture['name']}")
+            continue
+
+        print(f":: Processing cue: {cue['preset']} at {start_time}s for fixture {fixture.get('name', 'unknown')} with preset {preset.get('name', 'unknown')}")
+        ch_map = fixture.get("channels", {})
         overrides = cue.get("parameters", {})
         mode = preset.get("mode", "single")
 
-        start_brightness = float(overrides.get("start_brightness", preset["parameters"].get("start_brightness", 1.0)))
+        start_brightness = float(overrides.get("start_brightness", preset.get("parameters", {}).get("start_brightness", 1.0)))
 
         cycle_duration = 0.0
         if "steps" in preset and preset["steps"]:
@@ -76,7 +117,15 @@ def pre_render_cues(cues, fixture_config, fixture_presets, bpm=120.0, fps=120):
                     if ch_name not in ch_map:
                         continue
                     ch_index = ch_map[ch_name]
-                    is_color = fixture["meta"]["channel_types"].get(ch_name) == "color"
+                    # Final null check and type-safe access
+                    # Access validated fixture from outer scope
+                    meta = cast(dict, fixture.get("meta", {}))  # type: ignore
+                    channel_types = meta.get("channel_types", {})
+                        
+                    # Type assertion for type checker
+                    channel_types = cast(dict, channel_types)
+                        
+                    is_color = channel_types.get(ch_name, "") == "color"
                     scaled_val = int(raw_val * start_brightness) if is_color else raw_val
                     scaled_values[ch_index] = scaled_val
 
@@ -126,10 +175,19 @@ def pre_render_cues(cues, fixture_config, fixture_presets, bpm=120.0, fps=120):
             cue["duration"] = step_offset
 
         elif mode == "adsr":
-            adsr_params = preset.get("parameters", {}).get("adsr", {})
-            max_value = float(overrides.get("max_value", preset["parameters"].get("max_value", 1.0)))
-            channel_map = preset.get("parameters", {}).get("channel_map", {})
-            t = start_time
+            adsr_params = (preset.get("parameters") or {}).get("adsr", {})
+            # Validate ADS-R parameters
+            if not all(key in adsr_params for key in ["attack", "decay", "sustain", "release"]):
+                print(f"❌ Invalid ADS-R configuration in preset {preset.get('name')}")
+                continue
+                
+            try:
+                max_value = float(overrides.get("max_value", preset.get("parameters", {}).get("max_value", 1.0)))
+                channel_map = preset.get("parameters", {}).get("channel_map", {})
+                t = start_time
+            except KeyError as e:
+                print(f"❌ Missing required parameter in ADS-R config: {str(e)}")
+                continue
 
             def stage(stage_name, from_val, to_rel, duration):
                 nonlocal t

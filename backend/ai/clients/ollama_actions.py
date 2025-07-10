@@ -2,7 +2,7 @@
 
 import re
 from typing import Dict, List, Tuple
-from backend.models.app_state import app_state
+from ...models.app_state import app_state
 from .ollama_instructions import load_fixture_config
 
 
@@ -73,8 +73,9 @@ def execute_confirmed_action(action_id: str, proposals: List[Dict]) -> Tuple[boo
     
     try:
         # Import here to avoid circular imports
-        from ..services.cue_service import cue_manager
-        from .cue_interpreter import CueInterpreter
+        # Corrected imports based on actual file locations
+        from backend.services.cue_service import cue_manager
+        from backend.ai.cue_interpreter import CueInterpreter
         
         interpreter = CueInterpreter(cue_manager)
         
