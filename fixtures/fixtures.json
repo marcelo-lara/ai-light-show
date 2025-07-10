@@ -4,10 +4,10 @@
     "name": "Head EL-150",
     "type": "moving_head",
     "channels": {
-      "pan": 1,
-      "pan_fine": 2,
-      "tilt": 3,
-      "tilt_fine": 4,
+      "pan_msb": 1,
+      "pan_lsb": 2,
+      "tilt_msb": 3,
+      "tilt_lsb": 4,
       "speed": 5,
       "dim": 6,
       "shutter": 7,
@@ -16,9 +16,7 @@
     },
     "current_values": {
       "pan": 0,
-      "pan_fine": 0,
       "tilt": 0,
-      "tilt_fine": 0,
       "speed": 0,
       "dim": 0,
       "shutter": 0,
@@ -71,8 +69,19 @@
             "125": "Shapes",
             "150": "Tribal",
             "175": "Slashes"
+        }      
+      },
+      "position_constraints": {
+        "pan": {
+          "min": 0,
+          "max": 65535
+        },
+        "tilt": {
+          "min": 70,
+          "max": 3363
         }
       }
+
     }
   },
   {
