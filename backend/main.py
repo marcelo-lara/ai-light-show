@@ -13,8 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 # Import routers
-from .routers import dmx, songs, websocket
-from .services.timeline_executor import timeline_executor
+from backend.routers import dmx, songs, websocket
+from backend.services.timeline_executor import timeline_executor
 
 
 @asynccontextmanager

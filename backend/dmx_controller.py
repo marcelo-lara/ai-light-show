@@ -26,22 +26,18 @@ def send_blackout():
     global dmx_universe
     dmx_universe = [0] * DMX_CHANNELS
     print("🔴 Blackout sent to DMX universe")
-    send_artnet()
+    blackout_frame = bytes([0] * 512)
+    send_artnet(0, blackout_frame)
 
 def get_universe():
     return dmx_universe.copy()
 
 # --- Send ArtNet packet ---
-def send_artnet(_dmx_universe=None):
-    global last_artnet_send, last_packet, dmx_universe
+def send_artnet(universe: int, frame: bytes):
+    global last_artnet_send, last_packet
 
-    if _dmx_universe is not None:
-        dmx_universe = _dmx_universe
-
+    # Use frame directly without modifying global state
     now = perf_counter()
-    if now - last_artnet_send < (1.0 / FPS):
-        return
-    last_artnet_send = now
 
     # Full 512-byte DMX data
     full_data = dmx_universe[:DMX_CHANNELS] + [0] * (DMX_CHANNELS - len(dmx_universe))
@@ -63,3 +59,74 @@ def send_artnet(_dmx_universe=None):
         sock.close()
     except Exception as e:
         print(f"❌ Art-Net send error: {e}")
+
+from .services.dmx_canvas import DmxCanvas
+import time
+
+from threading import Lock, Event
+
+class DMXPlaybackController:
+    def __init__(self):
+        self._lock = Lock()
+        self._stop_event = Event()
+        self._is_sending = False
+        self._current_canvas = None
+
+    def start_playback(self, canvas: DmxCanvas):
+        with self._lock:
+            if self._is_sending:
+                return
+            self._is_sending = True
+            self._current_canvas = canvas
+            self._stop_event.clear()
+            
+            import threading
+            threading.Thread(target=self._playback_loop, daemon=True).start()
+
+    def stop_playback(self):
+        with self._lock:
+            self._is_sending = False
+            self._stop_event.set()
+
+    def _playback_loop(self):
+        with self._lock:
+            if not self._current_canvas:
+                return
+            
+            fps = self._current_canvas.fps
+            frame_duration = 1.0 / fps
+            start_time = time.perf_counter()
+            next_frame_time = start_time
+
+        while not self._stop_event.is_set():
+            with self._lock:
+                if not self._is_sending or not self._current_canvas:
+                    break
+                
+                # Calculate exact frame number based on elapsed time
+                elapsed = time.perf_counter() - start_time
+                frame_number = int(elapsed * fps)
+                frame_time = frame_number / fps
+                frame = self._current_canvas.get_frame(frame_time)
+                
+                # Only send if we've advanced to the next frame
+                if time.perf_counter() >= next_frame_time:
+                    # Log channels 20-40 (1-based DMX channels, 0-based list index 19-39)
+                    print(f"📡 Sending frame {frame_number} @ {frame_time:.3f}s - Ch20-40: {list(frame[19:40])}")
+                    send_artnet(0, bytes(frame))
+                    next_frame_time += frame_duration
+            
+            # Sleep precisely until next frame or stop signal
+            sleep_time = max(0, next_frame_time - time.perf_counter())
+            self._stop_event.wait(sleep_time)
+
+# Singleton playback controller
+playback_controller = DMXPlaybackController()
+
+def send_canvas_frames(canvas: DmxCanvas):
+    """Start DMX playback with thread-safety guarantees"""
+    playback_controller.start_playback(canvas)
+
+def stop_playback():
+    """Stop ongoing DMX playback"""
+    playback_controller.stop_playback()
