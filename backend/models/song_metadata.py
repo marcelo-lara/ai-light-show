@@ -265,6 +265,20 @@ class SongMetadata:
         print(f"    .. {len(self._arrangement)} sections created")
         return True
 
+    def load_key_moments_from_hints(self) -> bool:
+        """Load key moments from hints files if available."""
+        hints_folder = os.path.join(self._songs_folder, "hints")
+        key_moments_file = os.path.join(hints_folder, f"{self._song_name}.key_moments.json")
+        if not os.path.isfile(key_moments_file):
+            print(f"⚠️ Warning: Key moments file not found for '{self._song_name}' at {key_moments_file}")
+            return False
+        with open(key_moments_file, "r") as f:
+            key_moments_data = json.load(f)
+        self.key_moments = key_moments_data
+        print(f" 📜 Key moments loaded from {key_moments_file}")
+        print(f"    .. {len(self.key_moments)} key moments loaded")
+        return True
+
     def _load_hints_files(self) -> None:
         """Try to locate the hints files for this song."""
         hints_folder = os.path.join(self._songs_folder, "hints")
@@ -284,6 +298,9 @@ class SongMetadata:
 
         # segments file
         self.load_arrangement_from_hints()
+
+        # key moments file
+        self.load_key_moments_from_hints()
 
     def get_metadata_path(self) -> str:
         return os.path.join(self._songs_folder, f"{self._song_name}.meta.json")
@@ -311,6 +328,16 @@ class SongMetadata:
             self.load_chords_from_hints()
         if len(self._arrangement) == 0:
             self.load_arrangement_from_hints()
+        if len(self._key_moments) == 0:
+            loaded = self.load_key_moments_from_hints()
+            if not loaded:
+                # fallback to default key moments if not loaded
+                self.key_moments = [
+                    {"time": 0.0, "name": "Song Start", "description": "Beginning of the song", "duration": 0},
+                    {"time": 1.0, "name": "Drop", "description": "Main drop or beat drop", "duration": 0},
+                    {"time": 2.0, "name": "Break", "description": "Breakdown or break section", "duration": 0},
+                    {"time": 2.5, "name": "Build", "description": "Build-up section", "duration": 0},
+                ]
 
     def initialize_song_metadata(self) -> None:
         """Initialize song metadata with default values."""
