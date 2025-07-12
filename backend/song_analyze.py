@@ -1,11 +1,11 @@
-from backend.ai.pattern_finder_ml import get_stem_clusters_with_model
+from backend.services.audio.pattern_finder_ml import get_stem_clusters_with_model
 from backend.models.song_metadata import SongMetadata, Section
-from backend.ai.arrangement_guess import guess_arrangement
-from backend.ai.essentia_analysis import extract_with_essentia
-from backend.ai.drums_infer import infer_drums
-from backend.ai.demucs_split import extract_stems
-from backend.ai.pattern_finder import get_stem_clusters
-from backend.ai.audio_proccess import noise_gate
+from backend.services.audio.arrangement_guess import guess_arrangement
+from backend.services.audio.essentia_analysis import extract_with_essentia
+from backend.services.audio.drums_infer import infer_drums
+from backend.services.audio.demucs_split import extract_stems
+from backend.services.audio.pattern_finder import get_stem_clusters
+from backend.services.audio.audio_proccess import noise_gate
 
 def song_analyze(song: SongMetadata, reset_file: bool = True, debug: bool = False) -> SongMetadata:
 
