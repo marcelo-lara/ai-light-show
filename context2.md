@@ -99,7 +99,7 @@ Stored in `public/songs/songname.mp3.cues.json`
 
 ## 🕒 Timeline Rendering
 
-* `main.py` loads cues and presets at startup
+* `app.py` loads cues and presets at startup
 * Renders all cue events into a `timeline` list
 * Timeline is looped and executed in sync with current song time
 
@@ -138,7 +138,7 @@ frontend/
   ├─ PresetSelector.jsx
   └─ SongArrangement.jsx
 backend/
-  ├─ main.py
+  ├─ app.py
   ├─ dmx_controller.py
   ├─ timeline_engine.py
 static/
