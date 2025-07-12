@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict
-from backend.config import AI_CACHE, MASTER_FIXTURE_CONFIG, FIXTURE_PRESETS
-from backend.models.app_state import app_state
+from ...config import AI_CACHE, MASTER_FIXTURE_CONFIG, FIXTURE_PRESETS
+from ...models.app_state import app_state
 
 
 def load_fixture_config():

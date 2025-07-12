@@ -34,7 +34,7 @@ The backend is built with **FastAPI** and provides a comprehensive set of APIs f
 
 - **Natural Language Processing**:
   - **Cue Interpreter** (`backend/ai/cue_interpreter.py`): Converts natural language commands into lighting dmx instructions.
-  - **Ollama Integration** (`backend/ai/ollama_*.py`): Local LLM integration for intelligent lighting suggestions
+  - **Ollama Integration** (`backend/services/ollama/`): Local LLM integration for intelligent lighting suggestions
 
 #### Data Models & Services
 

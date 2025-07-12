@@ -64,7 +64,7 @@ def clear_current_song(session_id: str = "default"):
 
 def get_current_song(session_id: str = "default"):
     """Get the current song context from AppState."""
-    from backend.models.app_state import app_state
+    from ...models.app_state import app_state
     
     if app_state.current_song:
         return {

@@ -34,7 +34,7 @@ class WebSocketManager:
 
     async def _handle_user_prompt(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
         """Handle userPrompt with streaming and action proposals/confirmation flow."""
-        from ..ai.ollama_client import query_ollama_mistral_streaming, extract_action_proposals, execute_confirmed_action
+        from ..services.ollama import query_ollama_mistral_streaming, extract_action_proposals, execute_confirmed_action
         
         prompt = message.get("text", "") or message.get("prompt", "")
         if not prompt:
@@ -428,7 +428,7 @@ class WebSocketManager:
     async def _check_ai_service_health(self) -> tuple[bool, str]:
         """Check if the AI service (Ollama) is available and return status."""
         try:
-            from ..ai.ollama_client import query_ollama_mistral_streaming
+            from ..services.ollama import query_ollama_mistral_streaming
             
             # Try a simple test prompt
             test_response = ""

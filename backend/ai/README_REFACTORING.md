@@ -1,8 +1,19 @@
 # Ollama Client Modular Structure
 
-The large `ollama_client.py` file has been successfully refactored into separate, focused modules:
+**⚠️ MIGRATION NOTICE: The Ollama modules have been moved to `backend/services/ollama/` as of July 12, 2025.**
 
-## Module Structure
+**All Ollama functionality is now available from `backend/services/ollama` instead of `backend/ai/ollama_client`.**
+
+The large `ollama_client.py` file has been successfully refactored into separate, focused modules and moved to the services directory for better organization:
+
+## New Location: `backend/services/ollama/`
+
+All imports should now use:
+```python
+from backend.services.ollama import function_name
+```
+
+## Module Structure (Located in `backend/services/ollama/`)
 
 ### 1. `ollama_client.py` (Main Entry Point)
 - **Purpose**: Public API that imports from all specialized modules
@@ -62,13 +73,17 @@ The large `ollama_client.py` file has been successfully refactored into separate
 
 ## Import Compatibility
 
-All existing code that imports from `ollama_client` will continue to work without changes:
+All existing code that imports from the moved ollama modules now imports from the new location:
 
 ```python
-from ..ai.ollama_client import query_ollama_mistral_streaming, extract_action_proposals, execute_confirmed_action
+# NEW LOCATION (after migration)
+from backend.services.ollama import query_ollama_mistral_streaming, extract_action_proposals, execute_confirmed_action
+
+# OLD LOCATION (deprecated) 
+# from backend.ai.ollama_client import query_ollama_mistral_streaming, extract_action_proposals, execute_confirmed_action
 ```
 
-The main module re-exports all functions, so there are no breaking changes.
+The main module re-exports all functions, so the migration maintains full backward compatibility.
 
 ## Enhanced Error Handling
 

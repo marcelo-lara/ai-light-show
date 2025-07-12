@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
-from ..ai.ollama_client import query_ollama_with_actions, execute_confirmed_action
+from ..services.ollama import query_ollama_with_actions, execute_confirmed_action
 from ..models.app_state import app_state
 
 router = APIRouter(prefix="/ai", tags=["AI Lighting"])
@@ -65,7 +65,7 @@ async def get_current_context():
     """Get current AI context (song, fixtures, presets)."""
     
     try:
-        from ..ai.ollama_client import get_current_song, get_current_fixtures, get_current_presets
+        from ..services.ollama import get_current_song, get_current_fixtures, get_current_presets
         
         return {
             "song": get_current_song(),
@@ -92,7 +92,7 @@ async def get_lighting_suggestions(song_section: Optional[str] = None):
             prompt = "Suggest a complete lighting design for this song"
         
         # Get AI suggestions
-        from ..ai.ollama_client import query_ollama_mistral
+        from ..services.ollama import query_ollama_mistral
         suggestions = query_ollama_mistral(prompt, "suggestions")
         
         return {
@@ -110,7 +110,7 @@ async def clear_ai_conversation(session_id: str):
     """Clear AI conversation history for a session."""
     
     try:
-        from ..ai.ollama_client import clear_conversation
+        from ..services.ollama import clear_conversation
         clear_conversation(session_id)
         
         return {"success": True, "message": f"Conversation cleared for session {session_id}"}
@@ -123,7 +123,7 @@ async def confirm_and_execute_action(request: ActionConfirmationRequest):
     """Confirm and execute a proposed lighting action."""
     
     try:
-        from ..ai.ollama_client import execute_confirmed_action
+        from ..services.ollama import execute_confirmed_action
         
         success, message = execute_confirmed_action(
             request.action_id,

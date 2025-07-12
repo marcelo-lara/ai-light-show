@@ -2,7 +2,7 @@
 
 import re
 from typing import Dict, List, Tuple
-from backend.models.app_state import app_state
+from ...models.app_state import app_state
 from .ollama_instructions import load_fixture_config
 
 
