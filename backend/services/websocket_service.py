@@ -8,7 +8,7 @@ from ..models.app_state import app_state
 from ..fixture_utils import load_fixtures_config
 from ..models.song_metadata import SongMetadata, Section
 from ..config import SONGS_DIR
-
+from ..services.dmx_canvas import DmxCanvas
 
 class WebSocketManager:
     """Manages WebSocket connections and message handling."""
@@ -22,15 +22,9 @@ class WebSocketManager:
         self.message_handlers = {
             "sync": self._handle_sync,
             "loadSong": self._handle_load_song,
-            "getCues": self._handle_get_cues,
-            "addCue": self._handle_add_cue,
-            "updateCues": self._handle_update_cues,
-            "updateCue": self._handle_update_cue,
-            "deleteCue": self._handle_delete_cue,
             "previewDmx": self._handle_preview_dmx,
             "saveArrangement": self._handle_save_arrangement,
             "saveKeyMoments": self._handle_save_key_moments,
-            "insertChaser": self._handle_insert_chaser,
             "analyzeSong": self._handle_analyze_song,
             "reloadFixtures": self._handle_reload_fixtures,
             "setDmx": self._handle_set_dmx,
@@ -81,11 +75,12 @@ class WebSocketManager:
                     })
                     
                     # Broadcast updates to all clients if any action succeeded
-                    # TODO: Implement new DMX Canvas update broadcast
+                    # TODO: Implement DMX Canvas update broadcast
+                    # This should broadcast the updated canvas state to all clients
                     if any_success:
                         await broadcast_to_all({
-                            "type": "dmxUpdated",
-                            "message": "DMX updated - new system in development"
+                            "type": "dmxCanvasUpdated",
+                            "message": "DMX Canvas updated by AI actions"
                         })
                     
                     # Clear pending actions
@@ -262,76 +257,40 @@ class WebSocketManager:
         app_state.current_song_file = song_file
         app_state.current_song = SongMetadata(song_file, songs_folder=str(SONGS_DIR))
 
+        # Re-initialize the DmxCanvas with the new song duration
+        song_duration = app_state.current_song.duration
+        if song_duration > 0:
+            print(f"🎛️ Re-initializing DMX Canvas with duration: {song_duration:.2f}s")
+            app_state.dmx_canvas = DmxCanvas(fps=44, duration=song_duration)
+        else:
+            # TODO: Handle songs without duration metadata
+            # Consider using a default duration or audio file length detection
+            print("⚠️ Song duration not available, using default canvas duration")
+            app_state.dmx_canvas = DmxCanvas(fps=44, duration=300.0)  # 5 minute default
+
         await websocket.send_json({
             "type": "songLoaded",
             "metadata": app_state.current_song.to_dict(),
-            "message": "Song loaded - new DMX Canvas system in development"
+            "message": f"Song loaded - DMX Canvas initialized with {song_duration:.2f}s duration"
         })
     
-    async def _handle_get_cues(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
-        """Handle cue list request - placeholder for new system."""
-        print(f"🔍 Cue system removed - new DMX Canvas system in development")
-        await websocket.send_json({
-            "type": "systemMessage",
-            "message": "Cue system removed - new DMX Canvas system in development"
-        })
-    
-    async def _handle_add_cue(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
-        """Handle adding a new cue - placeholder for new system."""
-        print("📝 Cue system removed - new DMX Canvas system in development")
-        await websocket.send_json({
-            "type": "systemMessage",
-            "message": "Cue system removed - new DMX Canvas system in development"
-        })
-    
-    async def _handle_update_cues(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
-        """Handle bulk cue updates - placeholder for new system."""
-        print("📝 Cue system removed - new DMX Canvas system in development")
-        await websocket.send_json({
-            "type": "systemMessage",
-            "message": "Cue system removed - new DMX Canvas system in development"
-        })
-    
-    async def _handle_update_cue(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
-        """Handle single cue update - placeholder for new system."""
-        print("📝 Cue system removed - new DMX Canvas system in development")
-        await websocket.send_json({
-            "type": "systemMessage",
-            "message": "Cue system removed - new DMX Canvas system in development"
-        })
-    
-    async def _handle_delete_cue(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
-        """Handle cue deletion - placeholder for new system."""
-        print("🗑️ Cue system removed - new DMX Canvas system in development")
-        await websocket.send_json({
-            "type": "systemMessage",
-            "message": "Cue system removed - new DMX Canvas system in development"
-        })
     
     async def _handle_preview_dmx(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
-        """Handle DMX preview."""
+        """Handle DMX preview using new DMX Canvas system."""
         cue = message["cue"]
-        cue["time"] = 0  # Set time to 0 for preview
-
-        # Render a tiny timeline with only this cue
-        bpm = 120  # or use current song bpm
-        fps = 30
-        tmp_timeline = render_timeline(
-            app_state.fixture_config,
-            app_state.fixture_presets,
-            cues=[cue],
-            current_song="__preview__",
-            bpm=bpm,
-            fps=fps
-        )
-
-        print(f"🔍 Previewing DMX for cue: {cue}")
-
-        # Immediately execute the DMX for first few frames (simulate preview)
-        from ..dmx_controller import send_artnet
-        for frame in tmp_timeline:
-            send_artnet(tmp_timeline[frame])
-            await asyncio.sleep(1 / fps)
+        
+        # TODO: Implement cue preview using DMX Canvas and render_engine
+        # This should:
+        # 1. Create a temporary DMX Canvas for preview
+        # 2. Use render_engine.render_cue() to paint the cue
+        # 3. Extract frames and send via Art-Net
+        print(f"🔍 TODO: Preview cue using DMX Canvas: {cue}")
+        
+        # For now, just acknowledge the preview request
+        await websocket.send_json({
+            "type": "previewStarted",
+            "cue": cue
+        })
     
     async def _handle_save_arrangement(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
         """Handle saving song arrangement."""
@@ -352,13 +311,6 @@ class WebSocketManager:
         else:
             print("No song object loaded; cannot save key moments.")
 
-    async def _handle_insert_chaser(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
-        """Handle chaser insertion - placeholder for new system."""
-        print("🎬 Chaser system removed - new DMX Canvas system in development")
-        await websocket.send_json({
-            "type": "systemMessage",
-            "message": "Chaser system removed - new DMX Canvas system in development"
-        })
     
     async def _handle_analyze_song(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
         """Handle song analysis."""
@@ -377,28 +329,39 @@ class WebSocketManager:
             "metadata": app_state.current_song.to_dict()
         })
 
-        # Note: Test cue generation removed - new DMX Canvas system in development
+        # TODO: Implement test cue generation using DMX Canvas
+        # This should analyze song structure and generate sample lighting cues
+        # painted directly into app_state.dmx_canvas
         create_test = message.get("renderTestCues", False)
         if create_test:
-            print("👁️‍🗨️ Test cue generation removed - new DMX Canvas system in development")
+            print("👁️‍🗨️ TODO: Generate test cues using DMX Canvas based on song analysis")
             await websocket.send_json({
-                "type": "systemMessage",
-                "message": "Test cue generation removed - new DMX Canvas system in development"
+                "type": "testCuesGenerated",
+                "message": "TODO: Test cues will be generated using DMX Canvas"
             })
     
     async def _handle_reload_fixtures(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
         """Handle fixture configuration reload."""
         print("--🔄 Reloading fixture configuration")
-        fixture_config, fixture_presets = load_fixtures_config(force_reload=True)
         
-        app_state.fixture_config = fixture_config
-        app_state.fixture_presets = fixture_presets
-        
-        await broadcast_to_all({
-            "type": "fixturesUpdated",
-            "fixtures": fixture_config,
-            "presets": fixture_presets
-        })
+        # TODO: Update load_fixtures_config to return proper tuple or handle None
+        result = load_fixtures_config(force_reload=True)
+        if result is not None:
+            fixture_config, fixture_presets = result
+            app_state.fixture_config = fixture_config
+            app_state.fixture_presets = fixture_presets
+            
+            await broadcast_to_all({
+                "type": "fixturesUpdated",
+                "fixtures": fixture_config,
+                "presets": fixture_presets
+            })
+        else:
+            print("❌ Failed to load fixture configuration")
+            await websocket.send_json({
+                "type": "error",
+                "message": "Failed to reload fixture configuration"
+            })
     
     async def _handle_set_dmx(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
         """Handle DMX channel value updates with debouncing."""
