@@ -3,7 +3,10 @@
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, field
 from fastapi import WebSocket
-from ..config import SONGS_DIR
+
+from backend.services.dmx_canvas import DmxCanvas
+from ..config import SONGS_DIR, FIXTURES_FILE
+from ..models.fixtures_model import FixturesModel
 
 
 @dataclass
@@ -18,18 +21,21 @@ class PlaybackState:
 @dataclass
 class AppState:
     """Central application state management."""
+
+    # Fixture management
+    fixtures = FixturesModel(fixtures_config_file=FIXTURES_FILE, debug=True)
+    dmx_canvas = DmxCanvas()
+
     # Fixture and lighting configuration
     fixture_config: List[Dict[str, Any]] = field(default_factory=list)
     fixture_presets: List[Dict[str, Any]] = field(default_factory=list)
-    chasers: List[Dict[str, Any]] = field(default_factory=list)
     
     # Song management
     current_song_file: Optional[str] = None
     current_song: Optional[Any] = None  # SongMetadata object
     song_metadata: Dict[str, Any] = field(default_factory=dict)
     
-    # Timeline and playback
-    timeline: List[Any] = field(default_factory=list)
+    # Playback state
     playback: PlaybackState = field(default_factory=PlaybackState)
     
     # WebSocket connections

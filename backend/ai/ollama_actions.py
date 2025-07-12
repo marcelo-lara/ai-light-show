@@ -23,9 +23,9 @@ def extract_action_proposals(ai_response: str, session_id: str = "default"):
     current_song = app_state.current_song
     if not current_song:
         return cleaned_response, [{"error": "No song loaded - cannot create lighting actions"}]
-    
-    fixtures, presets, chasers = load_fixture_config()
-    
+
+    fixtures, presets = load_fixture_config()
+
     proposals = []
     for action_text in actions:
         try:
@@ -69,31 +69,12 @@ def execute_confirmed_action(action_id: str, proposals: List[Dict]) -> Tuple[boo
     if not current_song:
         return False, "No song loaded"
     
-    fixtures, presets, chasers = load_fixture_config()
+    fixtures, presets = load_fixture_config()
     
-    try:
-        # Import here to avoid circular imports
-        from ..services.cue_service import cue_manager
-        from .cue_interpreter import CueInterpreter
-        
-        interpreter = CueInterpreter(cue_manager)
-        
-        # Execute the command
-        success, message = interpreter.execute_command(
-            action['command'],
-            current_song,
-            fixtures,
-            presets
-        )
-        
-        # Save cues after successful execution (same as _handle_add_cue)
-        if success:
-            cue_manager.save_cues()
-        
-        return success, message
-        
-    except Exception as e:
-        return False, f"Execution error: {str(e)}"
+    # TODO: Implement new fixture-based lighting logic here
+    # This is a placeholder until new DMX Canvas and Fixture system is implemented
+    
+    return False, "Action execution not yet implemented - awaiting new DMX Canvas system"
 
 
 def _generate_friendly_description(command: str, fixtures: List[Dict], presets: List[Dict]) -> str:

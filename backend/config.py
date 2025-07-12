@@ -4,9 +4,11 @@ from pathlib import Path
 BASE_DIR = Path("/app/static") if Path("/app/static").exists() else Path(__file__).parent.parent
 
 ## DMX Related
-CHASER_TEMPLATE_PATH = BASE_DIR / "fixtures/chaser_templates.json"
+FIXTURES_FILE = BASE_DIR / "fixtures/fixtures.json"
 MASTER_FIXTURE_CONFIG = BASE_DIR / "fixtures/master_fixture_config.json"
 FIXTURE_PRESETS = BASE_DIR / "fixtures/fixture_presets.json"
+
+
 
 ## Song Related
 SONGS_DIR = BASE_DIR / "songs"
@@ -18,7 +20,6 @@ AI_CACHE =  Path("/root/.cache") if Path("/app/static").exists() else BASE_DIR /
 
 if __name__ == "__main__":
     print(f"Base Directory: {BASE_DIR}")
-    print(f"Chaser Template Path: {CHASER_TEMPLATE_PATH}")
     print(f"Master Fixture Config: {MASTER_FIXTURE_CONFIG}")
     print(f"Fixture Presets: {FIXTURE_PRESETS}")
     print(f"Songs Directory: {SONGS_DIR}")

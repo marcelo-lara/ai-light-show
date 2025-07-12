@@ -33,8 +33,7 @@ from .ollama_instructions import (
     generate_system_instructions,
     get_system_message,
     get_current_fixtures,
-    get_current_presets,
-    get_current_chasers
+    get_current_presets
 )
 
 # Action processing
@@ -71,7 +70,6 @@ __all__ = [
     'get_system_message',
     'get_current_fixtures',
     'get_current_presets',
-    'get_current_chasers',
     
     # Actions
     'extract_action_proposals',

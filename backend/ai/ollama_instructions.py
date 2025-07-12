@@ -4,12 +4,12 @@ import json
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict
-from backend.config import AI_CACHE, MASTER_FIXTURE_CONFIG, FIXTURE_PRESETS, CHASER_TEMPLATE_PATH
+from backend.config import AI_CACHE, MASTER_FIXTURE_CONFIG, FIXTURE_PRESETS
 from backend.models.app_state import app_state
 
 
 def load_fixture_config():
-    """Load the current fixture configuration, presets, and chaser templates."""
+    """Load the current fixture configuration and presets."""
     
     try:
         # Load master fixture config
@@ -20,19 +20,15 @@ def load_fixture_config():
         with open(FIXTURE_PRESETS, 'r') as f:
             presets = json.load(f)
         
-        # Load chaser templates
-        with open(CHASER_TEMPLATE_PATH, 'r') as f:
-            chasers = json.load(f)
-        
-        return fixtures, presets, chasers
+        return fixtures, presets
     except Exception as e:
         print(f"Warning: Could not load fixture configuration: {e}")
-        return [], [], []
+        return [], []
 
 
 def generate_system_instructions(session_id: str = "default"):
     """Generate dynamic system instructions based on current fixture configuration and song context."""
-    fixtures, presets, chasers = load_fixture_config()
+    fixtures, presets = load_fixture_config()
     
     # Get current song from AppState
     current_song = app_state.current_song
@@ -52,13 +48,7 @@ def generate_system_instructions(session_id: str = "default"):
     preset_summary = []
     for preset in presets[:10]:  # Limit for readability
         preset_summary.append(f"- **{preset['name']}**: {preset.get('description', 'No description')}")
-    
-    # Build chaser summary
-    chaser_summary = []
-    for chaser in chasers[:10]:  # Limit for readability
-        fixture_ids = chaser.get('fixture_ids', [])
-        chaser_summary.append(f"- **{chaser['name']}**: {chaser.get('description', 'No description')} (Fixtures: {', '.join(fixture_ids)})")
-    
+
     base_instructions = """You are a creative light show designer AI that helps create stunning visual experiences synchronized to music. Your role is to help users:
 
 1. **Design light shows** - Create dynamic sequences, effects, and synchronized performances
@@ -80,7 +70,7 @@ def generate_system_instructions(session_id: str = "default"):
 - Suggest specific color combinations, timing patterns, and effect sequences
 - Match lighting moods to musical genres and energy levels
 - Be SHORT and CONCISE - give actionable creative direction
-- Always use the actual fixtures, presets, and chasers available below
+- Always use the actual fixtures and presets available below
 - Think like a lighting designer, not a technician
 - PRIORITIZE SPECIFICITY: Always include exact timing, fixture names, and effect details
 
@@ -113,15 +103,7 @@ If users ask about unrelated topics, respond with:
             base_instructions += f"\n... and {len(presets)-10} more presets available"
     else:
         base_instructions += "No presets currently configured."
-    
-    base_instructions += "\n\n**Available Chaser Templates:**\n"
-    if chaser_summary:
-        base_instructions += "\n".join(chaser_summary)
-        if len(chasers) > 10:
-            base_instructions += f"\n... and {len(chasers)-10} more chaser templates available"
-    else:
-        base_instructions += "No chaser templates currently configured."
-    
+
     # Add current song information if available
     if current_song:
         base_instructions += _generate_song_context(current_song)
@@ -321,20 +303,14 @@ def get_system_message(session_id: str = "default"):
 
 def get_current_fixtures():
     """Get current fixture configuration for external use."""
-    fixtures, _, _ = load_fixture_config()
+    fixtures, _ = load_fixture_config()
     return fixtures
 
 
 def get_current_presets():
     """Get current presets for external use."""
-    _, presets, _ = load_fixture_config()
+    _, presets = load_fixture_config()
     return presets
-
-
-def get_current_chasers():
-    """Get current chaser templates for external use."""
-    _, _, chasers = load_fixture_config()
-    return chasers
 
 
 def _save_system_instructions(instructions: str):

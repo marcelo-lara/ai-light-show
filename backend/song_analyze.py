@@ -122,9 +122,7 @@ def add_flash_preset(start_time:float=0.0, fixture:str="parcan_l", start_brightn
             "fade_beats": 1,
             "start_brightness": start_brightness
         },
-        "duration": 1,
-        "chaser": "ai",
-        "chaser_id": "ai_generated_000"
+        "duration": 1
     }
 
 

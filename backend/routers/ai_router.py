@@ -5,8 +5,6 @@ from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
 from ..ai.ollama_client import query_ollama_with_actions, execute_confirmed_action
-from ..ai.cue_interpreter import CueInterpreter
-from ..services.cue_service import CueManager
 from ..models.app_state import app_state
 
 router = APIRouter(prefix="/ai", tags=["AI Lighting"])
@@ -51,52 +49,16 @@ async def ai_chat(request: ChatRequest):
 
 @router.post("/execute-cue", response_model=Dict[str, Any])
 async def execute_cue_command(request: CueCommand):
-    """Execute a natural language cue command directly."""
+    """Execute a natural language cue command - placeholder for new system."""
     
-    try:
-        # Validate current song
-        if not app_state.current_song:
-            raise HTTPException(status_code=400, detail="No song currently loaded")
-        
-        # Get system context
-        from ..ai.ollama_client import load_fixture_config
-        fixtures, presets, chasers = load_fixture_config()
-        
-        if not fixtures:
-            raise HTTPException(status_code=400, detail="No fixtures configured")
-        
-        if not presets:
-            raise HTTPException(status_code=400, detail="No presets configured")
-        
-        # Execute command
-        cue_manager = CueManager()
-        interpreter = CueInterpreter(cue_manager)
-        
-        success, message = interpreter.execute_command(
-            request.command,
-            app_state.current_song,
-            fixtures,
-            presets
-        )
-        
-        # Get interpretation details for feedback
-        interpretation = interpreter.interpret_command(
-            request.command,
-            app_state.current_song,
-            fixtures,
-            presets
-        )
-        
-        return {
-            "success": success,
-            "message": message,
-            "command": request.command,
-            "interpretation": interpretation,
-            "confidence": interpretation.get('confidence', 0.0)
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Command execution error: {str(e)}")
+    # TODO: Implement new DMX Canvas and Fixture system
+    return {
+        "success": False,
+        "message": "Cue system removed - new DMX Canvas system in development",
+        "command": request.command,
+        "interpretation": {},
+        "confidence": 0.0
+    }
 
 @router.get("/current-context")
 async def get_current_context():

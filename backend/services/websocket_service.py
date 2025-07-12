@@ -5,12 +5,9 @@ import time
 from typing import Dict, Any, List
 from fastapi import WebSocket, WebSocketDisconnect
 from ..models.app_state import app_state
-from ..chaser_utils import get_chasers
 from ..fixture_utils import load_fixtures_config
 from ..models.song_metadata import SongMetadata, Section
-from ..timeline_engine import render_timeline
 from ..config import SONGS_DIR
-from .cue_service import cue_manager
 
 
 class WebSocketManager:
@@ -83,11 +80,12 @@ class WebSocketManager:
                         "action_proposals": []
                     })
                     
-                    # Broadcast cue updates to all clients if any action succeeded
+                    # Broadcast updates to all clients if any action succeeded
+                    # TODO: Implement new DMX Canvas update broadcast
                     if any_success:
                         await broadcast_to_all({
-                            "type": "cuesUpdated",
-                            "cues": cue_manager.cue_list
+                            "type": "dmxUpdated",
+                            "message": "DMX updated - new system in development"
                         })
                     
                     # Clear pending actions
@@ -201,8 +199,7 @@ class WebSocketManager:
             "type": "setup",
             "songs": app_state.get_songs_list(),
             "fixtures": app_state.fixture_config,
-            "presets": app_state.fixture_presets,
-            "chasers": get_chasers()
+            "presets": app_state.fixture_presets
         })
     
     async def disconnect(self, websocket: WebSocket) -> None:
@@ -264,92 +261,51 @@ class WebSocketManager:
         
         app_state.current_song_file = song_file
         app_state.current_song = SongMetadata(song_file, songs_folder=str(SONGS_DIR))
-        
-        # Load cues for this song
-        cue_manager.load_cues(song_file)
 
         await websocket.send_json({
             "type": "songLoaded",
             "metadata": app_state.current_song.to_dict(),
-            "cues": cue_manager.cue_list,
+            "message": "Song loaded - new DMX Canvas system in development"
         })
-        
-        # Render timeline
-        bpm = app_state.current_song.bpm
-        render_timeline(
-            app_state.fixture_config, 
-            app_state.fixture_presets, 
-            cues=cue_manager.cue_list, 
-            current_song=app_state.current_song_file, 
-            bpm=bpm
-        )
     
     async def _handle_get_cues(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
-        """Handle cue list request."""
-        print(f"🔍 Fetching cues for {cue_manager.current_song_file}")
+        """Handle cue list request - placeholder for new system."""
+        print(f"🔍 Cue system removed - new DMX Canvas system in development")
         await websocket.send_json({
-            "type": "cuesUpdated",
-            "cues": cue_manager.cue_list
+            "type": "systemMessage",
+            "message": "Cue system removed - new DMX Canvas system in development"
         })
     
     async def _handle_add_cue(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
-        """Handle adding a new cue."""
-        cue = message["cue"]
-        cue_manager.add_cue(cue)
-        print(f"📝 Added new cue: {cue}")
-        
-        cue_manager.save_cues()
-        
-        await broadcast_to_all({
-            "type": "cuesUpdated",
-            "cues": cue_manager.cue_list
+        """Handle adding a new cue - placeholder for new system."""
+        print("📝 Cue system removed - new DMX Canvas system in development")
+        await websocket.send_json({
+            "type": "systemMessage",
+            "message": "Cue system removed - new DMX Canvas system in development"
         })
     
     async def _handle_update_cues(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
-        """Handle bulk cue updates."""
-        cues = message["cues"]
-        cue_manager.update_cues(cues)
-        print(f"📝 Updated cues: {len(cues)} cues")
-        
-        cue_manager.save_cues()
-        
-        await broadcast_to_all({
-            "type": "cuesUpdated",
-            "cues": cue_manager.cue_list
+        """Handle bulk cue updates - placeholder for new system."""
+        print("📝 Cue system removed - new DMX Canvas system in development")
+        await websocket.send_json({
+            "type": "systemMessage",
+            "message": "Cue system removed - new DMX Canvas system in development"
         })
     
     async def _handle_update_cue(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
-        """Handle single cue update."""
-        updated = message["cue"]
-        for i, c in enumerate(cue_manager.cue_list):
-            if c["fixture"] == updated["fixture"] and c["time"] == updated["time"]:
-                cue_manager.cue_list[i] = updated
-                print(f"📝 Updated cue: {updated}")
-                break
-
-        cue_manager.save_cues()
-        
-        await broadcast_to_all({
-            "type": "cuesUpdated",
-            "cues": cue_manager.cue_list
+        """Handle single cue update - placeholder for new system."""
+        print("📝 Cue system removed - new DMX Canvas system in development")
+        await websocket.send_json({
+            "type": "systemMessage",
+            "message": "Cue system removed - new DMX Canvas system in development"
         })
     
     async def _handle_delete_cue(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
-        """Handle cue deletion."""
-        cue = message["cue"]
-
-        if "chaser_id" in cue:
-            cid = cue["chaser_id"]
-            cue_manager.delete_cue_by_chaser_id(cid)
-            print(f"🗑️ Deleted chaser group '{cid}'")
-        else:
-            cue_manager.delete_cue(cue["fixture"], cue["time"])
-
-        cue_manager.save_cues()
-        
-        await broadcast_to_all({
-            "type": "cuesUpdated",
-            "cues": cue_manager.cue_list
+        """Handle cue deletion - placeholder for new system."""
+        print("🗑️ Cue system removed - new DMX Canvas system in development")
+        await websocket.send_json({
+            "type": "systemMessage",
+            "message": "Cue system removed - new DMX Canvas system in development"
         })
     
     async def _handle_preview_dmx(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
@@ -397,36 +353,16 @@ class WebSocketManager:
             print("No song object loaded; cannot save key moments.")
 
     async def _handle_insert_chaser(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
-        """Handle chaser insertion."""
-        from ..chaser_utils import expand_chaser_template
-        
-        chaser_name = message["chaser"]
-        insert_time = message["time"]
-        user_params = message.get("parameters", {})
-        chaser_id = message.get("chaser_id")
-
-        bpm = app_state.song_metadata.get("bpm", 120)
-        new_cues = expand_chaser_template(chaser_name, insert_time, bpm)
-
-        for cue in new_cues:
-            cue["parameters"].update(user_params)
-            cue["chaser"] = chaser_name
-            cue["chaser_id"] = chaser_id
-
-        # Add new cues to the cue manager
-        for cue in new_cues:
-            cue_manager.add_cue(cue)
-        
-        cue_manager.save_cues()
-
-        await broadcast_to_all({
-            "type": "cuesUpdated",
-            "cues": cue_manager.cue_list
+        """Handle chaser insertion - placeholder for new system."""
+        print("🎬 Chaser system removed - new DMX Canvas system in development")
+        await websocket.send_json({
+            "type": "systemMessage",
+            "message": "Chaser system removed - new DMX Canvas system in development"
         })
     
     async def _handle_analyze_song(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
         """Handle song analysis."""
-        from ..song_analyze import song_analyze, build_test_cues
+        from ..song_analyze import song_analyze
         
         if not app_state.current_song:
             print("❌ No song loaded for analysis")
@@ -441,38 +377,27 @@ class WebSocketManager:
             "metadata": app_state.current_song.to_dict()
         })
 
+        # Note: Test cue generation removed - new DMX Canvas system in development
         create_test = message.get("renderTestCues", False)
         if create_test:
-            print("👁️‍🗨️ Generating cues from song analysis")
-            cues = build_test_cues(app_state.current_song)
-            cue_manager.update_cues(cues)
-            render_timeline(
-                app_state.fixture_config, 
-                app_state.fixture_presets, 
-                cues=cue_manager.cue_list, 
-                current_song=app_state.current_song_file, 
-                bpm=app_state.current_song.bpm
-            )
-
-            await broadcast_to_all({
-                "type": "cuesUpdated",
-                "cues": cue_manager.cue_list
+            print("👁️‍🗨️ Test cue generation removed - new DMX Canvas system in development")
+            await websocket.send_json({
+                "type": "systemMessage",
+                "message": "Test cue generation removed - new DMX Canvas system in development"
             })
     
     async def _handle_reload_fixtures(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
         """Handle fixture configuration reload."""
         print("--🔄 Reloading fixture configuration")
-        fixture_config, fixture_presets, chasers = load_fixtures_config(force_reload=True)
+        fixture_config, fixture_presets = load_fixtures_config(force_reload=True)
         
         app_state.fixture_config = fixture_config
         app_state.fixture_presets = fixture_presets
-        app_state.chasers = chasers
         
         await broadcast_to_all({
             "type": "fixturesUpdated",
             "fixtures": fixture_config,
-            "presets": fixture_presets,
-            "chasers": chasers
+            "presets": fixture_presets
         })
     
     async def _handle_set_dmx(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
@@ -515,7 +440,8 @@ class WebSocketManager:
                         updates[ch] = val
                 
                 # Send ArtNet update
-                send_artnet()
+                universe_data = get_universe()
+                send_artnet(0, bytes(universe_data))
                 
                 # Broadcast to all WebSocket clients
                 await broadcast_to_all({

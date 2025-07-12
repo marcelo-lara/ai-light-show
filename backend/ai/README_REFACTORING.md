@@ -31,7 +31,7 @@ The large `ollama_client.py` file has been successfully refactored into separate
 - **Functions**:
   - `generate_system_instructions()` - Build dynamic AI instructions
   - `get_system_message()` - Get system message for conversations
-  - `load_fixture_config()` - Load fixture/preset/chaser data
+  - `load_fixture_config()` - Load fixture/preset data
   - Helper functions for song context and action guidelines
 - **Size**: ~240 lines
 

@@ -2,11 +2,9 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import FixtureCard from './FixtureCard';
 import SongArrangement from './SongArrangement';
 import SongKeyMoments from './SongKeyMoments';
-import SongCues from './SongCues';
 import AudioPlayer from './AudioPlayer'; 
 import SongSelector from './SongSelector';
 import ChordsCard from './ChordsCard';
-import Chasers from './Chasers';
 import Fixtures from './Fixtures';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -38,7 +36,6 @@ export function App() {
   const [fixtures, setFixtures] = useState([]);
   const [fixturesPresets, setFixturesPresets] = useState([]);
   const [cues, setCues] = useState([]);
-  const [chasers, setChasers] = useState([]);
 
   // UI toast notification state
   const [toastMessage, setToast] = useState(null);
@@ -77,7 +74,6 @@ export function App() {
             setSongsList(msg.songs || []);
             setFixtures(msg.fixtures || []);
             setFixturesPresets(msg.presets || []);
-            setChasers(msg.chasers || []);
 
             // load default song if not set
             setCurrentSongFile("born_slippy.mp3");
@@ -111,7 +107,6 @@ export function App() {
             console.log("Received fixtures update:", msg);
             setFixtures(msg.fixtures || []);
             setFixturesPresets(msg.presets || []);
-            setChasers(msg.chasers || []);
             setToast("Fixtures updated!");
             break;
           }
@@ -249,16 +244,6 @@ export function App() {
           </div>
           )}
 
-          {/* Song Cue Controls Card */}
-          <div className="bg-white/10 rounded-2xl p-6 mb-6">
-            <SongCues 
-              cues={cues}
-              delCue={(cue)=>wsSend("deleteCue", {cue: cue})}
-              currentTime={currentTime}
-              setCurrentTime={setCurrentTime}
-              updateCues={(cues)=>wsSend("updateCues", {cues: cues})}
-            />
-          </div>
         </div>
       </div>
 
@@ -313,15 +298,6 @@ export function App() {
           />
         </div>
 
-        {/* Chasers Control */}
-        <div>
-          <Chasers
-            currentTime={currentTime}
-            chasers={chasers}
-            insertChaser={(chaserData) => wsSend("insertChaser", chaserData)}
-            reloadFixtures={() => wsSend("reloadFixtures", {})}
-          />
-        </div>
       </div>
     </div>
   );

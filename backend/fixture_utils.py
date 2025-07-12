@@ -1,6 +1,5 @@
 from typing import Dict
-from backend.chaser_utils import load_chaser_templates 
-from backend.config import MASTER_FIXTURE_CONFIG, FIXTURE_PRESETS, CHASER_TEMPLATE_PATH
+from backend.config import MASTER_FIXTURE_CONFIG, FIXTURE_PRESETS
 import json
 
 fixture_config = []
@@ -18,12 +17,11 @@ def load_fixtures_config(force_reload=False):
               fixture_presets = json.load(f)
               print(f"✅ Loaded fixture config with {len(fixture_config)} fixtures and {len(fixture_presets)} presets.")            
 
-              chasers = load_chaser_templates()  # Load chaser templates on startup
-              return fixture_config, fixture_presets, chasers
+              return fixture_config, fixture_presets
 
     except Exception as e:
         print("❌ load_fixtures_config error: ", e)
-        return [], [], []
+        return [], []
 
 def get_preset_channels(preset_name: str, fixture_config: dict) -> Dict[int, int]:
     """Get channel values for a given preset from fixture configuration."""
