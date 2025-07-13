@@ -36,8 +36,8 @@ class RgbParcan(FixtureModel):
             "type": self.fixture_type,
             "channels": self.channels
         }
-    
-    def _handle_flash(self, start_time: float = 0.0, duration: float = 1.0, intensity: float = 1.0, **kwargs) -> None:
+
+    def _handle_flash(self, colors: list[str] = ['red', 'green', 'blue'], start_time: float = 0.0, duration: float = 1.0, intensity: float = 1.0, **kwargs) -> None:
         """
         Handle the flash action for the RGB Parcan fixture.
         Set the 'dim' channel to max intensity, then fade to 0 for a flash effect.
@@ -54,11 +54,24 @@ class RgbParcan(FixtureModel):
         
         # Convert intensity percentage to DMX value (0-255)
         dmx_intensity = int(intensity * 255)
-        
-        # Set the dim channel to peak intensity instantly
-        self.set_channel_value('dim', dmx_intensity, start_time=start_time, duration=0.1)
-        
-        # Fade the dim channel to 0 over the specified duration
-        self.fade_channel('dim', dmx_intensity, 0, start_time=start_time + 0.1, duration=duration)
-        
+
+        # If no channel color is specified, use all RGB channels (usually red)
+        if not colors:
+            colors = ['red', 'green', 'blue']
+
+        # Set the specified color channels to peak intensity instantly
+        for color in colors:
+            if color not in self.channel_names:
+                print(f"⚠️ {self.name}: No '{color}' channel found for flash effect")
+                continue
+            # Set the channel value
+            self.set_channel_value(color, dmx_intensity, start_time=start_time, duration=0.1)
+
+
+        # Fade the channels to 0 over the specified duration
+        for color in colors:
+            if color not in self.channel_names:
+                continue
+            self.fade_channel(color, dmx_intensity, 0, start_time=start_time + 0.1, duration=duration)
+
         print(f"  ⚡ {self.name}: Flash effect at {start_time:.2f}s - peak {dmx_intensity}, fade over {duration:.2f}s")
