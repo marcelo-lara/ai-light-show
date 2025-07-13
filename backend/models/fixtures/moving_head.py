@@ -4,47 +4,32 @@ from backend.services.dmx_canvas import DmxCanvas
 
 
 class MovingHead(FixtureModel):
-    def __init__(self, id: str, name: str, dmx_canvas: Optional[DmxCanvas] = None):
+    def __init__(self, id: str, name: str, dmx_canvas: Optional[DmxCanvas] = None, config: Optional[Dict[str, Any]] = None):
         """
         Initialize an Moving Head fixture.
         Args:
             id (str): Unique identifier for the fixture.
             name (str): Name of the fixture.
             dmx_canvas (Optional[DmxCanvas]): The DMX canvas instance.
+            config (Optional[Dict[str, Any]]): Fixture configuration from fixtures.json.
         """
 
         self.action_handlers = {
             'arm': self._handle_arm,
+            'flash': self._handle_flash,
             'pan': self._handle_pan,
         }
 
-        super().__init__(id, name, 'moving_head', 12, dmx_canvas) # Moving Head uses 12 channels (e.g., pan, tilt, color, etc.)
+        super().__init__(id, name, 'moving_head', 12, dmx_canvas, config) # Moving Head uses 12 channels (e.g., pan, tilt, color, etc.)
     
-    def render_action(self, action: str, parameters: Optional[Dict[str, Any]] = None) -> None:
-        """
-        Render a specific action on the Moving Head fixture.
-        Args:
-            action (str): Action name (e.g., 'pan', 'tilt').
-            parameters (dict): Parameters for the action.
-        """
-        if parameters is None:
-            parameters = {}
-            
-        if action in self.action_handlers:
-            handler = self.action_handlers[action]
-            return handler(**parameters)
-        else:
-            raise ValueError(f"Action '{action}' is not available for fixture '{self.name}'. Available actions: {self.actions}")
-
     def _handle_arm(self) -> dict:
         """
         Handle the arm action for the Moving Head fixture.
         Returns:
             dict: Fixture properties.
         """
-        # Example of using the DMX canvas
-        if self.dmx_canvas:
-            print(f"  🎛️ {self.name} accessing DMX canvas (duration: {self.dmx_canvas.duration:.2f}s)")
+        # Use the base class set_arm method with configuration from fixtures.json
+        self.set_arm(True)
         
         return {
             "id": self.id,
@@ -53,21 +38,29 @@ class MovingHead(FixtureModel):
             "channels": self.channels
         }
     
+    def _handle_flash(self, args: dict) -> None:
+        """
+        Handle the flash action for the Moving Head fixture.
+        Set the 'dim' channel to 255, then fade to 0 for a flash effect.
+        Args:
+            args (dict): Abstract arguments to the effect.
+        """
+
+        ## get the 'dim' channel
+
+        ## set the 'dim' channel to 255
+
+        ## fade the 'dim' channel to 0 over 1 second
+
+
+
+
     def _handle_pan(self, position: float) -> None:
         """
         Handle the pan action for the Moving Head fixture.
         Args:
             position (float): Target position to pan the fixture.
         """
-        raise NotImplementedError()
-    
-    def _handle_flash(self, args: dict) -> None:
-        """
-        Handle the flash action for the Moving Head fixture.
-        Args:
-            args (dict): Abstract arguments to the effect.
-        """
-        raise NotImplementedError()
-
-
-## Example Moving Head fixture
+        # TODO: Implement pan movement using fixture configuration
+        print(f"  🔄 {self.name}: Pan to position {position} (not yet implemented)")
+        raise NotImplementedError("Pan movement not yet implemented")

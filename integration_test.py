@@ -42,6 +42,16 @@ for _, fixture in fixtures.fixtures.items():
     except ValueError as e:
         print(f"    - {e}")
 
+
+
+## save the DMX canvas to a file
+print("⛳️ Saving DMX canvas to file...")
+dmx_canvas_file = "integration_test_output.txt"
+with open(dmx_canvas_file, 'w') as f:
+    f.write(dmx_canvas.export_as_txt(end_channel=45))
+
+
+
 # for _, fixture in fixtures.fixtures.items():
 #     print(f"  -> {fixture.name} ({fixture.id}) {len(fixture.actions)} actions")
 #     for action in fixture.actions:

@@ -85,9 +85,19 @@ class FixturesListModel:
         # load fixtures based on their type
         for fixture_data in fixtures_data:
             if fixture_data['type'] == 'rgb':
-                fixture = RgbParcan(fixture_data['id'], fixture_data['name'], self._dmx_canvas)
+                fixture = RgbParcan(
+                    id=fixture_data['id'], 
+                    name=fixture_data['name'], 
+                    dmx_canvas=self._dmx_canvas, 
+                    config=fixture_data
+                )
             elif fixture_data['type'] == 'moving_head':
-                fixture = MovingHead(fixture_data['id'], fixture_data['name'], self._dmx_canvas)
+                fixture = MovingHead(
+                    id=fixture_data['id'], 
+                    name=fixture_data['name'], 
+                    dmx_canvas=self._dmx_canvas, 
+                    config=fixture_data
+                )
             else:
                 print(f"⚠️ Unknown fixture type: {fixture_data['type']}. Skipping fixture with ID {fixture_data['id']}.")
                 continue

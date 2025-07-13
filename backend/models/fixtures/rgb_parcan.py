@@ -1,16 +1,17 @@
 from .fixture_model import FixtureModel
-from typing import Optional
+from typing import Optional, Dict, Any
 from backend.services.dmx_canvas import DmxCanvas
 
 
 class RgbParcan(FixtureModel):
-    def __init__(self, id: str, name: str, dmx_canvas: Optional[DmxCanvas] = None):
+    def __init__(self, id: str, name: str, dmx_canvas: Optional[DmxCanvas] = None, config: Optional[Dict[str, Any]] = None):
         """
         Initialize an RGB Parcan fixture.
         Args:
             id (str): Unique identifier for the fixture.
             name (str): Name of the fixture.
             dmx_canvas (Optional[DmxCanvas]): The DMX canvas instance.
+            config (Optional[Dict[str, Any]]): Fixture configuration from fixtures.json.
         """
 
         self.action_handlers = {
@@ -18,7 +19,7 @@ class RgbParcan(FixtureModel):
             'flash': self._handle_flash,
         }
 
-        super().__init__(id, name, 'parcan', 3, dmx_canvas)  # RGB Parcan uses 3 channels (R, G, B)
+        super().__init__(id, name, 'parcan', 3, dmx_canvas, config)  # RGB Parcan uses 3 channels (R, G, B)
     
     def _handle_arm(self) -> dict:
         """
@@ -26,9 +27,8 @@ class RgbParcan(FixtureModel):
         Returns:
             dict: Fixture properties.
         """
-        # Example of using the DMX canvas
-        if self.dmx_canvas:
-            print(f"  🎛️ {self.name} accessing DMX canvas (duration: {self.dmx_canvas.duration:.2f}s)")
+        # Use the base class set_arm method with configuration from fixtures.json
+        self.set_arm(True)
         
         return {
             "id": self.id,
@@ -43,4 +43,6 @@ class RgbParcan(FixtureModel):
         Args:
             args (dict): Abstract arguments to the effect.
         """
-        raise NotImplementedError()
+        # TODO: Implement flash effect using fixture configuration
+        print(f"  ⚡ {self.name}: Flash effect (not yet implemented)")
+        raise NotImplementedError("Flash effect not yet implemented")
