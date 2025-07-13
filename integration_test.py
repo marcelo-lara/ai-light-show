@@ -32,18 +32,8 @@ fixtures = FixturesModel(
 
 ## 3. Paint DMX canvas with fixtures actions logic
 print("⛳️ Paint DMX canvas with fixtures actions logic...")
-for fixture in fixtures.fixtures.values():
-    print(f"  -> {fixture.name} (ID: {fixture.id})")
-    for action in fixture.actions:
-        print(f"    - Action: {action}")
-        try:
-            # Simulate rendering the action
-            fixture.render_action(action, {})
-        except ValueError as e:
-            print(f"    - Error: {e}")
-        except NotImplementedError:
-            print(f"    - Action '{action}' is not implemented for fixture '{fixture.name}'")
-        else:
-            print(f"    - Action '{action}' rendered successfully.")
-        print("\n")
+for _, fixture in fixtures.fixtures.items():
+    print(f"  -> {fixture.name} ({fixture.id}) {len(fixture.actions)} actions")
+    fixture.render_action('arm', {})
+    print("\n")
     

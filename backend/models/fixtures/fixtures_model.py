@@ -1,6 +1,6 @@
 from pathlib import Path
 import json
-from typing import Optional
+from typing import Dict, Optional
 from .fixture_model import FixtureModel
 from .rgb_parcan import RgbParcan
 from .moving_head import MovingHead
@@ -11,8 +11,17 @@ class FixturesModel:
         """
         Initialize the FixturesModel with an empty fixture list.
         """
-        self.fixtures = {}
+        self._fixtures = {}
         self.load_fixtures(fixtures_config_file, debug)
+
+    @property
+    def fixtures(self) -> Dict[str, FixtureModel]:
+        """
+        Get the fixtures dictionary.
+        Returns:
+            dict: Dictionary of fixtures with fixture ID as key.
+        """
+        return self._fixtures
 
     def add_fixture(self, fixture: FixtureModel) -> None:
         """
@@ -20,7 +29,7 @@ class FixturesModel:
         Args:
             fixture (FixtureModel): The fixture to add.
         """
-        self.fixtures[fixture.id] = fixture
+        self._fixtures[fixture.id] = fixture
 
     def get_fixture(self, id: str) -> Optional[FixtureModel]:
         """
@@ -30,7 +39,7 @@ class FixturesModel:
         Returns:
             Optional[FixtureModel]: The requested fixture, or None if not found.
         """
-        return self.fixtures.get(id)
+        return self._fixtures.get(id)
     
     def load_fixtures(self, fixtures_config_file:Path, debug=False) -> None:
         """
@@ -60,6 +69,6 @@ class FixturesModel:
             self.add_fixture(fixture)
 
         if debug:
-            print(f"Loaded {len(self.fixtures)} fixtures:")
-            for fixture in self.fixtures.values():
+            print(f"Loaded {len(self._fixtures)} fixtures:")
+            for fixture in self._fixtures.values():
                 print(f"  - {fixture}")

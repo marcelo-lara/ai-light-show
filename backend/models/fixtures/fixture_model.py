@@ -11,11 +11,31 @@ class FixtureModel:
             fixture_type (str): Type of the fixture (e.g., 'parcan', 'moving_head').
             channels (int): Number of DMX channels used by the fixture.
         """
-        self.id = id
-        self.name = name
-        self.fixture_type = fixture_type
-        self.channels = channels
+        self._id = id
+        self._name = name
+        self._fixture_type = fixture_type
+        self._channels = channels
         self.action_handlers = {}  # Should be overridden by subclasses
+    
+    @property
+    def id(self) -> str:
+        """Get the fixture ID."""
+        return self._id
+    
+    @property
+    def name(self) -> str:
+        """Get the fixture name."""
+        return self._name
+    
+    @property
+    def fixture_type(self) -> str:
+        """Get the fixture type."""
+        return self._fixture_type
+    
+    @property
+    def channels(self) -> int:
+        """Get the number of channels."""
+        return self._channels
     
     @property
     def actions(self):
