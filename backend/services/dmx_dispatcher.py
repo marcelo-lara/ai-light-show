@@ -33,11 +33,31 @@ def set_channel(ch: int, val: int) -> bool:
 
 # --- Send ArtNet packet ---
 last_artnet_send = 0
+last_packet = [0] * DMX_CHANNELS
+
 def send_artnet(_dmx_universe=None, debug=False):
+    """
+    Send ArtNet packet with DMX data.
+    
+    Args:
+        _dmx_universe: Can be bytes, list, or None. If None, uses global dmx_universe.
+        debug: Whether to print debug output.
+    """
     global last_artnet_send, last_packet, dmx_universe
 
+    # Handle different input types
     if _dmx_universe is not None:
-        dmx_universe = _dmx_universe
+        if isinstance(_dmx_universe, bytes):
+            # Convert bytes to list for processing
+            dmx_data = list(_dmx_universe)
+        elif isinstance(_dmx_universe, (list, tuple)):
+            # Use list/tuple directly
+            dmx_data = list(_dmx_universe)
+        else:
+            raise TypeError(f"_dmx_universe must be bytes, list, or None. Got {type(_dmx_universe)}")
+    else:
+        # Use global dmx_universe
+        dmx_data = dmx_universe
 
     # Limit sending rate to 60 FPS
     now = perf_counter()
@@ -45,8 +65,15 @@ def send_artnet(_dmx_universe=None, debug=False):
         return
     last_artnet_send = now
 
-    # Full 512-byte DMX data
-    full_data = dmx_universe[:DMX_CHANNELS] + [0] * (DMX_CHANNELS - len(dmx_universe))
+    # Ensure we have exactly 512 bytes of DMX data
+    if len(dmx_data) < DMX_CHANNELS:
+        # Pad with zeros if data is shorter than 512
+        full_data = dmx_data + [0] * (DMX_CHANNELS - len(dmx_data))
+    else:
+        # Truncate if data is longer than 512
+        full_data = dmx_data[:DMX_CHANNELS]
+
+    # Build ArtNet packet
     packet = bytearray()
     packet.extend(b'Art-Net\x00')                          # ID
     packet.extend((0x00, 0x50))                            # OpCode: ArtDMX
@@ -60,9 +87,9 @@ def send_artnet(_dmx_universe=None, debug=False):
 
     # Debug output
     if debug:
-      dmx_slice = dmx_universe[15:40]
-      dmx_str = '.'.join(f"{v:03d}" for v in dmx_slice)
-      print(f"[{now:.3f}] {dmx_str}")
+        dmx_slice = full_data[15:40]  # Use full_data instead of dmx_universe
+        dmx_str = '.'.join(f"{v:03d}" for v in dmx_slice)
+        print(f"[{now:.3f}] {dmx_str}")
 
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

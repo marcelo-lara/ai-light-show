@@ -70,8 +70,6 @@ print("⛳️ Sending DMX canvas to the artnet node...")
 from backend.services.dmx_dispatcher import send_artnet
 import time
 
-# Simple test loop to send a few seconds of the DMX canvas
-print("  - Sending first 10 seconds of DMX data at 44 FPS...")
 test_duration = 10.0  # Send 10 seconds of data
 test_fps = 44       # 44 frames per second for testing
 frame_interval = 1.0 / test_fps
@@ -82,11 +80,8 @@ for i in range(int(test_duration * test_fps)):
     # Get the DMX frame for this timestamp
     dmx_frame = dmx_canvas.get_frame(current_time)
     
-    # Convert bytes to list for send_artnet function
-    dmx_frame_list = list(dmx_frame)
-    
-    # Send the frame via ArtNet
-    send_artnet(dmx_frame_list, debug=True)
+    # Send the frame via ArtNet (now accepts bytes directly)
+    send_artnet(dmx_frame, debug=True)
     
     print(f"  📡 Sent frame {i+1}/{int(test_duration * test_fps)} @ {current_time:.2f}s")
     
