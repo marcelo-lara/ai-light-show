@@ -31,8 +31,8 @@ fixtures = FixturesListModel(
     debug=True
 )
 
-## 3. Paint DMX canvas with fixtures actions logic
-print("⛳️ Paint DMX canvas with fixtures actions logic...")
+## 3. Arm all fixtures with the action logic
+print("⛳️ Arm all fixtures with the action logic...")
 
 print(f"  - arm all fixtures")
 for _, fixture in fixtures.fixtures.items():
@@ -43,17 +43,30 @@ for _, fixture in fixtures.fixtures.items():
         print(f"    - {e}")
 
 
+## 4. Paint Flash action to all fixtures with an interval of 0.5 seconds between each fixture
+print("⛳️ Paint Flash action to all fixtures with an interval of 0.5 seconds between each fixture...")
+
+start_time = 0.5
+duration = 1.0
+intensity = 1 # Peak intensity for flash ( 1 = 100% = 255)
+for fixture_id, fixture in fixtures.fixtures.items():
+    print(f"  -> {fixture.name} ({fixture.id}) {len(fixture.actions)} actions")
+    try:
+        # Call the flash action with a start time and duration
+        fixture.render_action('flash', {
+            'start_time': start_time,
+            'duration': duration, 
+            'intensity': intensity
+        })
+        start_time += 0.5  # Increment start time for next fixture
+    except ValueError as e:
+        print(f"    - {e}")
+    except Exception as e:
+        print(f"    - Unexpected error: {e}")
+
 
 ## save the DMX canvas to a file
 print("⛳️ Saving DMX canvas to file...")
 dmx_canvas_file = "integration_test_output.txt"
 with open(dmx_canvas_file, 'w') as f:
     f.write(dmx_canvas.export_as_txt(end_channel=45))
-
-
-
-# for _, fixture in fixtures.fixtures.items():
-#     print(f"  -> {fixture.name} ({fixture.id}) {len(fixture.actions)} actions")
-#     for action in fixture.actions:
-#         print(f"    - {action}")
-    

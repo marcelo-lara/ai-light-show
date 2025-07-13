@@ -44,6 +44,11 @@ class FixtureModel:
         return self._channels
 
     @property
+    def channel_names(self) -> Dict[str, int]:
+        """Get the channel names to DMX channel mapping from configuration."""
+        return self._config.get('channels', {})
+
+    @property
     def dmx_canvas(self):
         """Get the DMX canvas associated with the fixture."""
         return self._dmx_canvas
@@ -117,6 +122,63 @@ class FixtureModel:
                 return channel_values
             
             self._dmx_canvas.paint_range(0.0, self._dmx_canvas.duration, arm_values_fn)
+    
+    def set_channel_value(self, channel_name: str, value: int, start_time: float = 0.0, duration: Optional[float] = None) -> None:
+        """
+        Set a specific channel to a value for a given time range.
+        Args:
+            channel_name (str): Name of the channel (e.g., 'dim', 'red', 'pan').
+            value (int): DMX value to set (0-255).
+            start_time (float): Start time in seconds.
+            duration (Optional[float]): Duration in seconds. If None, uses canvas duration.
+        """
+        if not self._dmx_canvas:
+            raise ValueError("DMX canvas is not set for this fixture.")
+        
+        channels_config = self._config.get('channels', {})
+        if channel_name not in channels_config:
+            raise ValueError(f"Channel '{channel_name}' not found in fixture '{self.name}' configuration")
+        
+        dmx_channel = channels_config[channel_name] - 1  # Convert to 0-based
+        end_time = start_time + (duration if duration is not None else self._dmx_canvas.duration)
+        
+        def channel_value_fn(t: float) -> Dict[int, int]:
+            return {dmx_channel: value}
+        
+        self._dmx_canvas.paint_range(start_time, end_time, channel_value_fn)
+        print(f"  💡 {self.name}: Setting channel {channel_name} (DMX {dmx_channel + 1}) to {value} from {start_time:.2f}s to {end_time:.2f}s")
+
+    def fade_channel(self, channel_name: str, from_value: int, to_value: int, start_time: float, duration: float) -> None:
+        """
+        Fade a channel from one value to another over a given duration.
+        Args:
+            channel_name (str): Name of the channel (e.g., 'dim', 'red', 'pan').
+            from_value (int): Starting DMX value (0-255).
+            to_value (int): Ending DMX value (0-255).
+            start_time (float): Start time in seconds.
+            duration (float): Duration of the fade in seconds.
+        """
+        if not self._dmx_canvas:
+            raise ValueError("DMX canvas is not set for this fixture.")
+        
+        channels_config = self._config.get('channels', {})
+        if channel_name not in channels_config:
+            raise ValueError(f"Channel '{channel_name}' not found in fixture '{self.name}' configuration")
+        
+        dmx_channel = channels_config[channel_name] - 1  # Convert to 0-based
+        end_time = start_time + duration
+        
+        def fade_fn(t: float) -> Dict[int, int]:
+            # Calculate progress from 0.0 to 1.0
+            progress = (t - start_time) / duration
+            progress = max(0.0, min(1.0, progress))  # Clamp to [0, 1]
+            
+            # Linear interpolation
+            current_value = int(from_value + (to_value - from_value) * progress)
+            return {dmx_channel: current_value}
+        
+        self._dmx_canvas.paint_range(start_time, end_time, fade_fn)
+        print(f"  🌈 {self.name}: Fading channel {channel_name} (DMX {dmx_channel + 1}) from {from_value} to {to_value} over {duration:.2f}s")
     
     def __str__(self) -> str:
         """
