@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """
-Test script to verify the flow of:
-1. initializing the DMX Canvas with a song duration.
-2. initialize the fixtures.
-3. paint dmx canvas with fixtures actions logic.
+Test script to verify the end-to-end flow
 """
-    
+
+RENDER_DMX = False  # Disable rendering to DMX for this test
+
 ## 1 Initialize the DMX Canvas with a song duration
 print("⛳️ Initializing DMX Canvas with song duration...")
 from backend.config import SONGS_DIR
@@ -65,30 +64,105 @@ for fixture_id, fixture in fixtures.fixtures.items():
         print(f"    - Unexpected error: {e}")
 
 
+## 5. Paint Flash of blue color to the RGB Parcan fixture (at 0.5 seconds interval)
+print("⛳️ Paint Flash of blue color to the RGB Parcan fixture (at 0.5 seconds interval)...")
+for fixture_id, fixture in fixtures.fixtures.items():
+    if fixture.fixture_type == 'parcan':
+        print(f"  -> {fixture.name} ({fixture.id}) {len(fixture.actions)} actions")
+        try:
+            # Call the flash action with blue color
+            fixture.render_action('flash', {
+                'colors': ['blue'],  # Flash with blue color
+                'start_time': start_time,
+                'duration': duration, 
+                'intensity': intensity
+            })
+            start_time += 0.25  # Increment start time for next fixture
+        except ValueError as e:
+            print(f"    - {e}")
+        except Exception as e:
+            print(f"    - Unexpected error: {e}")
+
+
+## 6. load ActionsSheet for the sample song "born_slippy"
+print("⛳️ Load ActionsSheet for the sample song 'born_slippy'...")
+from backend.models.actions_sheet import ActionsSheet, ActionModel
+actions_sheet = ActionsSheet('born_slippy')
+
+# Load existing actions (or create empty file if it doesn't exist)
+actions_sheet.load_actions()
+
+# add a flash action to parcan_pl at start_time with a duration of 0.5 seconds
+flash_action = ActionModel(
+    action="flash",
+    fixture_id="parcan_pl",
+    parameters={
+        "intensity": 1,
+        "colors": ["blue"]
+    },
+    start_time=start_time,
+    duration=0.5
+)
+actions_sheet.add_action(flash_action)
+
+# Save the actions to file
+actions_sheet.save_actions()
+print(f"  ✅ Added flash action to parcan_pl at {start_time}s with 0.5s duration")
+
+
+## 7. Render actions from ActionsSheet at specific timestamps
+print("⛳️ Render actions from ActionsSheet at specific timestamps...")
+from backend.services.actions_service import ActionsService
+
+# Create the ActionsService with fixtures and dmx_canvas
+actions_service = ActionsService(fixtures, dmx_canvas, debug=True)
+
+# Validate the actions before rendering
+validation_result = actions_service.validate_actions(actions_sheet)
+print(f"  📋 Validation: {validation_result['valid_actions']}/{validation_result['total_actions']} actions valid")
+if validation_result['errors']:
+    for error in validation_result['errors']:
+        print(f"    ❌ {error}")
+if validation_result['warnings']:
+    for warning in validation_result['warnings']:
+        print(f"    ⚠️  {warning}")
+
+# render actions to the dmx_canvas
+success = actions_service.render_actions_to_canvas(actions_sheet, clear_first=True)
+if success:
+    print(f"  ✅ Successfully rendered actions to DMX canvas")
+else:
+    print(f"  ❌ Failed to render actions to DMX canvas")
+
+# Test rendering actions at a specific timestamp (when our action should be active)
+test_timestamp = start_time + 0.1  # During our flash action
+render_result = actions_service.render_action_at_time(actions_sheet, test_timestamp)
+print(f"  🎯 At {test_timestamp}s: {render_result['active_actions_count']} active actions, {render_result['rendered_count']} rendered")
+
+
+
 ## Send the DMX canvas to the artnet node
-print("⛳️ Sending DMX canvas to the artnet node...")
-from backend.services.dmx_dispatcher import send_artnet
-import time
+if RENDER_DMX:
+    print("⛳️ Sending DMX canvas to the artnet node...")
+    from backend.services.dmx_dispatcher import send_artnet
+    import time
 
-test_duration = 10.0  # Send 10 seconds of data
-test_fps = 44       # 44 frames per second for testing
-frame_interval = 1.0 / test_fps
+    test_duration = start_time + 1.0
+    test_fps = 44       # 44 frames per second for testing
+    frame_interval = 1.0 / test_fps
 
-for i in range(int(test_duration * test_fps)):
-    current_time = i * frame_interval
-    
-    # Get the DMX frame for this timestamp
-    dmx_frame = dmx_canvas.get_frame(current_time)
-    
-    # Send the frame via ArtNet (now accepts bytes directly)
-    send_artnet(dmx_frame, debug=True)
-    
-    print(f"  📡 Sent frame {i+1}/{int(test_duration * test_fps)} @ {current_time:.2f}s")
-    
-    # Sleep until next frame (for real-time playback)
-    time.sleep(frame_interval)
-
-print("  ✅ ArtNet transmission test completed")
+    for i in range(int(test_duration * test_fps)):
+        current_time = i * frame_interval
+        
+        # Get the DMX frame for this timestamp
+        dmx_frame = dmx_canvas.get_frame(current_time)
+        
+        # Send the frame via ArtNet (now accepts bytes directly)
+        send_artnet(dmx_frame, debug=True)
+        
+        # Sleep until next frame (for real-time playback)
+        time.sleep(frame_interval)
+    print("  ✅ ArtNet transmission test completed")
 
 
 

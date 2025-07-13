@@ -183,6 +183,19 @@ class DmxCanvas:
         
         return timeline
 
+    def clear_canvas(self) -> None:
+        """
+        Clear the entire DMX canvas, resetting all channels to zero.
+        """
+        # Reset the entire canvas to zeros
+        self._canvas.fill(0)
+        
+        # Clear the timeline dictionary as well
+        self._timeline.clear()
+        
+        if self.debug:
+            print(f"DMX Canvas cleared: {self._num_frames} frames, {self.universe_size} channels reset to 0")
+    
     def export_as_txt(self, start_time: float = 0, end_time: float = 10, start_channel: int = 1, end_channel: int = 512) -> str:
         """
         Export the DMX canvas as a log string.
