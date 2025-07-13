@@ -31,13 +31,8 @@ class MovingHead(FixtureModel):
         if action in self.action_handlers:
             handler = self.action_handlers[action]
             return handler(**parameters)
-
-        if action not in self.actions:
-            raise ValueError(f"Action '{action}' is not available for fixture '{self.name}'.")
-        
-        print(f"⚠️ '{action}' could not be rendered on fixture '{self.name}'")
-
-        return super().render_action(action, parameters)
+        else:
+            raise ValueError(f"Action '{action}' is not available for fixture '{self.name}'. Available actions: {self.actions}")
 
     def _handle_arm(self) -> dict:
         """

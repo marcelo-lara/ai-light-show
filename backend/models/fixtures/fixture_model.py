@@ -15,7 +15,9 @@ class FixtureModel:
         self._name = name
         self._fixture_type = fixture_type
         self._channels = channels
-        self.action_handlers = {}  # Should be overridden by subclasses
+        # Initialize action_handlers if not already set by subclass
+        if not hasattr(self, 'action_handlers'):
+            self.action_handlers = {}  # Should be overridden by subclasses
     
     @property
     def id(self) -> str:
