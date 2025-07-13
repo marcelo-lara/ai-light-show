@@ -140,6 +140,57 @@ render_result = actions_service.render_action_at_time(actions_sheet, test_timest
 print(f"  🎯 At {test_timestamp}s: {render_result['active_actions_count']} active actions, {render_result['rendered_count']} rendered")
 
 
+## 8. Parse action commands from text using Actions Parser Service
+print("⛳️ Parse action commands from text using Actions Parser Service...")
+from backend.services.actions_parser_service import ActionsParserService
+
+# Create the Actions Parser Service
+parser_service = ActionsParserService(fixtures, debug=True)
+
+# Test various command formats
+commands_list = [
+    "flash parcan_pl blue at 6.0s for 1.0s with intensity 0.8",
+    "strobe all_parcans at 7.5s for 2.0s",
+    "fade head_el150 from red to blue at 9.0s for 3.0s",
+    "full parcan_pr intensity=0.5 at 11.0s for 1.5s"
+]
+
+print(f"  📝 Testing {len(commands_list)} commands:")
+parsed_actions = []
+
+for i, command in enumerate(commands_list):
+    print(f"    {i+1}. '{command}'")
+    actions = parser_service.parse_command(command)
+    
+    if actions:
+        for action in actions:
+            # Validate the action
+            is_valid, issues = parser_service.validate_action(action)
+            if is_valid:
+                parsed_actions.append(action)
+                actions_sheet.add_action(action)
+                print(f"      ✅ Parsed: {action.action} on {action.fixture_id} at {action.start_time}s")
+            else:
+                print(f"      ❌ Invalid action: {', '.join(issues)}")
+    else:
+        print(f"      ⚠️  No actions parsed from command")
+
+print(f"  🎯 Successfully parsed and added {len(parsed_actions)} actions to ActionsSheet")
+
+# Save the updated actions sheet
+actions_sheet.save_actions()
+print(f"  💾 Updated actions sheet saved with {len(actions_sheet)} total actions")
+
+# Show help for supported commands
+print("  📖 Supported command formats:")
+help_lines = parser_service.get_supported_commands_help().strip().split('\n')
+for line in help_lines[:10]:  # Show first 10 lines of help
+    print(f"    {line}")
+print("    ... (use parser_service.get_supported_commands_help() for full help)")
+
+
+
+
 
 ## Send the DMX canvas to the artnet node
 if RENDER_DMX:
