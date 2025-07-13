@@ -36,10 +36,16 @@ class MovingHead(FixtureModel):
 
     def _handle_arm(self) -> dict:
         """
-        Handle the arm action for the Moving Head fixture.
+        Set the arm channels to ARM value to the entire dmx canvas.
         Returns:
             dict: Fixture properties.
         """
+
+        if self._dmx_canvas is None:
+            raise ValueError("DMX canvas is not set for this fixture. Please set it before rendering actions.")
+
+        # get arm channels
+
         return {
             "id": self.id,
             "name": self.name,
@@ -62,3 +68,6 @@ class MovingHead(FixtureModel):
             args (dict): Abstract arguments to the effect.
         """
         raise NotImplementedError()
+
+
+## Example Moving Head fixture

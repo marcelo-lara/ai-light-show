@@ -1,8 +1,8 @@
 from typing import Optional, Dict, Any
-
+from backend.services.dmx_canvas import DmxCanvas
 
 class FixtureModel:
-    def __init__(self, id: str, name: str, fixture_type: str, channels: int):
+    def __init__(self, id: str, name: str, fixture_type: str, channels: int, dmx_canvas: Optional[DmxCanvas] = None):
         """
         Initialize a fixture model.
         Args:
@@ -15,6 +15,7 @@ class FixtureModel:
         self._name = name
         self._fixture_type = fixture_type
         self._channels = channels
+        self._dmx_canvas = dmx_canvas 
         # Initialize action_handlers if not already set by subclass
         if not hasattr(self, 'action_handlers'):
             self.action_handlers = {}  # Should be overridden by subclasses
@@ -38,7 +39,17 @@ class FixtureModel:
     def channels(self) -> int:
         """Get the number of channels."""
         return self._channels
+
+    @property
+    def dmx_canvas(self):
+        """Get the DMX canvas associated with the fixture."""
+        return self._dmx_canvas
     
+    @dmx_canvas.setter
+    def dmx_canvas(self, canvas):
+        """Set the DMX canvas for the fixture."""
+        self._dmx_canvas = canvas
+
     @property
     def actions(self):
         """
@@ -57,6 +68,8 @@ class FixtureModel:
         """
         if parameters is None:
             parameters = {}
+        if self._dmx_canvas is None:
+            raise ValueError("DMX canvas is not set for this fixture. Please set it before rendering actions.")
             
         if action in self.action_handlers:
             handler = self.action_handlers[action]

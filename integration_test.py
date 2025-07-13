@@ -27,13 +27,23 @@ from backend.config import FIXTURES_FILE
 from backend.models.fixtures_model import FixturesModel
 fixtures = FixturesModel(
     fixtures_config_file=FIXTURES_FILE,
+    dmx_canvas=dmx_canvas,
     debug=True
 )
 
 ## 3. Paint DMX canvas with fixtures actions logic
 print("⛳️ Paint DMX canvas with fixtures actions logic...")
+
+print(f"  - arm all fixtures")
 for _, fixture in fixtures.fixtures.items():
     print(f"  -> {fixture.name} ({fixture.id}) {len(fixture.actions)} actions")
-    fixture.render_action('arm', {})
-    print("\n")
+    try:
+        fixture.render_action('arm')
+    except ValueError as e:
+        print(f"    - {e}")
+
+# for _, fixture in fixtures.fixtures.items():
+#     print(f"  -> {fixture.name} ({fixture.id}) {len(fixture.actions)} actions")
+#     for action in fixture.actions:
+#         print(f"    - {action}")
     

@@ -4,15 +4,38 @@ from typing import Dict, Optional
 from .fixture_model import FixtureModel
 from .rgb_parcan import RgbParcan
 from .moving_head import MovingHead
+from backend.services.dmx_canvas import DmxCanvas
 
 
 class FixturesModel:
-    def __init__(self, fixtures_config_file:Path, debug=False):
+    def __init__(self, fixtures_config_file:Path, dmx_canvas: DmxCanvas, debug=False):
         """
         Initialize the FixturesModel with an empty fixture list.
         """
         self._fixtures = {}
-        self.load_fixtures(fixtures_config_file, debug)
+        self._dmx_canvas = dmx_canvas
+        self.debug = debug
+        self.load_fixtures(fixtures_config_file)
+
+    @property
+    def dmx_canvas(self) -> DmxCanvas:
+        """
+        Get the DMX canvas associated with the fixtures.
+        Returns:
+            DmxCanvas: The DMX canvas instance.
+        """
+        return self._dmx_canvas
+    
+    @dmx_canvas.setter
+    def dmx_canvas(self, canvas: DmxCanvas) -> None:
+        """
+        Set the DMX canvas for the fixtures.
+        Args:
+            canvas (DmxCanvas): The DMX canvas instance to set.
+        """
+        self._dmx_canvas = canvas
+        for fixture in self._fixtures.values():
+            fixture.dmx_canvas = canvas
 
     @property
     def fixtures(self) -> Dict[str, FixtureModel]:
@@ -41,13 +64,16 @@ class FixturesModel:
         """
         return self._fixtures.get(id)
     
-    def load_fixtures(self, fixtures_config_file:Path, debug=False) -> None:
+    def load_fixtures(self, fixtures_config_file:Path, debug=None) -> None:
         """
         Load fixtures from the fixtures.json file.
         This method initializes fixtures based on the provided data.
         Args:
             fixtures_data (list): List of fixture data dictionaries.
         """
+        if debug is None:
+            debug = self.debug
+
         if not fixtures_config_file.exists():
             raise FileNotFoundError(f"Fixtures configuration file {fixtures_config_file} not found.")
         
