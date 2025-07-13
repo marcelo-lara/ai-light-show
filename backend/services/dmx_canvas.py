@@ -29,7 +29,7 @@ class DmxCanvas:
         _canvas (np.ndarray): NumPy array for efficient frame manipulation.
     """
     
-    def __init__(self, fps: int = 44, duration: float = 300.0):
+    def __init__(self, fps: int = 44, duration: float = 300.0, debug: Optional[bool] = False):
         """
         Initialize a new DMX canvas.
         
@@ -40,14 +40,32 @@ class DmxCanvas:
         self.fps = fps
         self.duration = duration
         self.frame_duration = 1.0 / fps
-        self.num_frames = math.ceil(duration * fps)
+        self._num_frames = math.ceil(duration * fps)
         self.universe_size = 512
+        self.debug = debug
+        
+        # Initialize the canvas with zeros
+        # Each frame is a 512-byte array representing the DMX universe state
+        # The canvas is initialized to zero (all channels off)
+        
+        if self.debug:
+            print(f"Initializing DMX Canvas: {self._num_frames} frames, {self.universe_size} channels")
         
         # Internal storage as NumPy array for performance
-        self._canvas = np.zeros((self.num_frames, self.universe_size), dtype=np.uint8)
+        self._canvas = np.zeros((self._num_frames, self.universe_size), dtype=np.uint8)
         
         # Timeline dictionary for final storage and export
         self._timeline = {}
+    
+    @property
+    def num_frames(self) -> int:
+        """
+        Get the total number of frames in the timeline.
+        
+        Returns:
+            int: Total number of frames.
+        """
+        return self._num_frames
     
     def _time_to_frame_index(self, timestamp: float) -> int:
         """
@@ -60,7 +78,7 @@ class DmxCanvas:
             int: The nearest frame index.
         """
         frame_index = round(timestamp * self.fps)
-        return max(0, min(frame_index, self.num_frames - 1))
+        return max(0, min(frame_index, self._num_frames - 1))
     
     def _frame_index_to_time(self, frame_index: int) -> float:
         """
@@ -159,11 +177,57 @@ class DmxCanvas:
         """
         # Convert the NumPy array to a timeline dictionary
         timeline = {}
-        for frame_index in range(self.num_frames):
+        for frame_index in range(self._num_frames):
             timestamp = self._frame_index_to_time(frame_index)
             timeline[timestamp] = bytes(self._canvas[frame_index])
         
         return timeline
+
+    def export_as_txt(self, start_time: float = 0, end_time: float = 10, start_channel: int = 1, end_channel: int = 512) -> str:
+        """
+        Export the DMX canvas as a log string.
+        This method formats the timeline into a human-readable string,
+        with each line containing the timestamp and the corresponding DMX frame in int format.
+        
+        Args:
+            start_time (float): Start time for the export (default: 0).
+            end_time (float): End time for the export (default: entire canvas).
+            start_channel (int): Start channel for the export (1-based index) (default: 1).
+            end_channel (int): End channel for the export (1-based index) (default: 512).
+
+        Returns:
+            str: Formatted log string.
+        """
+        # Clamp channel indices to valid range
+        start_channel = max(1, min(start_channel, self.universe_size))
+        end_channel = max(1, min(end_channel, self.universe_size))
+        if end_channel < start_channel:
+            end_channel = start_channel
+
+        # Calculate frame indices for time range
+        start_frame = self._time_to_frame_index(start_time)
+        end_frame = self._time_to_frame_index(end_time)
+        if end_frame < start_frame:
+            end_frame = start_frame
+
+        # Header for selected channels
+        log_lines = []
+        log_lines.append(
+            "time  | " + ".".join(f"{i:03}" for i in range(start_channel, end_channel + 1))
+        )
+        log_lines.append("----- | " + "-" * (4 * (end_channel - start_channel + 1)))
+
+        # Iterate through the selected frames and format each
+        for frame_index in range(start_frame, end_frame + 1):
+            timestamp = self._frame_index_to_time(frame_index)
+            frame = self._canvas[frame_index]
+            selected_values = frame[start_channel - 1:end_channel]
+            # Format each value, replacing '000' with blanks for better readability
+            frame_values = [f"{value:03}" if value != 0 else "   " for value in selected_values]
+            line = f"{timestamp:.3f} | {'.'.join(frame_values)}"
+            log_lines.append(line)
+        return "\n".join(log_lines)
+
 
 
 if __name__ == "__main__":
@@ -182,6 +246,7 @@ if __name__ == "__main__":
     
     canvas.paint_range(2.0, 5.0, fade_in)
     
-    # Get a frame
-    frame_at_3s = canvas.get_frame(3.0)
-    print(f"Frame at 3.0s: {frame_at_3s[:30]}...")  # Show first 30 bytes
+    # Export as text
+    log_output = canvas.export_as_txt(start_channel=10, end_channel=22)
+    print("Exported log:")
+    print(log_output)  # Print first 500 characters of the log

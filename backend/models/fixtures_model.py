@@ -181,10 +181,6 @@ class MovingHead(FixtureModel):
         """
         raise NotImplementedError()
 
-
-
-
-
 class FixturesModel:
     def __init__(self, fixtures_config_file:Path, debug=False):
         """
