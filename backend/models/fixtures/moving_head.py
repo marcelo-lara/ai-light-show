@@ -1,14 +1,16 @@
 from .fixture_model import FixtureModel
 from typing import Optional, Dict, Any
+from backend.services.dmx_canvas import DmxCanvas
 
 
 class MovingHead(FixtureModel):
-    def __init__(self, id: str, name: str):
+    def __init__(self, id: str, name: str, dmx_canvas: Optional[DmxCanvas] = None):
         """
         Initialize an Moving Head fixture.
         Args:
             id (str): Unique identifier for the fixture.
             name (str): Name of the fixture.
+            dmx_canvas (Optional[DmxCanvas]): The DMX canvas instance.
         """
 
         self.action_handlers = {
@@ -16,7 +18,7 @@ class MovingHead(FixtureModel):
             'pan': self._handle_pan,
         }
 
-        super().__init__(id, name, 'moving_head', 12) # Moving Head uses 12 channels (e.g., pan, tilt, color, etc.)
+        super().__init__(id, name, 'moving_head', 12, dmx_canvas) # Moving Head uses 12 channels (e.g., pan, tilt, color, etc.)
     
     def render_action(self, action: str, parameters: Optional[Dict[str, Any]] = None) -> None:
         """
@@ -36,16 +38,14 @@ class MovingHead(FixtureModel):
 
     def _handle_arm(self) -> dict:
         """
-        Set the arm channels to ARM value to the entire dmx canvas.
+        Handle the arm action for the Moving Head fixture.
         Returns:
             dict: Fixture properties.
         """
-
-        if self._dmx_canvas is None:
-            raise ValueError("DMX canvas is not set for this fixture. Please set it before rendering actions.")
-
-        # get arm channels
-
+        # Example of using the DMX canvas
+        if self.dmx_canvas:
+            print(f"  🎛️ {self.name} accessing DMX canvas (duration: {self.dmx_canvas.duration:.2f}s)")
+        
         return {
             "id": self.id,
             "name": self.name,

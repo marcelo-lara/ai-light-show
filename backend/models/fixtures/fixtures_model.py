@@ -7,7 +7,7 @@ from .moving_head import MovingHead
 from backend.services.dmx_canvas import DmxCanvas
 
 
-class FixturesModel:
+class FixturesListModel:
     def __init__(self, fixtures_config_file:Path, dmx_canvas: DmxCanvas, debug=False):
         """
         Initialize the FixturesModel with an empty fixture list.
@@ -52,6 +52,8 @@ class FixturesModel:
         Args:
             fixture (FixtureModel): The fixture to add.
         """
+        # Set the DMX canvas for the fixture
+        fixture.dmx_canvas = self._dmx_canvas
         self._fixtures[fixture.id] = fixture
 
     def get_fixture(self, id: str) -> Optional[FixtureModel]:
@@ -83,9 +85,9 @@ class FixturesModel:
         # load fixtures based on their type
         for fixture_data in fixtures_data:
             if fixture_data['type'] == 'rgb':
-                fixture = RgbParcan(fixture_data['id'], fixture_data['name'])
+                fixture = RgbParcan(fixture_data['id'], fixture_data['name'], self._dmx_canvas)
             elif fixture_data['type'] == 'moving_head':
-                fixture = MovingHead(fixture_data['id'], fixture_data['name'])
+                fixture = MovingHead(fixture_data['id'], fixture_data['name'], self._dmx_canvas)
             else:
                 print(f"⚠️ Unknown fixture type: {fixture_data['type']}. Skipping fixture with ID {fixture_data['id']}.")
                 continue

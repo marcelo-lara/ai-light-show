@@ -6,7 +6,7 @@ from fastapi import WebSocket
 
 from backend.services.dmx_canvas import DmxCanvas
 from ..config import SONGS_DIR, FIXTURES_FILE
-from ..models.fixtures_model import FixturesModel
+from ..models.fixtures import FixturesListModel
 
 
 @dataclass
@@ -22,9 +22,11 @@ class PlaybackState:
 class AppState:
     """Central application state management."""
 
-    # Fixture management
-    fixtures = FixturesModel(fixtures_config_file=FIXTURES_FILE, debug=True)
-    dmx_canvas = DmxCanvas()
+    # DMX Canvas (must be created first)
+    dmx_canvas: DmxCanvas = field(default_factory=DmxCanvas)
+    
+    # Fixture management (depends on dmx_canvas)
+    fixtures: Optional[FixturesListModel] = field(default=None)
 
     # Fixture and lighting configuration
     fixture_config: List[Dict[str, Any]] = field(default_factory=list)
@@ -40,6 +42,15 @@ class AppState:
     
     # WebSocket connections
     websocket_clients: List[WebSocket] = field(default_factory=list)
+    
+    def __post_init__(self):
+        """Initialize fixtures after dmx_canvas is created."""
+        if self.fixtures is None:
+            self.fixtures = FixturesListModel(
+                fixtures_config_file=FIXTURES_FILE, 
+                dmx_canvas=self.dmx_canvas, 
+                debug=True
+            )
     
     def add_client(self, websocket: WebSocket) -> None:
         """Add a WebSocket client."""

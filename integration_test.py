@@ -24,8 +24,8 @@ dmx_canvas = DmxCanvas(
 ## 2 Initialize the fixtures
 print("⛳️ Initialize the fixtures...")
 from backend.config import FIXTURES_FILE
-from backend.models.fixtures_model import FixturesModel
-fixtures = FixturesModel(
+from backend.models.fixtures import FixturesListModel
+fixtures = FixturesListModel(
     fixtures_config_file=FIXTURES_FILE,
     dmx_canvas=dmx_canvas,
     debug=True
