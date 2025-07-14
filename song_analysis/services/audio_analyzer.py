@@ -6,6 +6,8 @@ from typing import Dict, Any
 import logging
 from pathlib import Path
 from models.song_metadata import SongMetadata
+from .load_metadata_hints import (load_arrangement_from_hints, load_key_moments_from_hints, load_chords_from_hints)
+
 from .audio import (
     extract_with_essentia,
     extract_stems,
@@ -44,6 +46,9 @@ class SongAnalyzer:
 
         if reset_file:
             song = SongMetadata(song.song_name, songs_folder=song.songs_folder, ignore_existing=True)
+            song = load_chords_from_hints(song)
+            song = load_key_moments_from_hints(song)
+            song = load_arrangement_from_hints(song)
 
         # Core analysis using Essentia
         logger.info("🎧 Extracting beats, volume and basic metadata using Essentia...")
