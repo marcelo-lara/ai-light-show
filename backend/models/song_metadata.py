@@ -98,7 +98,7 @@ class SongMetadata:
         self._chords: List[Dict[str, Any]] = []
         self._patterns: List[Dict[str, Any]] = []
         self._arrangement: List[Section] = []
-        self._duration = 0.0
+        self._duration = 2.0 * 60.0 # Default duration of 2 minutes
         self._drums: List[Dict[str, Any]] = []
         self._key_moments: List[Dict[str, Any]] = []
         
@@ -303,7 +303,7 @@ class SongMetadata:
         self.load_key_moments_from_hints()
 
     def get_metadata_path(self) -> str:
-        return os.path.join(self._songs_folder, f"{self._song_name}.meta.json")
+        return os.path.join(self._songs_folder, "data", f"{self._song_name}.meta.json")
 
     def exists(self) -> bool:
         return os.path.isfile(self.get_metadata_path())

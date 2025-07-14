@@ -152,7 +152,8 @@ commands_list = [
     "flash parcan_pl blue at 6.0s for 1.0s with intensity 0.8",
     "strobe all_parcans at 7.5s for 2.0s",
     "fade head_el150 from red to blue at 9.0s for 3.0s",
-    "full parcan_pr intensity=0.5 at 11.0s for 1.5s"
+    "full parcan_pr intensity=0.5 at 11.0s for 1.5s",
+    "flash parcan_pl blue at 300.0s for 1.0s with intensity 0.8",
 ]
 
 print(f"  📝 Testing {len(commands_list)} commands:")
@@ -188,7 +189,11 @@ for line in help_lines[:10]:  # Show first 10 lines of help
     print(f"    {line}")
 print("    ... (use parser_service.get_supported_commands_help() for full help)")
 
-
+success = actions_service.render_actions_to_canvas(actions_sheet, clear_first=True)
+if success:
+    print(f"  ✅ Successfully rendered actions to DMX canvas")
+else:
+    print(f"  ❌ Failed to render actions to DMX canvas")
 
 
 
@@ -218,7 +223,7 @@ if RENDER_DMX:
 
 
 ## save the DMX canvas to a file
-print("⛳️ Saving DMX canvas to file...")
+print("🏁 Saving DMX canvas to file...")
 dmx_canvas_file = "integration_test_output.txt"
 with open(dmx_canvas_file, 'w') as f:
     f.write(dmx_canvas.export_as_txt(end_channel=45))
