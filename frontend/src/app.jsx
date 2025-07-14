@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import FixtureCard from './components/fixtures/FixtureCard';
-import SongArrangement from './components/song/SongArrangement';
-import SongKeyMoments from './components/song/SongKeyMoments';
 import AudioPlayer from './AudioPlayer'; 
 import SongSelector from './components/song/SongSelector';
-import ChordsCard from './components/song/ChordsCard';
 import Fixtures from './components/fixtures/Fixtures';
 import ActionsCard from './components/ActionsCard';
 import { ToastContainer, toast } from 'react-toastify';
@@ -12,6 +9,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import SongAnalysis from './components/song/SongAnalysis';
 import ChatAssistant from './ChatAssistant';
+import SongMetadata from './components/SongMetadata';
 
 export function App() {
   const wsRef = useRef(null); // WebSocket reference
@@ -268,32 +266,17 @@ export function App() {
           />
         </div>
 
-        {/* Song Key Moments */}
-        <div>
-          <SongKeyMoments
+        {/* Song Metadata Components */}
+        {songData && (
+          <SongMetadata
             currentTime={currentTime}
             setCurrentTime={setCurrentTime}
             songData={songData}
             seekTo={(time) => handleSeekTo(time)}
-            saveKeyMoments={(km) => {wsSend("saveKeyMoments", {key_moments: km})}}
+            wsSend={wsSend}
           />
-        </div>
+        )}
 
-        {/* Song Arrangement */}
-        <div>
-          <SongArrangement
-            currentTime={currentTime}
-            setCurrentTime={setCurrentTime}
-            songData={songData}
-            seekTo={(time) => handleSeekTo(time)}
-            saveArrangement={(a) => {wsSend("saveArrangement", {arrangement: a})}}
-          />
-        </div>
-
-        {/* Chords Information */}
-        <div>
-          <ChordsCard songData={songData} currentTime={currentTime} setCurrentTime={setCurrentTime} />
-        </div>
 
         {/* Fixtures Control */}
         <div>

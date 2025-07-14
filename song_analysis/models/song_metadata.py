@@ -262,6 +262,10 @@ class SongMetadata:
         self.arrangement = []
         self.key_moments = []
 
+        ## TODO: try to load arrangement from hints folder
+
+        ## TODO: try to load key_moments from hints folder
+
     def add_beat(self, time: float, volume: float = 0.0, energy: float = 1.0) -> None:
         """Add a beat to the song metadata."""
         self.beats.append({"time": time, "volume": volume, "energy": energy})
