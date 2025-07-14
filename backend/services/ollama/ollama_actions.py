@@ -54,7 +54,19 @@ def extract_action_proposals(ai_response: str, session_id: str = "default"):
 
 
 def execute_confirmed_action(action_id: str, proposals: List[Dict]) -> Tuple[bool, str]:
-    """Execute a confirmed action from the proposals list."""
+    """
+    Execute a confirmed action from the proposals list using the Actions system.
+    
+    Follows the Actions-Based Flow: AI → Actions Sheet → Actions Service → DMX Canvas
+    Uses cached services from app_state to avoid re-initialization (performance optimization).
+    
+    Args:
+        action_id: ID of the action to execute from proposals
+        proposals: List of action proposals from AI response
+        
+    Returns:
+        Tuple of (success: bool, message: str)
+    """
     
     # Find the action by ID
     action = next((p for p in proposals if p.get('id') == action_id), None)
@@ -64,15 +76,14 @@ def execute_confirmed_action(action_id: str, proposals: List[Dict]) -> Tuple[boo
     if not action.get('can_execute', False):
         return False, f"Action cannot be executed: {action.get('error', 'Unknown error')}"
     
-    # Get current context
+    # Get current context from global app_state
     current_song = app_state.current_song
     if not current_song:
-        return False, "No song loaded"
+        return False, "No song loaded - Actions system requires an active song"
     
     # Import required modules
     from ...models.actions_sheet import ActionsSheet
     from pathlib import Path
-    from ...services.actions_parser_service import ActionsParserService
     from ...services.websocket_service import broadcast_to_all
     import asyncio
     
@@ -90,19 +101,21 @@ def execute_confirmed_action(action_id: str, proposals: List[Dict]) -> Tuple[boo
         if not fixtures:
             return False, "No fixtures configured"
         
-        # Create a parser for the action command
-        parser = ActionsParserService(fixtures, debug=True)
+        # Use cached parser service from app_state to avoid re-initialization
+        parser = app_state.get_actions_parser_service()
+        if not parser:
+            return False, "Failed to initialize actions parser service"
         
         # Parse the action command
         parsed_actions = parser.parse_command(action_command)
         if not parsed_actions:
             return False, f"Failed to parse action command: {action_command}"
         
-        # Initialize the actions sheet from the songs directory
+        # Initialize the actions sheet for current song (Actions system)
         actions_sheet = ActionsSheet(song_name)
         actions_sheet.load_actions()
         
-        # Add all parsed actions to the actions sheet
+        # Add all parsed actions to the actions sheet (replaces old cue system)
         for parsed_action in parsed_actions:
             actions_sheet.add_action(parsed_action)
         
@@ -117,11 +130,13 @@ def execute_confirmed_action(action_id: str, proposals: List[Dict]) -> Tuple[boo
                 "actions": actions_json
             }))
             
-            # Render the actions to the DMX canvas if available
+            # Render the actions to the DMX canvas using cached service
             if app_state.dmx_canvas:
-                from ...services.actions_service import ActionsService
-                actions_service = ActionsService(fixtures, app_state.dmx_canvas, debug=True)
-                actions_service.render_actions_to_canvas(actions_sheet, clear_first=False)
+                actions_service = app_state.get_actions_service()
+                if actions_service:
+                    actions_service.render_actions_to_canvas(actions_sheet, clear_first=False)
+                else:
+                    print("⚠️  Warning: Could not get actions service for DMX rendering")
             
             return True, f"Added {len(parsed_actions)} action(s) to the light show"
         else:

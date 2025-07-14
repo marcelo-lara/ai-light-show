@@ -375,6 +375,9 @@ class WebSocketManager:
             app_state.fixture_config = fixture_config
             app_state.fixture_presets = fixture_presets
             
+            # Invalidate cached services since fixtures changed
+            app_state.invalidate_service_cache()
+            
             await broadcast_to_all({
                 "type": "fixturesUpdated",
                 "fixtures": fixture_config,
