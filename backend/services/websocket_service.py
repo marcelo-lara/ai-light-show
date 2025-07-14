@@ -339,21 +339,65 @@ class WebSocketManager:
 
     
     async def _handle_analyze_song(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
-        """Handle song analysis."""
-        from .audio.song_analyze import song_analyze
+        """Handle song analysis using the standalone song analysis service."""
+        from .song_analysis_client import SongAnalysisClient
         
         if not app_state.current_song:
             print("❌ No song loaded for analysis")
+            await websocket.send_json({
+                "type": "analyzeResult",
+                "status": "error",
+                "message": "No song loaded for analysis"
+            })
             return
 
-        app_state.current_song = song_analyze(app_state.current_song)
-        app_state.current_song.save()
-
-        await websocket.send_json({
-            "type": "analyzeResult",
-            "status": "ok",
-            "metadata": app_state.current_song.to_dict()
-        })
+        try:
+            # Use the standalone song analysis service
+            async with SongAnalysisClient() as client:
+                # First check if service is healthy
+                health = await client.health_check()
+                if health.get("status") != "healthy":
+                    raise Exception(f"Song analysis service is not healthy: {health.get('error', 'Unknown error')}")
+                
+                # Perform analysis
+                result = await client.analyze_song(
+                    song_path=app_state.current_song.mp3_path,
+                    reset_file=True,
+                    debug=False
+                )
+                
+                if result.get("status") == "success":
+                    # Update the current song with analysis results
+                    metadata = result.get("metadata", {})
+                    
+                    # Update song properties
+                    app_state.current_song.bpm = metadata.get("bpm", app_state.current_song.bpm)
+                    app_state.current_song.duration = metadata.get("duration", app_state.current_song.duration)
+                    app_state.current_song.beats = metadata.get("beats", [])
+                    app_state.current_song.patterns = metadata.get("patterns", [])
+                    app_state.current_song.chords = metadata.get("chords", [])
+                    app_state.current_song.drums = metadata.get("drums", [])
+                    app_state.current_song.arrangement = metadata.get("arrangement", [])
+                    app_state.current_song.key_moments = metadata.get("key_moments", [])
+                    
+                    # Save updated metadata
+                    app_state.current_song.save()
+                    
+                    await websocket.send_json({
+                        "type": "analyzeResult",
+                        "status": "ok",
+                        "metadata": app_state.current_song.to_dict()
+                    })
+                else:
+                    raise Exception(result.get("message", "Analysis failed"))
+                    
+        except Exception as e:
+            print(f"❌ Song analysis failed: {str(e)}")
+            await websocket.send_json({
+                "type": "analyzeResult",
+                "status": "error",
+                "message": f"Analysis failed: {str(e)}"
+            })
 
         # DEPRECATED: Test cue generation removed
         create_test = message.get("renderTestCues", False)

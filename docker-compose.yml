@@ -5,12 +5,30 @@ services:
       - "5500:5500"
     networks:
       - ailightshow
-
+    depends_on:
+      - song-analysis
     volumes:
       - ./songs:/app/static/songs
       - ./fixtures:/app/static/fixtures
       - ./.cache:/root/.cache
     restart: unless-stopped
+    environment:
+      - SONG_ANALYSIS_SERVICE_URL=http://song-analysis:8001
+
+  song-analysis:
+    build:
+      context: ./song_analysis
+      dockerfile: Dockerfile
+    networks:
+      - ailightshow
+    volumes:
+      - ./songs:/app/static/songs:ro
+      - ./songs/data:/app/static/songs/data      
+      - ./.cache:/app/cache
+      - ./song_analysis/temp:/app/temp
+    restart: unless-stopped
+    expose:
+      - "8001" 
 
   backend-llm:
     image: ollama/ollama
