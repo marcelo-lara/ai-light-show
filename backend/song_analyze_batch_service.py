@@ -5,59 +5,16 @@ This replaces the original song_analyze_batch.py to use the microservice.
 """
 
 import asyncio
-import os
 import sys
-from pathlib import Path
 from backend.services.song_analysis_client import SongAnalysisClient
 
 
-async def analyze_batch_with_service(songs_folder: str = "/home/darkangel/ai-light-show/songs"):
+async def analyze_batch_with_service():
     """
     Analyze all MP3 files in the songs folder using the Song Analysis Service.
-    
-    Args:
-        songs_folder: Path to folder containing MP3 files
+    The service will automatically use the internal volume mapped songs folder.
     """
-    print(f"🎵 Starting batch analysis of songs in: {songs_folder}")
-    
-    # Get list of MP3 files
-    folder_path = Path(songs_folder)
-    if not folder_path.exists():
-        print(f"❌ Songs folder not found: {songs_folder}")
-        return
-    
-    mp3_files = list(folder_path.glob("*.mp3"))
-    if not mp3_files:
-        print("❌ No MP3 files found in the songs folder.")
-        return
-    
-    print(f"📁 Found {len(mp3_files)} MP3 files to analyze")
-    
-    # Clean up any existing temp files
-    temp_folder = folder_path / "temp"
-    if temp_folder.exists():
-        print(f"🧹 Cleaning up existing temp folder: {temp_folder}")
-        try:
-            import shutil
-            shutil.rmtree(temp_folder)
-        except Exception as e:
-            print(f"⚠️ Warning: Could not remove temp folder: {e}")
-    
-    # Remove any non-MP3 files (cleanup)
-    failed_to_remove = []
-    for file_path in folder_path.iterdir():
-        if file_path.is_file() and not file_path.name.endswith(".mp3") and file_path.name != ".gitkeep":
-            if file_path.is_dir():
-                continue  # Skip directories
-            try:
-                file_path.unlink()  # Remove file
-            except Exception as e:
-                failed_to_remove.append(str(file_path))
-    
-    if failed_to_remove:
-        print("⚠️ Failed to remove the following files:")
-        for file in failed_to_remove:
-            print(f"  {file}")
+    print(f"🎵 Starting batch analysis using Song Analysis Service")
     
     # Analyze songs using the service
     async with SongAnalysisClient() as client:
@@ -71,19 +28,34 @@ async def analyze_batch_with_service(songs_folder: str = "/home/darkangel/ai-lig
         
         print("✅ Song Analysis Service is healthy")
         
+        # List available songs
+        print("📁 Listing available songs...")
+        try:
+            songs_info = await client.list_songs()
+            song_names = songs_info.get("songs", [])
+            total_songs = songs_info.get("total", 0)
+            
+            if not song_names:
+                print("❌ No MP3 files found in the songs folder.")
+                return
+                
+            print(f"� Found {total_songs} songs to analyze")
+            
+        except Exception as e:
+            print(f"❌ Failed to list songs: {str(e)}")
+            return
+        
         # Process each song
         batch_results = []
         
-        for i, mp3_file in enumerate(sorted(mp3_files), 1):
+        for i, song_name in enumerate(song_names, 1):
             print(f"\n{'='*70}")
-            song_name = mp3_file.stem
-            print(f"[{i}/{len(mp3_files)}] Analyzing song: {song_name}")
-            print(f"File: {mp3_file}")
+            print(f"[{i}/{total_songs}] Analyzing song: {song_name}")
             
             try:
-                # Analyze the song
+                # Analyze the song by name
                 result = await client.analyze_song(
-                    song_path=str(mp3_file),
+                    song_name=song_name,
                     reset_file=True,
                     debug=True
                 )
@@ -163,5 +135,7 @@ async def analyze_batch_with_service(songs_folder: str = "/home/darkangel/ai-lig
 
 
 if __name__ == "__main__":
-    songs_folder = sys.argv[1] if len(sys.argv) > 1 else "/home/darkangel/ai-light-show/songs"
-    asyncio.run(analyze_batch_with_service(songs_folder))
+    print(f"Using Song Analysis Service for batch analysis")
+    print(f"Songs will be read from service's internal volume mapping")
+    
+    asyncio.run(analyze_batch_with_service())

@@ -359,9 +359,10 @@ class WebSocketManager:
                 if health.get("status") != "healthy":
                     raise Exception(f"Song analysis service is not healthy: {health.get('error', 'Unknown error')}")
                 
-                # Perform analysis
+                # Perform analysis using song name instead of full path
+                song_name = Path(app_state.current_song.mp3_path).stem
                 result = await client.analyze_song(
-                    song_path=app_state.current_song.mp3_path,
+                    song_name=song_name,
                     reset_file=True,
                     debug=False
                 )

@@ -49,7 +49,7 @@ analyzer = SongAnalyzer()
 
 # Request/Response models
 class AnalysisRequest(BaseModel):
-    song_path: str
+    song_name: str  # Changed from song_path to song_name
     reset_file: bool = True
     debug: bool = False
 
@@ -81,26 +81,36 @@ async def health_check():
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze_song(request: AnalysisRequest):
     """
-    Analyze a song file and return metadata including beats, BPM, patterns, etc.
+    Analyze a song file using song name and return metadata including beats, BPM, patterns, etc.
     
     Args:
-        request: Analysis request containing song path and options
+        request: Analysis request containing song name and options
         
     Returns:
         Analysis response with song metadata
     """
     try:
-        logger.info(f"Starting analysis for: {request.song_path}")
+        logger.info(f"Starting analysis for song: {request.song_name}")
+        
+        # Build the full path using the internal volume mapping
+        songs_folder = Path("/app/static/songs")
+        song_name = request.song_name
+        
+        # Remove .mp3 extension if provided
+        if song_name.endswith('.mp3'):
+            song_name = song_name[:-4]
+        
+        # Construct the song file path
+        song_path = songs_folder / f"{song_name}.mp3"
         
         # Validate input file exists
-        song_path = Path(request.song_path)
         if not song_path.exists():
-            raise HTTPException(status_code=404, detail=f"Song file not found: {request.song_path}")
+            raise HTTPException(status_code=404, detail=f"Song file not found: {song_name}.mp3 (looked in {song_path})")
         
         # Create SongMetadata object
         song = SongMetadata(
-            song_name=song_path.stem,
-            songs_folder=str(song_path.parent),
+            song_name=song_name,
+            songs_folder=str(songs_folder),
             ignore_existing=request.reset_file
         )
         
@@ -114,7 +124,7 @@ async def analyze_song(request: AnalysisRequest):
         # Save results
         analyzed_song.save()
         
-        logger.info(f"Analysis completed for: {request.song_path}")
+        logger.info(f"Analysis completed for song: {request.song_name}")
         
         return AnalysisResponse(
             status="success",
@@ -123,7 +133,7 @@ async def analyze_song(request: AnalysisRequest):
         )
         
     except Exception as e:
-        logger.error(f"Analysis failed for {request.song_path}: {str(e)}")
+        logger.error(f"Analysis failed for song {request.song_name}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 @app.post("/analyze/upload", response_model=AnalysisResponse)
@@ -155,9 +165,12 @@ async def analyze_uploaded_song(
             temp_path = temp_file.name
         
         try:
-            # Create analysis request
+            # Extract song name from filename
+            song_name = Path(file.filename).stem
+            
+            # Create analysis request using song name
             request = AnalysisRequest(
-                song_path=temp_path,
+                song_name=song_name,
                 reset_file=reset_file,
                 debug=debug
             )
@@ -178,46 +191,52 @@ async def analyze_uploaded_song(
         logger.error(f"Upload analysis failed for {file.filename}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Upload analysis failed: {str(e)}")
 
-@app.get("/analyze/batch/{songs_folder:path}")
-async def analyze_batch(songs_folder: str, reset_file: bool = True):
+@app.get("/analyze/batch")
+async def analyze_batch(reset_file: bool = True):
     """
-    Analyze all MP3 files in a folder.
+    Analyze all MP3 files in the internal songs folder.
     
     Args:
-        songs_folder: Path to folder containing MP3 files
         reset_file: Whether to reset existing analysis
         
     Returns:
         Batch analysis results
     """
     try:
-        folder_path = Path(songs_folder)
-        if not folder_path.exists():
-            raise HTTPException(status_code=404, detail=f"Folder not found: {songs_folder}")
+        # Use the internal volume mapped songs folder
+        songs_folder = Path("/app/static/songs")
         
-        mp3_files = list(folder_path.glob("*.mp3"))
+        if not songs_folder.exists():
+            raise HTTPException(status_code=404, detail=f"Songs folder not found: {songs_folder}")
+        
+        mp3_files = list(songs_folder.glob("*.mp3"))
         if not mp3_files:
-            raise HTTPException(status_code=404, detail="No MP3 files found in folder")
+            raise HTTPException(status_code=404, detail="No MP3 files found in songs folder")
         
         results = []
         for mp3_file in sorted(mp3_files):
             try:
+                # Use just the song name (without .mp3 extension)
+                song_name = mp3_file.stem
+                
                 request = AnalysisRequest(
-                    song_path=str(mp3_file),
+                    song_name=song_name,
                     reset_file=reset_file,
                     debug=False
                 )
                 
                 response = await analyze_song(request)
                 results.append({
-                    "file": str(mp3_file),
+                    "song_name": song_name,
+                    "file": mp3_file.name,
                     "status": "success",
                     "metadata": response.metadata
                 })
                 
             except Exception as e:
                 results.append({
-                    "file": str(mp3_file),
+                    "song_name": mp3_file.stem,
+                    "file": mp3_file.name,
                     "status": "error",
                     "error": str(e)
                 })
@@ -231,6 +250,33 @@ async def analyze_batch(songs_folder: str, reset_file: bool = True):
     except Exception as e:
         logger.error(f"Batch analysis failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Batch analysis failed: {str(e)}")
+
+@app.get("/songs")
+async def list_songs():
+    """
+    List all available MP3 files in the songs folder.
+    
+    Returns:
+        List of available song names
+    """
+    try:
+        songs_folder = Path("/app/static/songs")
+        
+        if not songs_folder.exists():
+            return {"songs": [], "message": "Songs folder not found"}
+        
+        mp3_files = list(songs_folder.glob("*.mp3"))
+        song_names = [mp3_file.stem for mp3_file in sorted(mp3_files)]
+        
+        return {
+            "songs": song_names,
+            "total": len(song_names),
+            "folder": str(songs_folder)
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to list songs: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to list songs: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
