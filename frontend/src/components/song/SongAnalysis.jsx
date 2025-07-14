@@ -1,7 +1,7 @@
 import { useState, useRef } from "preact/hooks";
 import { use, useEffect } from "react";
 import Bar from "./Bar";
-import PatternsTimeline from "./PatternsTimeline";
+import PatternsTimeline from "../../PatternsTimeline";
 
 export default function SongAnalysis({ songData, currentTime, setCurrentTime, analyzeSong, analysisResult, currentSongFile }) {
 

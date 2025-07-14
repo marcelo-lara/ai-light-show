@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import FixtureCard from './FixtureCard';
-import SongArrangement from './SongArrangement';
-import SongKeyMoments from './SongKeyMoments';
+import FixtureCard from './components/fixtures/FixtureCard';
+import SongArrangement from './components/song/SongArrangement';
+import SongKeyMoments from './components/song/SongKeyMoments';
 import AudioPlayer from './AudioPlayer'; 
-import SongSelector from './SongSelector';
-import ChordsCard from './ChordsCard';
-import Fixtures from './Fixtures';
+import SongSelector from './components/song/SongSelector';
+import ChordsCard from './components/song/ChordsCard';
+import Fixtures from './components/fixtures/Fixtures';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import SongAnalysis from './SongAnalysis';
+import SongAnalysis from './components/song/SongAnalysis';
 import ChatAssistant from './ChatAssistant';
 
 export function App() {

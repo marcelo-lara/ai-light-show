@@ -1,4 +1,4 @@
-import { formatTime } from "./utils";
+import { formatTime } from "../../utils";
 import { useEffect, useState, useRef } from 'preact/hooks';
 
 // Section schema: { name, start, end, prompt }

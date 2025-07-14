@@ -1,4 +1,4 @@
-import { formatTime } from "./utils";
+import { formatTime } from "../../utils";
 import { useEffect, useState, useRef } from 'preact/hooks';
 
 // Key moment schema: { time, name, description, duration }
