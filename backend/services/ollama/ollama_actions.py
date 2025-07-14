@@ -69,12 +69,69 @@ def execute_confirmed_action(action_id: str, proposals: List[Dict]) -> Tuple[boo
     if not current_song:
         return False, "No song loaded"
     
-    fixtures, presets = load_fixture_config()
+    # Import required modules
+    from ...models.actions_sheet import ActionsSheet
+    from pathlib import Path
+    from ...services.actions_parser_service import ActionsParserService
+    from ...services.websocket_service import broadcast_to_all
+    import asyncio
     
-    # TODO: Implement new fixture-based lighting logic here
-    # This is a placeholder until new DMX Canvas and Fixture system is implemented
-    
-    return False, "Action execution not yet implemented - awaiting new DMX Canvas system"
+    try:
+        # Get the action command from the proposal
+        action_command = action.get('command', '').strip()
+        if not action_command:
+            return False, "Empty action command"
+        
+        # Get song name from the current song file
+        song_name = Path(current_song.file_name).stem
+        
+        # Get fixtures from app state
+        fixtures = app_state.fixtures
+        if not fixtures:
+            return False, "No fixtures configured"
+        
+        # Create a parser for the action command
+        parser = ActionsParserService(fixtures, debug=True)
+        
+        # Parse the action command
+        parsed_actions = parser.parse_command(action_command)
+        if not parsed_actions:
+            return False, f"Failed to parse action command: {action_command}"
+        
+        # Initialize the actions sheet from the songs directory
+        actions_sheet = ActionsSheet(song_name)
+        actions_sheet.load_actions()
+        
+        # Add all parsed actions to the actions sheet
+        for parsed_action in parsed_actions:
+            actions_sheet.add_action(parsed_action)
+        
+        # Save the updated actions sheet
+        if actions_sheet.save_actions():
+            # Convert actions to dicts for JSON serialization
+            actions_json = [action.to_dict() for action in actions_sheet.actions]
+            
+            # Broadcast the update asynchronously
+            asyncio.create_task(broadcast_to_all({
+                "type": "actionsUpdate",
+                "actions": actions_json
+            }))
+            
+            # Render the actions to the DMX canvas if available
+            if app_state.dmx_canvas:
+                from ...services.actions_service import ActionsService
+                actions_service = ActionsService(fixtures, app_state.dmx_canvas, debug=True)
+                actions_service.render_actions_to_canvas(actions_sheet, clear_first=False)
+            
+            return True, f"Added {len(parsed_actions)} action(s) to the light show"
+        else:
+            return False, "Failed to save actions"
+        
+    except Exception as e:
+        import traceback
+        print(f"❌ Error executing action: {e}")
+        print(traceback.format_exc())
+        return False, f"Error executing action: {str(e)}"
 
 
 def _generate_friendly_description(command: str, fixtures: List[Dict], presets: List[Dict]) -> str:

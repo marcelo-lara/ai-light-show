@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 # Import routers
-from backend.routers import songs, websocket, dmx
+from backend.routers import songs, websocket
 
 # Import DMX player service
 from backend.services.dmx.dmx_player import dmx_player
@@ -52,7 +52,6 @@ def create_app() -> FastAPI:
     )
 
     # Include routers first (before static files to ensure API routes take precedence)
-    app.include_router(dmx.router)
     app.include_router(songs.router)
     app.include_router(websocket.router)
 
