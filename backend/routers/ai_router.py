@@ -23,11 +23,6 @@ class ActionConfirmationRequest(BaseModel):
     proposals: List[Dict[str, Any]]
     session_id: Optional[str] = "default"
 
-# DEPRECATED: CueCommand class removed - cue system deprecated
-# class CueCommand(BaseModel):
-#     command: str
-#     session_id: Optional[str] = "default"
-
 @router.post("/chat", response_model=ChatResponse)
 async def ai_chat(request: ChatRequest):
     """Chat with AI assistant for lighting design."""
@@ -47,20 +42,6 @@ async def ai_chat(request: ChatRequest):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI chat error: {str(e)}")
-
-# DEPRECATED: execute_cue_command removed - cue system deprecated
-# @router.post("/execute-cue", response_model=Dict[str, Any])
-# async def execute_cue_command(request: CueCommand):
-#     """Execute a natural language cue command - placeholder for new system."""
-#     
-#     # TODO: Implement new DMX Canvas and Fixture system
-#     return {
-#         "success": False,
-#         "message": "Cue system removed - new DMX Canvas system in development",
-#         "command": request.command,
-#         "interpretation": {},
-#         "confidence": 0.0
-#     }
 
 @router.get("/current-context")
 async def get_current_context():

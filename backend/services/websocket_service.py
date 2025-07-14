@@ -76,11 +76,12 @@ class WebSocketManager:
                     })
                     
                     # Broadcast updates to all clients if any action succeeded
-                    # TODO: Implement DMX Canvas update broadcast
-                    # This should broadcast the updated canvas state to all clients
                     if any_success:
+                        from ..dmx_controller import get_universe
+                        current_universe = get_universe()
                         await broadcast_to_all({
                             "type": "dmxCanvasUpdated",
+                            "universe": list(current_universe),
                             "message": "DMX Canvas updated by AI actions"
                         })
                     
@@ -277,10 +278,17 @@ class WebSocketManager:
             print(f"🎛️ Re-initializing DMX Canvas with duration: {song_duration:.2f}s")
             app_state.dmx_canvas = DmxCanvas(fps=44, duration=song_duration)
         else:
-            # TODO: Handle songs without duration metadata
-            # Consider using a default duration or audio file length detection
-            print("⚠️ Song duration not available, using default canvas duration")
-            app_state.dmx_canvas = DmxCanvas(fps=44, duration=300.0)  # 5 minute default
+            # Fallback to audio file length or default duration
+            from mutagen.mp3 import MP3
+            try:
+                audio = MP3(song_file)
+                song_duration = audio.info.length
+                print(f"⏱️ Using audio file duration: {song_duration:.2f}s")
+            except Exception as e:
+                print(f"⚠️ Failed to get audio duration: {e}, using default")
+                song_duration = 300.0  # 5 minute default
+            
+            app_state.dmx_canvas = DmxCanvas(fps=44, duration=song_duration)
 
         # Load actions for the song
         actions = []

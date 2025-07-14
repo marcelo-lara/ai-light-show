@@ -2,6 +2,7 @@
 List of actions for a song.
 """
 import json
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
@@ -157,9 +158,12 @@ class ActionsSheet:
         Args:
             action (ActionModel): The action to add
         """
-        ## TODO: if action.action_id is empty, generate a new unique action_id
-        ## TODO: if action.action_id is not empty, check if it is unique or raise an error if not
-            
+        if not action.action_id:
+            action.action_id = str(uuid.uuid4())
+        else:
+            if any(a.action_id == action.action_id for a in self.actions):
+                raise ValueError(f"Action ID {action.action_id} already exists")
+        
         self.actions.append(action)
     
     def remove_action(self, index: int) -> bool:
@@ -262,4 +266,3 @@ class ActionsSheet:
     def __iter__(self):
         """Iterate over actions."""
         return iter(self.actions)
-
