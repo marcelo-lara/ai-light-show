@@ -13,12 +13,13 @@ export default function ActionsCard({ wsActions = [] }) {
             <li key={index} className="bg-white/5 p-3 rounded-lg">
               <div className="flex justify-between items-start">
                 <div>
-                  <span className="font-medium">{action.name || 'Unnamed Action'}</span>
-                  <p className="text-sm text-gray-400">{action.description || action.command || 'No description'}</p>
+                  <span className="text-xs text-gray-500">{action.fixture_id}</span>
+                  <span className="font-medium">{action.action || 'Unnamed Action'}</span>
+                  <p className="text-sm text-gray-400">{action.fixture_id || action.parameters || 'No description'}</p>
                   
-                  {action.time !== undefined && (
+                  {action.start_time !== undefined && (
                     <div className="text-xs text-cyan-400 mt-1">
-                      Time: {action.time.toFixed(2)}s
+                      {action.start_time.toFixed(2)}s
                       {action.duration && ` (${action.duration.toFixed(2)}s)`}
                     </div>
                   )}

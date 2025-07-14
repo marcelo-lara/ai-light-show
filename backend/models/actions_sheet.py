@@ -27,6 +27,8 @@ class ActionModel:
     parameters: dict = field(default_factory=dict)
     start_time: float = 0.0
     duration: float = 0.0
+    action_id: str = ""  # Unique identifier for the action
+    group_id: str = ""  # Optional group ID for grouping actions
 
     def to_dict(self) -> dict:
         """Convert the action to a dictionary for JSON serialization."""
@@ -35,7 +37,9 @@ class ActionModel:
             "fixture_id": self.fixture_id,
             "parameters": self.parameters,
             "start_time": self.start_time,
-            "duration": self.duration
+            "duration": self.duration,
+            "action_id": self.action_id,
+            "group_id": self.group_id
         }
 
     @classmethod
@@ -46,7 +50,9 @@ class ActionModel:
             fixture_id=data.get("fixture_id", ""),
             parameters=data.get("parameters", {}),
             start_time=data.get("start_time", 0.0),
-            duration=data.get("duration", 0.0)
+            duration=data.get("duration", 0.0),
+            action_id=data.get("action_id", ""),
+            group_id=data.get("group_id", "")
         )
 
 
@@ -151,6 +157,9 @@ class ActionsSheet:
         Args:
             action (ActionModel): The action to add
         """
+        ## TODO: if action.action_id is empty, generate a new unique action_id
+        ## TODO: if action.action_id is not empty, check if it is unique or raise an error if not
+            
         self.actions.append(action)
     
     def remove_action(self, index: int) -> bool:

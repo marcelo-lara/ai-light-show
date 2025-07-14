@@ -30,8 +30,9 @@ The AI Light Show is an intelligent DMX lighting control system that uses AI to 
   # NOTE: Old cue system removed - no direct replacement for this functionality
   # Use the new Actions system instead
   ```
+- Update the "Current Architecture" 
 
-## 🏗️ Current Architecture (Post-Refactor)
+## 🏗️ Current Architecture
 
 ### Core Components
 
@@ -40,7 +41,7 @@ The AI Light Show is an intelligent DMX lighting control system that uses AI to 
 - **DMX Canvas** (`backend/services/dmx/dmx_canvas.py`): Timeline-based DMX universe management
 - **DMX Player** (`backend/services/dmx/dmx_player.py`): Real-time playback engine
 - **Fixtures System** (`backend/models/fixtures/`): Object-oriented fixture control
-- **Actions System** (`backend/models/actions_sheet.py`): NEW - Replaces deprecated cue system
+- **Actions System** (`backend/models/actions_sheet.py`): Instructions to paint dmx canvas (Replaces deprecated cue system)
 - **Audio Analysis** (`backend/services/audio/`): Essentia-based audio processing
 - **AI Integration** (`backend/services/ollama/`): Local LLM for lighting suggestions
 
@@ -49,7 +50,7 @@ The AI Light Show is an intelligent DMX lighting control system that uses AI to 
 - **Chat Assistant** (`frontend/src/ChatAssistant.jsx`): Natural language interface
 - **Song Analysis** (`frontend/src/components/song/SongAnalysis.jsx`): Audio analysis visualization
 - **Fixtures Control** (`frontend/src/components/fixtures/`): Real-time fixture monitoring
-- **Actions Card** (`frontend/src/components/ActionsCard.jsx`): NEW - Displays lighting actions
+- **Actions Card** (`frontend/src/components/ActionsCard.jsx`): Displays lighting actions
 
 ## 🚫 DEPRECATED SYSTEMS (DO NOT USE)
 
@@ -110,9 +111,15 @@ action = ActionModel(
     fixture_id="parcan_l",
     action_type="flash",
     start_time=5.2,
-    parameters={"colors": ["blue"], "duration": 1.5}
+    parameters={"colors": ["blue"], "duration": 1.5},
+    action_id="unique_id",
+    group_id="grouped_id" 
 )
 actions_sheet.add_action(action)
+
+# Action Dd and Group Id
+- Action Id is used for edit purposes, it must be unique in the entire ActionsSheet.
+- Group Id (optional) is used to link to the creator (e.g. "assistant", or "rainbow-sequence")
 
 # Render to canvas
 actions_service = ActionsService(fixtures, dmx_canvas)
