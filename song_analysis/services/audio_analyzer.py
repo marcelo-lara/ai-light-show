@@ -112,7 +112,7 @@ class SongAnalyzer:
                 continue
 
         # Guess arrangement if needed
-        if song.placeholder_prop:
+        if len(song.arrangement) == 0:
             logger.info("🎼 Guessing song arrangement...")
             guess_arrangement(song)
 

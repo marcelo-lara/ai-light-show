@@ -39,9 +39,8 @@ def guess_arrangement(song: SongMetadata) -> SongMetadata:
     if not song.beats:
         return song
 
-    # Create a simple arrangement based on beats
-    # This is a placeholder logic and should be replaced with actual arrangement logic
-    # A song usually has sections every 16 beats (4 bars at 4/4 time)
+    # TODO: This is a placeholder logic and should be replaced with actual arrangement logic
+    # -- placeholder start here --
     section_length = 16
     arrangement = []
     
@@ -60,6 +59,7 @@ def guess_arrangement(song: SongMetadata) -> SongMetadata:
                 f"{section_length} beats | volume: {section_volume:.3f}"
             )
             arrangement.append(section)
+    # -- placeholder ends here --
 
     song.arrangement = arrangement            
     return song

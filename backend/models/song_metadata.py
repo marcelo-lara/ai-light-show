@@ -113,8 +113,6 @@ class SongMetadata:
 
         if not ignore_existing and self.exists():
             self.load()
-        else:
-            self.initialize_song_metadata()
 
     @property
     def song_name(self) -> str:
@@ -217,7 +215,19 @@ class SongMetadata:
         if not isinstance(value, list):
             raise TypeError("Arrangement must be a list of Section objects.")
         if not all(isinstance(v, Section) for v in value):
-            raise TypeError("All elements of arrangement must be Section objects.")
+            # try to convert raw dicts to Section objects
+            value = [
+                item if isinstance(item, Section) else Section(
+                    name=str(item.get("name", "")),
+                    start=float(item.get("start", 0.0)),
+                    end=float(item.get("end", 0.0)),
+                    prompt=str(item.get("prompt", ""))
+                )
+                for item in value
+            ]
+
+            if not all(isinstance(v, Section) for v in value):
+                raise TypeError("All elements of arrangement must be Section objects.")
         self._arrangement = value
 
     def _find_mp3_path(self) -> Optional[str]:
@@ -323,52 +333,6 @@ class SongMetadata:
         self._arrangement = data.get("arrangement", [])
         self._key_moments = data.get("key_moments", [])
 
-        # attempt to load hints files if not already done
-        if len(self.beats) == 0:
-            self.load_chords_from_hints()
-        if len(self._arrangement) == 0:
-            self.load_arrangement_from_hints()
-        if len(self._key_moments) == 0:
-            loaded = self.load_key_moments_from_hints()
-            if not loaded:
-                # fallback to default key moments if not loaded
-                self.key_moments = [
-                    {"time": 0.0, "name": "Song Start", "description": "Beginning of the song", "duration": 0},
-                    {"time": 1.0, "name": "Drop", "description": "Main drop or beat drop", "duration": 0},
-                    {"time": 2.0, "name": "Break", "description": "Breakdown or break section", "duration": 0},
-                    {"time": 2.5, "name": "Build", "description": "Build-up section", "duration": 0},
-                ]
-
-    def initialize_song_metadata(self) -> None:
-        """Initialize song metadata with default values."""
-        # look for hints files
-        self._load_hints_files()
-        
-        self.beats = [
-            {"time": 0.5, "volume": 0.2, "energy": 0.3},
-            {"time": 1.0, "volume": 0.4, "energy": 0.5},
-            {"time": 1.5, "volume": 0.6, "energy": 0.7},
-            {"time": 2.0, "volume": 0.5, "energy": 0.6},
-            {"time": 2.5, "volume": 0.3, "energy": 0.4},
-        ]
-
-        if len(self._arrangement) == 0:
-            self.arrangement = [
-                Section("intro", 0.0, 0.5, "Intro section with ambient sounds. (placeholder)"),
-                Section("verse", 0.5, 1.5, "Verse with minimal instrumentation and vocals."),
-                Section("chorus", 1.5, 2.0, "Chorus with full energy and instrumentation."),
-                Section("bridge", 2.0, 2.5, "Bridge section with rhythmic variation."),
-                Section("outro", 2.5, 3.0, "Outro with fade-out or reduced energy.")
-            ]
-
-        if len(self._key_moments) == 0:
-            self.key_moments = [
-                {"time": 0.0, "name": "Song Start", "description": "Beginning of the song", "duration": 0},
-                {"time": 1.0, "name": "Drop", "description": "Main drop or beat drop", "duration": 0},
-                {"time": 2.0, "name": "Break", "description": "Breakdown or break section", "duration": 0},
-                {"time": 2.5, "name": "Build", "description": "Build-up section", "duration": 0},
-            ]
-
     def add_beat(self, time: float, volume: float = 0.0, energy: float = 1.0) -> None:
         self.beats.append({"time": time, "volume": volume, "energy": energy})
 
@@ -386,35 +350,6 @@ class SongMetadata:
             if abs(self.beats[i]["time"] - time) > 1e-6:
                 print(f"⚠️ Warning: Beat time mismatch at index {i}: expected {self.beats[i]['time']}, got {time}")
             self.beats[i]["volume"] = float(volume)
-
-    def set_beats_energy(self, beat_energy: List[Tuple[float, float]]) -> None:
-        if len(beat_energy) != len(self.beats):
-            print(f"⚠️ Warning: Energy list length {len(beat_energy)} does not match number of beats {len(self.beats)}.")
-            return
-        for i, (time, energy) in enumerate(beat_energy):
-            if abs(self.beats[i]["time"] - time) > 1e-6:
-                print(f"⚠️ Warning: Beat time mismatch at index {i}: expected {self.beats[i]['time']}, got {time}")
-            self.beats[i]["energy"] = float(energy)
-
-    def update_beat(self, time: float, volume: Optional[float] = None, energy: Optional[float] = None) -> None:
-        for beat in self.beats:
-            if beat["time"] == time:
-                if volume is not None:
-                    beat["volume"] = volume
-                if energy is not None:
-                    beat["energy"] = energy
-                return
-        print(f"⚠️ Beat at time {time} not found.")
-
-    def clear_patterns(self) -> None:
-        """Clears all patterns from the song metadata."""
-        self._patterns = []
-
-    def add_patterns(self, stem_name: str, patterns: List[Dict[str, Any]]) -> None:
-        """Adds patterns for a given stem to the song metadata."""
-        if not hasattr(self, "_patterns"):
-            self._patterns = []
-        self._patterns.append({"stem": stem_name, "clusters": patterns})
 
     def to_dict(self) -> Dict[str, Any]:
         data = {

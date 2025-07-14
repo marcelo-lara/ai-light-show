@@ -26,6 +26,8 @@ def load_arrangement_from_hints(song: SongMetadata) -> SongMetadata:
                     # Map 'label' to 'name' and add required 'prompt' field
                     section_data = section.copy()
                     section_data['name'] = section_data.pop('label')
+                    section_data['start'] = float(section_data.get('start', 0.0))
+                    section_data['end'] = float(section_data.get('end', 0.0))
                     section_data['prompt'] = ""  # Add empty prompt field
                     song.arrangement.append(Section(**section_data))
                 except TypeError as e:
