@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException
 from typing import Dict, Any
-from ..services.dmx_player import dmx_player
+from ..services.dmx.dmx_player import dmx_player
 
 router = APIRouter(prefix="/api/dmx", tags=["DMX Control"])
 

@@ -8,7 +8,7 @@ from ..models.app_state import app_state
 from ..fixture_utils import load_fixtures_config
 from ..models.song_metadata import SongMetadata, Section
 from ..config import SONGS_DIR
-from ..services.dmx_canvas import DmxCanvas
+from .dmx.dmx_canvas import DmxCanvas
 
 class WebSocketManager:
     """Manages WebSocket connections and message handling."""
@@ -231,7 +231,7 @@ class WebSocketManager:
     
     async def _handle_sync(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
         """Handle playback synchronization."""
-        from .dmx_player import dmx_player
+        from .dmx.dmx_player import dmx_player
         
         # Use the sync_playback method for smart synchronization
         is_playing = message.get("isPlaying", dmx_player.is_playing())

@@ -146,7 +146,7 @@ class DmxPlayer:
         """
         try:
             # Import here to avoid circular imports
-            from ..models.app_state import app_state
+            from ...models.app_state import app_state
             
             # Get DMX universe from canvas
             if app_state.dmx_canvas:

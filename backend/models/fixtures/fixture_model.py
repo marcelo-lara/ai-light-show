@@ -1,5 +1,5 @@
 from typing import Optional, Dict, Any
-from backend.services.dmx_canvas import DmxCanvas
+from backend.services.dmx.dmx_canvas import DmxCanvas
 
 class FixtureModel:
     def __init__(self, id: str, name: str, fixture_type: str, channels: int, dmx_canvas: Optional[DmxCanvas] = None, config: Optional[Dict[str, Any]] = None):

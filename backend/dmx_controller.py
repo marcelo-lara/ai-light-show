@@ -60,7 +60,7 @@ def send_artnet(universe: int, frame: bytes):
     except Exception as e:
         print(f"❌ Art-Net send error: {e}")
 
-from .services.dmx_canvas import DmxCanvas
+from .services.dmx.dmx_canvas import DmxCanvas
 import time
 
 from threading import Lock, Event

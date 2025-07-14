@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.routers import songs, websocket, dmx
 
 # Import DMX player service
-from backend.services.dmx_player import dmx_player
+from backend.services.dmx.dmx_player import dmx_player
 
 
 @asynccontextmanager

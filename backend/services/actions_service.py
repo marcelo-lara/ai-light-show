@@ -7,7 +7,7 @@ It renders actions from an ActionsSheet to the DMX canvas.
 from typing import Optional, Dict, Any
 from backend.models.actions_sheet import ActionsSheet, ActionModel
 from backend.models.fixtures.fixtures_list_model import FixturesListModel
-from backend.services.dmx_canvas import DmxCanvas
+from backend.services.dmx.dmx_canvas import DmxCanvas
 
 
 class ActionsService:

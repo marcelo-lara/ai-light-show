@@ -14,7 +14,7 @@ song_metadata = SongMetadata(
     songs_folder=str(SONGS_DIR),
 )
 
-from backend.services.dmx_canvas import DmxCanvas
+from backend.services.dmx.dmx_canvas import DmxCanvas
 dmx_canvas = DmxCanvas(
     duration=song_metadata.duration,
     debug=True
@@ -200,7 +200,7 @@ else:
 ## Send the DMX canvas to the artnet node
 if RENDER_DMX:
     print("⛳️ Sending DMX canvas to the artnet node...")
-    from backend.services.dmx_dispatcher import send_artnet
+    from backend.services.dmx.dmx_dispatcher import send_artnet
     import time
 
     test_duration = start_time + 1.0

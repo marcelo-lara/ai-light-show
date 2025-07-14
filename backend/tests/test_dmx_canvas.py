@@ -6,7 +6,7 @@ This module contains tests for the DmxCanvas class to verify its functionality.
 """
 import unittest
 import numpy as np
-from backend.services.dmx_canvas import DmxCanvas
+from backend.services.dmx.dmx_canvas import DmxCanvas
 
 
 class TestDmxCanvas(unittest.TestCase):

@@ -4,7 +4,7 @@ from typing import Dict, Optional
 from .fixture_model import FixtureModel
 from .rgb_parcan import RgbParcan
 from .moving_head import MovingHead
-from backend.services.dmx_canvas import DmxCanvas
+from backend.services.dmx.dmx_canvas import DmxCanvas
 
 
 class FixturesListModel:

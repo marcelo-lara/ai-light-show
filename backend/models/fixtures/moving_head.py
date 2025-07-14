@@ -1,6 +1,6 @@
 from .fixture_model import FixtureModel
 from typing import Optional, Dict, Any
-from backend.services.dmx_canvas import DmxCanvas
+from backend.services.dmx.dmx_canvas import DmxCanvas
 
 
 class MovingHead(FixtureModel):

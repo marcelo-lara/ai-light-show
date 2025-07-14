@@ -4,7 +4,7 @@ from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, field
 from fastapi import WebSocket
 
-from backend.services.dmx_canvas import DmxCanvas
+from backend.services.dmx.dmx_canvas import DmxCanvas
 from ..config import SONGS_DIR, FIXTURES_FILE
 from ..models.fixtures import FixturesListModel
 
