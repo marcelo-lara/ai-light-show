@@ -98,7 +98,7 @@ analyzed = song_analyze(song, reset_file=True)
 ## 🎵 Project-Specific Conventions
 
 ### File Organization
-- `songs/` - MP3 files + `data/*.meta.json` analysis + `data/*.actions.json` lighting
+- `songs/` - MP3 files + `data/<song_name>.meta.json` analysis files + `data/<song_name>.actions.json` lighting actions
 - `fixtures/fixtures.json` - Fixture definitions (RGB parcans, moving heads)
 - `backend/models/` - Data models (app_state, actions_sheet, song_metadata, fixtures)
 - `backend/services/` - Business logic (actions_service, dmx/, audio/, ollama/)
