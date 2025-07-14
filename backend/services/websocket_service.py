@@ -340,7 +340,7 @@ class WebSocketManager:
     
     async def _handle_analyze_song(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
         """Handle song analysis."""
-        from .song_analyze import song_analyze
+        from .audio.song_analyze import song_analyze
         
         if not app_state.current_song:
             print("❌ No song loaded for analysis")
