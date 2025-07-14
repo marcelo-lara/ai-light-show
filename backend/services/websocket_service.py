@@ -2,6 +2,7 @@
 
 import asyncio
 import time
+from pathlib import Path
 from typing import Dict, Any, List
 from fastapi import WebSocket, WebSocketDisconnect
 from ..models.app_state import app_state
@@ -190,11 +191,23 @@ class WebSocketManager:
         print(f"🧠 Client connected: {websocket.client}")
         
         # Send initial setup data
+        # Get actions for current song, if loaded
+        actions = []
+        if app_state.current_song_file:
+            try:
+                from ..models.actions_sheet import ActionsSheet
+                actions_sheet = ActionsSheet(Path(app_state.current_song_file).stem)
+                actions_sheet.load_actions()
+                actions = [action.to_dict() for action in actions_sheet.actions]
+            except Exception as e:
+                print(f"❌ Error loading actions for setup: {e}")
+        
         await websocket.send_json({
             "type": "setup",
             "songs": app_state.get_songs_list(),
             "fixtures": app_state.fixture_config,
-            "presets": app_state.fixture_presets
+            "presets": app_state.fixture_presets,
+            "actions": actions,  # Send current actionsheet
         })
     
     async def disconnect(self, websocket: WebSocket) -> None:
@@ -269,10 +282,29 @@ class WebSocketManager:
             print("⚠️ Song duration not available, using default canvas duration")
             app_state.dmx_canvas = DmxCanvas(fps=44, duration=300.0)  # 5 minute default
 
+        # Load actions for the song
+        actions = []
+        try:
+            from ..models.actions_sheet import ActionsSheet
+            song_name = Path(song_file).stem
+            actions_sheet = ActionsSheet(song_name)
+            actions_sheet.load_actions()
+            actions = [action.to_dict() for action in actions_sheet.actions]
+            print(f"📋 Loaded {len(actions)} actions for {song_name}")
+        except Exception as e:
+            print(f"❌ Error loading actions: {e}")
+
+        # Send song loaded message
         await websocket.send_json({
             "type": "songLoaded",
             "metadata": app_state.current_song.to_dict(),
             "message": f"Song loaded - DMX Canvas initialized with {song_duration:.2f}s duration"
+        })
+        
+        # Broadcast actions update to all clients
+        await broadcast_to_all({
+            "type": "actionsUpdate",
+            "actions": actions
         })
     
     

@@ -6,6 +6,7 @@ import AudioPlayer from './AudioPlayer';
 import SongSelector from './components/song/SongSelector';
 import ChordsCard from './components/song/ChordsCard';
 import Fixtures from './components/fixtures/Fixtures';
+import ActionsCard from './components/ActionsCard';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -32,11 +33,12 @@ export function App() {
   // Song Analysis state
   const [analysisResult, setAnalysisResult] = useState({});
 
+  // Lighting actions state
+  const [lightingActions, setLightingActions] = useState([]);
+
   // DMX fixtures and presets
   const [fixtures, setFixtures] = useState([]);
   const [fixturesPresets, setFixturesPresets] = useState([]);
-  // DEPRECATED: cues state removed - cue system deprecated
-  // const [cues, setCues] = useState([]);
 
   // UI toast notification state
   const [toastMessage, setToast] = useState(null);
@@ -86,12 +88,7 @@ export function App() {
             onDmxUpdate(universe);
             break;
           }
-          // DEPRECATED: cuesUpdated message handling removed - cue system deprecated
-          // case "cuesUpdated": {
-          //   console.log("Received cues update:", msg.cues);
-          //   setCues(msg.cues);
-          //   break;
-          // }
+          
           case "analyzeResult": {
             console.log("Received song analysis result:", msg);
             setAnalysisResult({"status": msg.status});
@@ -114,6 +111,12 @@ export function App() {
           }
           case "syncAck": {
             // keepalive message to acknowledge sync
+            break;
+          }
+          case "actionsUpdate": {
+            // Handle lighting actions updates from backend
+            console.log("Received actions update:", msg);
+            setLightingActions(msg.actions || []);
             break;
           }
           case "chatResponse": {
@@ -245,6 +248,10 @@ export function App() {
             />
           </div>
           )}
+
+
+          {/* Actions Card: Display lighting actions from the backend */}
+          <ActionsCard wsActions={lightingActions} />
 
         </div>
       </div>
