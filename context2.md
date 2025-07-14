@@ -3,7 +3,7 @@
 This project is a full-stack system for designing and playing synchronized DMX light shows to music. It includes:
 
 * 🎛️ **Fixture Controls** (Preact frontend)
-* 🎵 **Cue-based song syncing**
+* 🎵 **DEPRECATED: Cue-based song syncing (removed)**
 * 🕹️ **Real-time Art-Net packet sending**
 * 🧠 **Pre-rendered DMX timelines for playback accuracy**
 
@@ -13,18 +13,18 @@ This project is a full-stack system for designing and playing synchronized DMX l
 
 ### Frontend (Preact + Vite)
 
-* Visual editor for fixtures, cues, and arrangement
+* Visual editor for fixtures and arrangement (cues deprecated)
 * Loads fixtures from `/static/fixtures/master_fixture_config.json`
 * Loads presets from `/static/fixture_presets.json`
-* Cues are visualized and controlled inside the "Song Cue Controls" card
-* Sends DMX updates and cue events via fetch and WebSocket
+* DEPRECATED: Cues are visualized and controlled inside the "Song Cue Controls" card (removed)
+* Sends DMX updates via fetch and WebSocket (cue events deprecated)
 
 ### Backend (FastAPI)
 
 * Static file server for frontend
 * Art-Net UDP packet sender (44Hz loop)
 * DMX state tracking (512-channel universe)
-* Pre-renders cue timeline based on song and fixtures
+* DEPRECATED: Pre-renders cue timeline based on song and fixtures (removed)
 * Receives playback time sync over WebSocket (`/ws`)
 
 ---
@@ -80,9 +80,9 @@ Stored in `fixture_presets.json`. Example:
 
 ---
 
-## 🎬 Song Cues
+## 🚫 DEPRECATED: Song Cues (Removed)
 
-Stored in `public/songs/songname.mp3.cues.json`
+DEPRECATED: Stored in `public/songs/songname.mp3.cues.json` (no longer used)
 
 ```json
 [
@@ -99,8 +99,8 @@ Stored in `public/songs/songname.mp3.cues.json`
 
 ## 🕒 Timeline Rendering
 
-* `app.py` loads cues and presets at startup
-* Renders all cue events into a `timeline` list
+* `app.py` loads presets at startup (cues deprecated)
+* DEPRECATED: Renders all cue events into a `timeline` list (removed)
 * Timeline is looped and executed in sync with current song time
 
 ---
@@ -198,10 +198,10 @@ step type "fade": interpolate to new values over time
 
 Only applies to one fixture at a time
 
-🎵 Song Cues
-Each song has a cue list: songname.mp3.cues.json
+🚫 DEPRECATED: Song Cues (Removed)
+Each song had a cue list: songname.mp3.cues.json (no longer used)
 
-Cue structure includes:
+DEPRECATED: Cue structure included:
 
 fixture_id
 
@@ -211,10 +211,10 @@ start_time (in seconds)
 
 parameters overrides (e.g., duration)
 
-Cue lists are stored, loaded, and visualized independently from the song arrangement
+DEPRECATED: Cue lists were stored, loaded, and visualized independently from the song arrangement (removed)
 
-⏱️ Timeline & Playback
-Cues are pre-rendered server-side into a timeline variable for real-time playback
+⏱️ Timeline & Playback  
+DEPRECATED: Cues were pre-rendered server-side into a timeline variable for real-time playback (removed)
 
 Backend sends Art-Net UDP packets continuously at ~40Hz based on timeline and current_playback_time
 
@@ -231,7 +231,7 @@ Exposes:
 
 /dmx/universe: dumps current DMX state
 
-/songs/save: saves arrangement or cues
+/songs/save: saves arrangement (cues deprecated)
 
 /ws: syncs frontend playback
 
@@ -246,8 +246,8 @@ Arrangement markers (e.g., intro, drop)
 
 Fixtures panel (DMX sliders, presets)
 
-Cue controls (add, edit, trigger)
+DEPRECATED: Cue controls (add, edit, trigger) - removed
 
-Sends cue triggers, DMX updates, and playback time to backend
+Sends DMX updates and playback time to backend (cue triggers deprecated)
 
 Uses WebSockets for state sync and fetch API for updates

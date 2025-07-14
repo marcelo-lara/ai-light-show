@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import FixtureCard from './FixtureCard';
 
-export default function Fixtures({ fixtures, currentTime, fixturesPresets, addCue, previewDmx, wsSend }) {
+export default function Fixtures({ fixtures, currentTime, fixturesPresets, wsSend }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -23,8 +23,6 @@ export default function Fixtures({ fixtures, currentTime, fixturesPresets, addCu
                 fixture={fixture}
                 currentTime={currentTime}
                 allPresets={fixturesPresets}
-                addCue={addCue}
-                previewDmx={previewDmx}
                 wsSend={wsSend}
               />
             ))

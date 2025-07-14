@@ -15,7 +15,7 @@ The backend is built with **FastAPI** and provides a comprehensive set of APIs f
 
 - **FastAPI Application** (`backend/app.py`): Main application entry point with CORS configuration and route management
 - **DMX Controller** (`backend/services/dmx_dispatcher.py`): Art-Net DMX protocol implementation for lighting fixture control
-- **Timeline Engine** (`backend/timeline_engine.py`): Real-time cue execution and playback synchronization
+- **Timeline Engine** (`backend/timeline_engine.py`): DEPRECATED - Real-time cue execution and playback synchronization (removed)
 - **Render Engine** (`backend/render_engine.py`): DMX universe rendering and fixture state management
 
 #### AI & Audio Analysis

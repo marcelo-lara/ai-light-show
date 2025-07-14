@@ -14,7 +14,8 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime, an
     const [showPatterns, setShowPatterns] = useState(true);
     const [showPatternsTimeline, setShowPatternsTimeline] = useState(false);
     const [showBeats, setShowBeats] = useState(false);
-    const [generateCues, setGenerateCues] = useState(false);
+    // DEPRECATED: generateCues state removed - cue system deprecated
+    // const [generateCues, setGenerateCues] = useState(false);
     const currentBeatRef = useRef(null);
     const currentClusterBeatRef = useRef(null);
 
@@ -94,7 +95,8 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime, an
     }
 
     const handleAnalyzeSong = () => {
-      analyzeSong({songFile: currentSongFile, renderTestCues: generateCues});
+      // DEPRECATED: renderTestCues parameter removed - cue system deprecated
+      analyzeSong({songFile: currentSongFile});
     }
 
     return (
@@ -141,7 +143,8 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime, an
             >
               🔍 Analyze Song
             </button>
-            <label className="flex items-center space-x-2">
+            {/* DEPRECATED: Generate Cues checkbox removed - cue system deprecated */}
+            {/* <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
                 checked={generateCues}
@@ -149,7 +152,7 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime, an
                 className="form-checkbox h-4 w-4 text-blue-600"
               />
               <span className="text-sm">Generate Cues</span>
-            </label>
+            </label> */}
 
           </div>
         </div>

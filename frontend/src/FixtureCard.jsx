@@ -1,10 +1,11 @@
 // Fixture Card
 
-import PresetSelector from "./PresetSelector";
+// DEPRECATED: PresetSelector import removed - cue system deprecated
+// import PresetSelector from "./PresetSelector";
 import FixtureDmxChannels from "./FixtureDmxChannels";
 import { useState, useEffect, useRef } from "preact/hooks";
 
-export default function FixtureCard({ fixture, currentTime, addCue, allPresets, previewDmx, wsSend }) {
+export default function FixtureCard({ fixture, currentTime, allPresets, wsSend }) {
   const [values, setValues] = useState({ ...fixture.current_values });
   const { name, channels, presets } = fixture;
   const [expandedMap, setExpandedMap] = useState({});
@@ -49,13 +50,14 @@ export default function FixtureCard({ fixture, currentTime, addCue, allPresets, 
         <div className="px-4 pb-4 text-sm text-gray-300">
           
           <div className="mb-2">
-            <PresetSelector
+            {/* DEPRECATED: PresetSelector removed - cue system deprecated */}
+            {/* <PresetSelector
               fixture={fixture}
               presets={allPresets}
               currentTime={currentTime}
               onAddCue={(cue) => {addCue(cue);}}
               previewDmx={(cue) => {previewDmx(cue);}}
-            />
+            /> */}
           </div>
             
 

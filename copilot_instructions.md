@@ -3,19 +3,22 @@
 ### **Project Overview**
 This is an AI-powered light show system that synchronizes DMX lighting with music. The system uses FastAPI backend, React/Preact frontend, and integrates with Mistral AI for natural language lighting control.
 
-### **Recent Accomplishments (Just Completed)**
+**🚫 DEPRECATED: Cue System Removed**
+The entire cue-based lighting system has been removed and replaced with a new DMX Canvas approach. All cue-related functionality has been deprecated.
 
-#### **1. AI Action Command System - FULLY IMPLEMENTED ✅**
+### **DEPRECATED - Previous Accomplishments (Cue System Removed)**
+
+#### **1. AI Action Command System - DEPRECATED ✅**
 - **Problem Solved**: AI was generating vague commands like "Add some cool lights"
 - **Solution**: Enhanced Mistral prompt with mandatory command structure
 - **Result**: Now generates specific commands like "ACTION: Add bright white strobe effect during the drop using all RGB fixtures"
 
-#### **2. Cue Management Improvements - FULLY IMPLEMENTED ✅**
+#### **2. Cue Management Improvements - DEPRECATED ✅**
 - **Problem Solved**: Cues had duration=0 and type="Unknown", AI actions weren't saved
 - **Solution**: Enhanced `CueManager.add_cue()` and `execute_confirmed_action()`
 - **Result**: Proper defaults, automatic saving, detailed logging
 
-#### **3. Cue Interpreter Enhancements - FULLY IMPLEMENTED ✅**
+#### **3. Cue Interpreter Enhancements - DEPRECATED ✅**
 - **Problem Solved**: Complex commands like "strobes during the drop" failed
 - **Solution**: Added smart timing/fixture fallbacks and pattern recognition
 - **Result**: 5/5 test commands now execute successfully
@@ -25,26 +28,26 @@ This is an AI-powered light show system that synchronizes DMX lighting with musi
 - **Added**: Auto-scroll to latest message
 - **Status**: Ready for AI conversation testing
 
-### **Key Files & Recent Changes**
+### **DEPRECATED - Key Files (Cue System Removed)**
 
 #### **Backend Files:**
-1. **ollama_client.py** - Enhanced Mistral prompt system
-   - Added mandatory ACTION command structure
-   - Enhanced with 9 success tips and examples
-   - Fixed `execute_confirmed_action()` to use global cue_manager and auto-save
+1. **ollama_client.py** - DEPRECATED: Mistral prompt system enhanced for cues
+   - DEPRECATED: Added mandatory ACTION command structure for cues
+   - DEPRECATED: Enhanced with 9 success tips and examples for cues
+   - DEPRECATED: Fixed `execute_confirmed_action()` to use global cue_manager and auto-save
 
-2. **cue_service.py** - Improved cue management
-   - Enhanced `add_cue()` with defaults and detailed logging
-   - Fixed duration/type handling
+2. **DEPRECATED: cue_service.py** - Cue management (removed)
+   - DEPRECATED: Enhanced `add_cue()` with defaults and detailed logging
+   - DEPRECATED: Fixed duration/type handling
 
-3. **cue_interpreter.py** - Enhanced command parsing
-   - Added beat timing patterns ("on beat hits", "for X beats")
-   - Improved fixture detection ("left side lights", "all RGB fixtures")
-   - Better musical timing fallbacks
+3. **DEPRECATED: cue_interpreter.py** - Command parsing (removed)
+   - DEPRECATED: Added beat timing patterns ("on beat hits", "for X beats")
+   - DEPRECATED: Improved fixture detection ("left side lights", "all RGB fixtures")
+   - DEPRECATED: Better musical timing fallbacks
 
 4. **websocket_service.py** - Updated action execution
-   - Added cue broadcasting after AI actions
-   - Enhanced confirmation flow
+   - DEPRECATED: Added cue broadcasting after AI actions
+   - DEPRECATED: Enhanced confirmation flow for cues
 
 #### **Frontend Files:**
 5. **ChatAssistant.jsx** - Just improved
@@ -68,48 +71,45 @@ AI: "ACTION: Add bright white strobe effect during the drop using all RGB fixtur
 Result: ✅ SUCCESS - specific, executable, automatically saved
 ```
 
-### **Technical Architecture**
+### **DEPRECATED - Technical Architecture (Cue System Removed)**
 
-#### **AI Flow:**
+#### **DEPRECATED - AI Flow:**
 1. User types message in chat
 2. WebSocket sends to `_handle_user_prompt()`
 3. Streams response from Mistral with enhanced prompt
-4. Extracts ACTION commands with `extract_action_proposals()`
-5. Shows confirmation prompt to user
-6. On "yes", executes via `execute_confirmed_action()`
-7. Uses `CueInterpreter` → `CueManager` → auto-saves → broadcasts updates
+4. DEPRECATED: Extracts ACTION commands with `extract_action_proposals()`
+5. DEPRECATED: Shows confirmation prompt to user
+6. DEPRECATED: On "yes", executes via `execute_confirmed_action()`
+7. DEPRECATED: Uses `CueInterpreter` → `CueManager` → auto-saves → broadcasts updates
 
-#### **Key Components:**
-- **Mistral AI**: Enhanced with specific lighting prompt and ACTION structure
-- **CueInterpreter**: Smart command parsing with musical/fixture intelligence
-- **CueManager**: Proper defaults, logging, persistence
+#### **DEPRECATED - Key Components:**
+- **Mistral AI**: DEPRECATED: Enhanced with specific lighting prompt and ACTION structure for cues
+- **DEPRECATED: CueInterpreter**: Smart command parsing with musical/fixture intelligence
+- **DEPRECATED: CueManager**: Proper defaults, logging, persistence
 - **WebSocket**: Real-time communication with streaming support
 - **Frontend**: Scrollable chat with auto-scroll and markdown support
 
-### **Current Status: PRODUCTION READY ✅**
+### **DEPRECATED - Previous Status (Cue System Removed)**
 
-#### **What Works:**
-- ✅ Complex AI lighting commands execute successfully
-- ✅ Musical synchronization and timing detection
-- ✅ Fixture group and positioning logic
-- ✅ Automatic cue saving and persistence
+#### **What Was Working (Now Deprecated):**
+- ❌ DEPRECATED: Complex AI lighting commands execute successfully
+- ❌ DEPRECATED: Musical synchronization and timing detection
+- ❌ DEPRECATED: Fixture group and positioning logic
+- ❌ DEPRECATED: Automatic cue saving and persistence
 - ✅ Real-time chat interface with streaming
-- ✅ Action confirmation workflow
+- ❌ DEPRECATED: Action confirmation workflow for cues
 - ✅ Detailed logging and debugging
 
-#### **Test Results:**
-- 5/5 enhanced commands execute successfully
-- Timing patterns work: "beat hits", "during drop", "for 8 beats"
-- Fixture detection works: "parcans", "left side lights", "moving heads"
-- Colors parsed correctly: "bright white", "blue", "multi-colored"
+#### **DEPRECATED Test Results:**
+- ❌ DEPRECATED: 5/5 enhanced commands execute successfully
+- ❌ DEPRECATED: Timing patterns work: "beat hits", "during drop", "for 8 beats"
+- ❌ DEPRECATED: Fixture detection works: "parcans", "left side lights", "moving heads"  
+- ❌ DEPRECATED: Colors parsed correctly: "bright white", "blue", "multi-colored"
 
-### **Next Steps (If Needed):**
-1. **Live Testing**: Test with actual Mistral model and real songs
-2. **UI Polish**: Add action proposal display in chat
-3. **Advanced Features**: Beat sync visualization, energy-based suggestions
-4. **Performance**: Optimize for larger song databases
+### **Current Focus - New DMX Canvas System:**
+The system has moved from cue-based control to a new DMX Canvas approach for direct lighting control.
 
-### **Instructions for New Chat:**
-The system is now fully functional for AI-powered lighting control. The core diagnostic and improvement work is complete. Focus should be on testing the live AI conversations and potentially adding UI enhancements or advanced features based on user feedback.
+### **Instructions for New Development:**
+Focus on the new DMX Canvas system rather than the deprecated cue system. The AI chat interface remains functional for general lighting discussions.
 
-**Key Achievement**: Transformed vague AI commands into precise, executable lighting cues with automatic persistence and real-time feedback! 🎉
+**System Migration**: Transitioned from cue-based lighting control to DMX Canvas direct painting approach! �

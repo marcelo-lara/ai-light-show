@@ -80,7 +80,7 @@ Templates define animations (DMX value changes over time). Chasers apply templat
 
 * Syncs with current song time (from local clock or OSC input)
 * Sends Art-Net packets on time
-* Evaluates all cues `time <= now`
+* DEPRECATED: Evaluates all cues `time <= now` (removed)
 * Respects ARM conditions before activating light
 
 ---
@@ -92,7 +92,7 @@ Templates define animations (DMX value changes over time). Chasers apply templat
 * Sends Art-Net UDP packets using current `dmx_universe` values
 * Offers APIs:
 
-  * `POST /timeline` to load cues
+  * DEPRECATED: `POST /timeline` to load cues (removed)
   * `GET /timeline` to inspect
   * `POST /dmx/set` for real-time override
   * `WebSocket /ws` for live UI sync

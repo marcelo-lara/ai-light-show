@@ -276,20 +276,13 @@ class WebSocketManager:
     
     
     async def _handle_preview_dmx(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
-        """Handle DMX preview using new DMX Canvas system."""
-        cue = message["cue"]
+        """DEPRECATED: DMX preview using old cue system - functionality removed."""
+        # DEPRECATED: Cue preview system removed
+        print(f"� DEPRECATED: Preview cue functionality removed")
         
-        # TODO: Implement cue preview using DMX Canvas and render_engine
-        # This should:
-        # 1. Create a temporary DMX Canvas for preview
-        # 2. Use render_engine.render_cue() to paint the cue
-        # 3. Extract frames and send via Art-Net
-        print(f"🔍 TODO: Preview cue using DMX Canvas: {cue}")
-        
-        # For now, just acknowledge the preview request
         await websocket.send_json({
-            "type": "previewStarted",
-            "cue": cue
+            "type": "error",
+            "message": "DEPRECATED: Cue preview functionality has been removed"
         })
     
     async def _handle_save_arrangement(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
@@ -329,15 +322,13 @@ class WebSocketManager:
             "metadata": app_state.current_song.to_dict()
         })
 
-        # TODO: Implement test cue generation using DMX Canvas
-        # This should analyze song structure and generate sample lighting cues
-        # painted directly into app_state.dmx_canvas
+        # DEPRECATED: Test cue generation removed
         create_test = message.get("renderTestCues", False)
         if create_test:
-            print("👁️‍🗨️ TODO: Generate test cues using DMX Canvas based on song analysis")
+            print("� DEPRECATED: Test cue generation has been removed")
             await websocket.send_json({
-                "type": "testCuesGenerated",
-                "message": "TODO: Test cues will be generated using DMX Canvas"
+                "type": "error",
+                "message": "DEPRECATED: Test cue generation functionality has been removed"
             })
     
     async def _handle_reload_fixtures(self, websocket: WebSocket, message: Dict[str, Any]) -> None:

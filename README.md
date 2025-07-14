@@ -16,7 +16,7 @@ The backend is built with **FastAPI** and provides a comprehensive set of APIs f
 
 - **FastAPI Application** (`backend/app.py`): Main application entry point with CORS configuration and route management
 - **DMX Controller** (`backend/dmx_controller.py`): Art-Net DMX protocol implementation for lighting fixture control
-- **Timeline Engine** (`backend/timeline_engine.py`): Real-time cue execution and playback synchronization
+- **Timeline Engine** (`backend/timeline_engine.py`): DEPRECATED - Real-time cue execution and playback synchronization (removed)
 - **Render Engine** (`backend/render_engine.py`): DMX universe rendering and fixture state management
 
 #### AI & Audio Analysis
@@ -33,14 +33,14 @@ The backend is built with **FastAPI** and provides a comprehensive set of APIs f
 - **Drum Classification** (`backend/ai/drums_infer.py`): ML-based drum pattern recognition and classification
 
 - **Natural Language Processing**:
-  - **Cue Interpreter** (`backend/ai/cue_interpreter.py`): Converts natural language commands into lighting dmx instructions.
+  - **DEPRECATED: Cue Interpreter** (`backend/ai/cue_interpreter.py`): Converted natural language commands into lighting dmx instructions (removed).
   - **Ollama Integration** (`backend/services/ollama/`): Local LLM integration for intelligent lighting suggestions
 
 #### Data Models & Services
 
 - **Application State** (`backend/models/app_state.py`): Centralized state management
 - **Song Metadata** (`backend/models/song_metadata.py`): Structured audio analysis data
-- **Cue Service** (`backend/services/cue_service.py`): Lighting cue management and persistence
+- **DEPRECATED: Cue Service** (`backend/services/cue_service.py`): Lighting cue management and persistence (removed)
 - **WebSocket Service** (`backend/services/websocket_service.py`): Real-time client communication
 
 #### API Routes
@@ -60,7 +60,7 @@ The frontend is a modern single-page application built with **Preact** and **Vit
 - **Chat Assistant** (`ChatAssistant.jsx`): Natural language interface for lighting control
 - **Song Analysis** (`SongAnalysis.jsx`): Visual representation of audio analysis results
 - **Fixtures Control** (`Fixtures.jsx`, `FixtureCard.jsx`): Manual fixture control and monitoring
-- **Cue Management** (`SongCues.jsx`): Timeline-based cue editing and visualization
+- **DEPRECATED: Cue Management** (`SongCues.jsx`): Timeline-based cue editing and visualization (removed)
 - **Arrangement View** (`SongArrangement.jsx`): Musical structure visualization
 - **Chord Display** (`ChordsCard.jsx`): Real-time chord progression display
 
@@ -84,7 +84,7 @@ The frontend is a modern single-page application built with **Preact** and **Vit
 - **Source Separation**: Isolation of drums, vocals, and instruments
 
 ### AI-Powered Lighting
-- **Natural Language Control**: Create lighting cues using plain English commands
+- **DEPRECATED: Natural Language Control**: Create lighting cues using plain English commands (removed)
 - **Intelligent Suggestions**: AI-generated lighting recommendations based on musical content
 - **Pattern Recognition**: Automatic detection of musical patterns for synchronized effects
 - **Beat Synchronization**: Precise timing alignment with musical beats
@@ -97,7 +97,7 @@ The frontend is a modern single-page application built with **Preact** and **Vit
 - **Chase Sequences**: Complex multi-fixture lighting patterns
 
 ### User Interface
-- **Visual Timeline**: Drag-and-drop cue editing with waveform display
+- **DEPRECATED: Visual Timeline**: Drag-and-drop cue editing with waveform display (removed)
 - **Real-time Monitoring**: Live fixture status and DMX channel values
 - **Interactive Waveform**: Click-to-seek audio navigation
 - **Responsive Design**: Works on desktop and tablet devices
@@ -162,7 +162,7 @@ ai-light-show/
 ├── backend/                    # Python FastAPI backend
 │   ├── ai/                    # AI and audio analysis modules
 │   │   ├── essentia_analysis.py    # Audio feature extraction
-│   │   ├── cue_interpreter.py      # Natural language processing
+│   │   ├── DEPRECATED: cue_interpreter.py      # Natural language processing (removed)
 │   │   ├── ollama_*.py             # LLM integration
 │   │   └── drums_infer.py          # Drum pattern recognition
 │   ├── models/                # Data models

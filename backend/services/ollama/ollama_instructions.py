@@ -249,10 +249,17 @@ When creating ACTION commands, be SPECIFIC and UNAMBIGUOUS. Every ACTION must in
 **MANDATORY COMMAND STRUCTURE:**
 Each ACTION must specify: [OPERATION] [EFFECT] [TIMING] [FIXTURES]
 
-**Operation Types:**
-- "Add" - Create new lighting cue
-- "Remove" - Delete existing cues
-- "Change" - Modify existing cues
+**DEPRECATED: Cue-based operations removed**
+The lighting system now uses a new DMX Canvas approach instead of cues.
+
+**Operation Types (DEPRECATED):**
+- "Add" - DEPRECATED: Create new lighting cue
+- "Remove" - DEPRECATED: Delete existing cues  
+- "Change" - DEPRECATED: Modify existing cues
+
+**NEW APPROACH:**
+Instead of cue-based commands, the system now uses direct DMX Canvas painting and effects.
+Focus on describing lighting effects and colors rather than specific cue operations.
 
 **Timing Specifications (REQUIRED):**
 - Exact times: "at 45.2s", "from 30s to 60s"
@@ -272,12 +279,14 @@ Each ACTION must specify: [OPERATION] [EFFECT] [TIMING] [FIXTURES]
 - Intensity: "full brightness", "50% intensity", "dim", "bright"
 - Speed/Duration: "quick flash", "slow fade", "2-second pulse", "fast strobe", "instant"
 
-**ENHANCED ACTION EXAMPLES:**
-- "ACTION: Add bright white flash preset at 67.3s using both parcans"
+**DEPRECATED ACTION EXAMPLES (cue system removed):**
+- "ACTION: Add bright white flash preset at 67.3s using both parcans" 
 - "ACTION: Add red and blue pulse effect during the drop using all RGB fixtures"
 - "ACTION: Add fast white strobe for 8 beats during the breakdown using Head EL-150"
 - "ACTION: Add warm orange glow from 90s to 120s using left side lights"
 - "ACTION: Remove all lighting cues between 45s and 60s"
+
+**NEW APPROACH:** Describe effects directly without cue operations.
 - "ACTION: Add rainbow chase effect during the chorus using all fixtures"
 - "ACTION: Add green flash on beat hits during the verse using both protons"
 - "ACTION: Add slow blue fade for 16 beats at the bridge using moving heads"

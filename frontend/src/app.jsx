@@ -32,10 +32,11 @@ export function App() {
   // Song Analysis state
   const [analysisResult, setAnalysisResult] = useState({});
 
-  // DMX fixtures, presets, and cues
+  // DMX fixtures and presets
   const [fixtures, setFixtures] = useState([]);
   const [fixturesPresets, setFixturesPresets] = useState([]);
-  const [cues, setCues] = useState([]);
+  // DEPRECATED: cues state removed - cue system deprecated
+  // const [cues, setCues] = useState([]);
 
   // UI toast notification state
   const [toastMessage, setToast] = useState(null);
@@ -85,11 +86,12 @@ export function App() {
             onDmxUpdate(universe);
             break;
           }
-          case "cuesUpdated": {
-            console.log("Received cues update:", msg.cues);
-            setCues(msg.cues);
-            break;
-          }
+          // DEPRECATED: cuesUpdated message handling removed - cue system deprecated
+          // case "cuesUpdated": {
+          //   console.log("Received cues update:", msg.cues);
+          //   setCues(msg.cues);
+          //   break;
+          // }
           case "analyzeResult": {
             console.log("Received song analysis result:", msg);
             setAnalysisResult({"status": msg.status});
@@ -98,7 +100,7 @@ export function App() {
             break;
           }
           case "songLoaded": {
-            setCues(msg.cues || []);
+            // DEPRECATED: setCues removed - cue system deprecated
             setSongData(msg.metadata || {});
             console.log("Song loaded:", msg.metadata);
             break;
@@ -292,8 +294,6 @@ export function App() {
             fixtures={fixtures}
             currentTime={currentTime}
             fixturesPresets={fixturesPresets}
-            addCue={(cue)=>wsSend("addCue", {cue: cue})}
-            previewDmx={(cue) => wsSend("previewDmx", {cue: cue})}
             wsSend={wsSend}
           />
         </div>
