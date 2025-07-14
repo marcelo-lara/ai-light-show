@@ -10,15 +10,6 @@ from ..models.fixtures import FixturesListModel
 
 
 @dataclass
-class PlaybackState:
-    """Manages playback timing and state."""
-    is_playing: bool = False
-    playback_time: float = 0.0
-    start_monotonic: float = 0.0
-    last_sent: float = 0.0
-
-
-@dataclass
 class AppState:
     """Central application state management."""
 
@@ -36,9 +27,6 @@ class AppState:
     current_song_file: Optional[str] = None
     current_song: Optional[Any] = None  # SongMetadata object
     song_metadata: Dict[str, Any] = field(default_factory=dict)
-    
-    # Playback state
-    playback: PlaybackState = field(default_factory=PlaybackState)
     
     # WebSocket connections
     websocket_clients: List[WebSocket] = field(default_factory=list)

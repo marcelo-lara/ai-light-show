@@ -13,17 +13,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 # Import routers
-from backend.routers import dmx, songs, websocket
+from backend.routers import songs, websocket, dmx
+
+# Import DMX player service
+from backend.services.dmx_player import dmx_player
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager - handles startup and shutdown."""
     try:
+        # Start the DMX player engine
+        await dmx_player.start_playback_engine()
+        print("🎬 DMX Player engine started")
         yield
     finally:
-        # Clean shutdown placeholder
-        pass
+        # Stop the DMX player engine
+        await dmx_player.stop_playback_engine()
+        print("🎬 DMX Player engine stopped")
 
 
 def create_app() -> FastAPI:

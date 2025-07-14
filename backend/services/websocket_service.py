@@ -231,17 +231,18 @@ class WebSocketManager:
     
     async def _handle_sync(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
         """Handle playback synchronization."""
-        if "isPlaying" in message:
-            app_state.playback.is_playing = message["isPlaying"]
-        if "currentTime" in message:
-            app_state.playback.playback_time = message["currentTime"]
-            if app_state.playback.is_playing:
-                app_state.playback.start_monotonic = time.monotonic() - app_state.playback.playback_time
+        from .dmx_player import dmx_player
+        
+        # Use the sync_playback method for smart synchronization
+        is_playing = message.get("isPlaying", dmx_player.is_playing())
+        current_time = message.get("currentTime", dmx_player.get_current_time())
+        
+        dmx_player.sync_playback(is_playing, current_time)
 
         await websocket.send_json({
             "type": "syncAck",
-            "isPlaying": app_state.playback.is_playing,
-            "currentTime": app_state.playback.playback_time
+            "isPlaying": dmx_player.playback_state.is_playing,
+            "currentTime": dmx_player.playback_state.get_current_time()
         })
 
     async def _handle_blackout(self, websocket: WebSocket, message: Dict[str, Any]) -> None:

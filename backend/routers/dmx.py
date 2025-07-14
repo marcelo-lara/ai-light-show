@@ -1,52 +1,69 @@
-"""DMX control router for the AI Light Show system."""
+"""DMX control router for playback operations."""
 
+from fastapi import APIRouter, HTTPException
 from typing import Dict, Any
-from fastapi import APIRouter, Request, HTTPException
-from ..dmx_controller import set_channel, get_universe, send_artnet, send_canvas_frames
-from ..services.dmx_canvas import DmxCanvas
-from ..models.app_state import app_state
+from ..services.dmx_player import dmx_player
 
-router = APIRouter(prefix="/dmx", tags=["dmx"])
+router = APIRouter(prefix="/api/dmx", tags=["DMX Control"])
 
 
-@router.get("/universe")
-async def get_dmx_universe() -> Dict[str, Any]:
-    """Get the current DMX universe state."""
-    return {"universe": get_universe()}
+@router.post("/play")
+async def start_playback() -> Dict[str, Any]:
+    """Start DMX playback."""
+    dmx_player.play()
+    return {
+        "status": "success",
+        "message": "Playback started",
+        "is_playing": dmx_player.playback_state.is_playing,
+        "current_time": dmx_player.playback_state.get_current_time()
+    }
 
 
-@router.get("/test/artnet")
-async def test_artnet_send() -> Dict[str, bool]:
-    """Test ArtNet communication by setting specific channels."""
-    try:
-        set_channel(15, 255)  # DMX Channel 16 (0-based index)
-        set_channel(18, 255)  # DMX Channel 19
-        # Create test frame with channels 16 and 19 at full intensity
-        frame = [0] * 512
-        frame[15] = 255  # Channel 16 (0-based index 15)
-        frame[18] = 255  # Channel 19 (0-based index 18)
-        send_artnet(0, bytes(frame))
-        return {"sent": True}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@router.post("/pause")
+async def pause_playback() -> Dict[str, Any]:
+    """Pause DMX playback."""
+    dmx_player.pause()
+    return {
+        "status": "success", 
+        "message": "Playback paused",
+        "is_playing": dmx_player.playback_state.is_playing,
+        "current_time": dmx_player.playback_state.get_current_time()
+    }
 
-@router.post("/start-test")
-async def start_test_show():
-    """Start a test light show pattern"""
-    try:
-        # Create test canvas with 5 second duration at 30 FPS
-        canvas = DmxCanvas(fps=30, duration=5.0)
+
+@router.post("/stop")
+async def stop_playback() -> Dict[str, Any]:
+    """Stop DMX playback."""
+    dmx_player.stop()
+    return {
+        "status": "success",
+        "message": "Playback stopped", 
+        "is_playing": dmx_player.playback_state.is_playing,
+        "current_time": dmx_player.playback_state.get_current_time()
+    }
+
+
+@router.post("/seek")
+async def seek_playback(time: float) -> Dict[str, Any]:
+    """Seek to a specific time position."""
+    if time < 0:
+        raise HTTPException(status_code=400, detail="Time cannot be negative")
         
-        # Paint test pattern - fade channels 20-40 over 5 seconds
-        for channel in range(20, 41):
-            canvas.paint_channel(
-                channel=channel,
-                start_time=0.0,
-                duration=5.0,
-                value_fn=lambda t: int(t * 255)  # t ranges 0.0-1.0 over duration
-            )
-            
-        send_canvas_frames(canvas)
-        return {"status": "show_started"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    dmx_player.seek(time)
+    return {
+        "status": "success",
+        "message": f"Seeked to {time:.3f}s",
+        "is_playing": dmx_player.playback_state.is_playing,
+        "current_time": dmx_player.playback_state.get_current_time()
+    }
+
+
+@router.get("/status")
+async def get_playback_status() -> Dict[str, Any]:
+    """Get current playback status."""
+    return {
+        "is_playing": dmx_player.playback_state.is_playing,
+        "current_time": dmx_player.playback_state.get_current_time(),
+        "fps": dmx_player.fps,
+        "engine_running": dmx_player.is_running
+    }

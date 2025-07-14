@@ -1,6 +1,6 @@
 ### Song Metadata
 
-Every song (mp3 file) has a related metadata file in `/songs` with the name `/songs/{fileName}.meta.json`.
+Every song (mp3 file) has a related metadata file in `/songs/data` with the name `/songs/data/{fileName}.meta.json`.
 
 
 #### Top-Level Fields
