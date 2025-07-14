@@ -6,7 +6,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_score
 from collections import Counter
 import scipy.signal
-from ..models.song_metadata import ensure_json_serializable
+from backend.models.song_metadata import ensure_json_serializable
 
 def get_stem_clusters(
     beats,

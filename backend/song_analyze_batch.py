@@ -1,5 +1,5 @@
 from backend.models.song_metadata import SongMetadata, Section
-from backend.song_analyze import song_analyze
+from backend.services.song_analyze import song_analyze
 if __name__ == "__main__":
 
     songs_folder="/home/darkangel/ai-light-show/songs"
