@@ -93,8 +93,8 @@ def execute_confirmed_action(action_id: str, proposals: List[Dict]) -> Tuple[boo
         if not action_command:
             return False, "Empty action command"
         
-        # Get song name from the current song file
-        song_name = Path(current_song.file_name).stem
+        # Get song name from the current song
+        song_name = current_song.song_name
         
         # Get fixtures from app state
         fixtures = app_state.fixtures
