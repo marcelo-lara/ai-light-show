@@ -1,0 +1,158 @@
+.
+├── artnet_dummy
+│   ├── artnet_node.py
+│   └── artnet_test_client.py
+├── backend
+│   ├── app.py
+│   ├── config.py
+│   ├── dmx_controller.py
+│   ├── fixture_utils.py
+│   ├── health_check_service.py
+│   ├── __init__.py
+│   ├── models
+│   │   ├── actions_sheet.py
+│   │   ├── app_state.py
+│   │   ├── fixtures
+│   │   │   ├── fixture_model.py
+│   │   │   ├── fixtures_list_model.py
+│   │   │   ├── __init__.py
+│   │   │   ├── moving_head.py
+│   │   │   └── rgb_parcan.py
+│   │   ├── __init__.py
+│   │   └── song_metadata.py
+│   ├── osc_monitor.py
+│   ├── requirements.txt
+│   ├── routers
+│   │   ├── ai_router.py
+│   │   ├── __init__.py
+│   │   ├── songs.py
+│   │   └── websocket.py
+│   ├── services
+│   │   ├── actions_parser_service.py
+│   │   ├── actions_service.py
+│   │   ├── dmx
+│   │   │   ├── dmx_canvas.py
+│   │   │   ├── dmx_dispatcher.py
+│   │   │   └── dmx_player.py
+│   │   ├── __init__.py
+│   │   ├── ollama
+│   │   │   ├── __init__.py
+│   │   │   ├── ollama_api.py
+│   │   │   ├── ollama_client.py
+│   │   │   └── ollama_streaming.py
+│   │   ├── song_analysis_client.py
+│   │   ├── utils
+│   │   │   ├── broadcast.py
+│   │   │   └── __init__.py
+│   │   ├── websocket_handlers
+│   │   │   ├── ai_handler.py
+│   │   │   ├── dmx_handler.py
+│   │   │   ├── fixture_handler.py
+│   │   │   ├── __init__.py
+│   │   │   ├── song_handler.py
+│   │   │   └── sync_handler.py
+│   │   └── websocket_manager.py
+│   ├── song_analyze_batch.py
+│   ├── song_analyze_batch_service.py
+│   └── tests
+│       └── test_dmx_canvas.py
+├── Backlog.md
+├── docker-compose.dev.yml
+├── docker-compose.yml
+├── Dockerfile
+├── .dockerignore
+├── docs
+│   ├── File_Fixtures.md
+│   └── File_SongMetadata.md
+├── fixtures
+│   └── fixtures.json
+├── frontend
+│   ├── index.html
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── postcss.config.js
+│   ├── public
+│   │   └── vite.svg
+│   ├── src
+│   │   ├── app.css
+│   │   ├── app.jsx
+│   │   ├── assets
+│   │   │   └── preact.svg
+│   │   ├── AudioPatternsDisplay.jsx
+│   │   ├── AudioPlayer.jsx
+│   │   ├── ChatAssistant.jsx
+│   │   ├── components
+│   │   │   ├── ActionsCard.jsx
+│   │   │   ├── fixtures
+│   │   │   │   ├── FixtureCard.jsx
+│   │   │   │   ├── FixtureDmxChannels.jsx
+│   │   │   │   └── Fixtures.jsx
+│   │   │   ├── song
+│   │   │   │   ├── Bar.jsx
+│   │   │   │   ├── ChordsCard.jsx
+│   │   │   │   ├── SongAnalysis.jsx
+│   │   │   │   ├── SongArrangement.jsx
+│   │   │   │   ├── SongKeyMoments.jsx
+│   │   │   │   └── SongSelector.jsx
+│   │   │   └── SongMetadata.jsx
+│   │   ├── index.css
+│   │   ├── main.jsx
+│   │   ├── PresetSelector.jsx
+│   │   └── utils.js
+│   ├── tailwind.config.js
+│   └── vite.config.js
+├── .github
+│   └── copilot-instructions.md
+├── .gitignore
+├── integration_test_output.txt
+├── integration_test.py
+├── .python-version
+├── README.md
+├── songs
+│   ├── data
+│   │   ├── born_slippy.actions.json
+│   │   └── born_slippy.meta.json
+│   ├── hints
+│   │   ├── born_slippy.chords.json
+│   │   ├── born_slippy.key_moments.json
+│   │   ├── born_slippy.lyrics.json
+│   │   └── born_slippy.segments.json
+│   ├── temp
+│   │   └── born_slippy
+│   │       ├── bass.wav
+│   │       ├── drums.wav
+│   │       ├── other.wav
+│   │       ├── stem_clusters_best.json
+│   │       └── vocals.wav
+│   └── born_slippy.mp3
+├── song_analysis
+│   ├── app.py
+│   ├── Dockerfile
+│   ├── ExpectedAnalysis.md
+│   ├── __init__.py
+│   ├── models
+│   │   ├── __init__.py
+│   │   └── song_metadata.py
+│   ├── notebooks
+│   │   ├── drums_noisegate.spectrogram.png
+│   │   ├── drums_noisegate.wave.png
+│   │   ├── drums_raw.spectrogram.png
+│   │   ├── drums_raw.wave.png
+│   │   └── song_analysis.ipynb
+│   ├── README.md
+│   ├── requirements.txt
+│   ├── services
+│   │   ├── audio
+│   │   │   ├── arrangement_guess.py
+│   │   │   ├── audio_process.py
+│   │   │   ├── demucs_split.py
+│   │   │   ├── essentia_analysis.py
+│   │   │   ├── __init__.py
+│   │   │   └── pattern_finder.py
+│   │   ├── audio_analyzer.py
+│   │   ├── __init__.py
+│   │   └── load_metadata_hints.py
+│   └── test_service.py
+└── test_integration.py
+
+27 directories, 112 files

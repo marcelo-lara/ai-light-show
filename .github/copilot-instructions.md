@@ -124,6 +124,30 @@ actions_sheet.add_action(action)
 actions_service = ActionsService(app_state.fixtures, app_state.dmx_canvas)
 actions_service.render_actions_to_canvas(actions_sheet)
 ```
+### IMPORTANT
+
+#### 🔌 Fixture Behavior Model
+DMX fixtures are dumb devices — they do not understand commands like "strobe" or "flash". They only respond to raw channel values over time.
+
+#### 🎬 Action-to-Channel Translation
+All high-level lighting instructions — referred to as actions (e.g. "strobe", "fade_in", "seek") — must be converted into sequences of channel values over time by the system.
+
+✅ Example: strobe Action
+If channel 10 controls the shutter:
+"strobe" → [
+  (t=0.00, channel 10 = 255),
+  (t=0.10, channel 10 = 0),
+  (t=0.20, channel 10 = 255),
+  ...
+]
+
+The DMX canvas must be painted explicitly with the right values at the right timestamps to simulate the effect.
+
+#### 🧱 Implication
+Lighting logic lives entirely in software. Fixtures are merely endpoints; the system is responsible for:
+- Timing
+- Value sequencing
+- Effect shaping (e.g., ramping, pulsing, panning)
 
 ### Song Analysis Integration
 ```python
