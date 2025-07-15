@@ -10,12 +10,11 @@ Modules:
 - ollama_streaming: Streaming functionality for real-time responses
 """
 
-# Import client functions for easy access
-from .ollama_api import query_ollama_mistral
-from .ollama_streaming import query_ollama_mistral_streaming
+# Import all exports from the client module
+from .ollama_client import *
 
+# Define what gets exported from the package
 __all__ = [
-    # API
     'query_ollama_mistral',
     'query_ollama_mistral_streaming'
 ]
