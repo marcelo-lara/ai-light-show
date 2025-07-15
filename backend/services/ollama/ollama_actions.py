@@ -115,7 +115,7 @@ def execute_confirmed_action(action_id: str, proposals: List[Dict]) -> Tuple[boo
         actions_sheet = ActionsSheet(song_name)
         actions_sheet.load_actions()
         
-        # Add all parsed actions to the actions sheet (replaces old cue system)
+        # Add all parsed actions to the actions sheet
         for parsed_action in parsed_actions:
             actions_sheet.add_action(parsed_action)
         

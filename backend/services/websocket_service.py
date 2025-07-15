@@ -23,7 +23,6 @@ class WebSocketManager:
         self.message_handlers = {
             "sync": self._handle_sync,
             "loadSong": self._handle_load_song,
-            "previewDmx": self._handle_preview_dmx,
             "saveArrangement": self._handle_save_arrangement,
             "saveKeyMoments": self._handle_save_key_moments,
             "analyzeSong": self._handle_analyze_song,
@@ -316,15 +315,7 @@ class WebSocketManager:
         })
     
     
-    async def _handle_preview_dmx(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
-        """DEPRECATED: DMX preview using old cue system - functionality removed."""
-        # DEPRECATED: Cue preview system removed
-        print(f"� DEPRECATED: Preview cue functionality removed")
-        
-        await websocket.send_json({
-            "type": "error",
-            "message": "DEPRECATED: Cue preview functionality has been removed"
-        })
+
     
     async def _handle_save_arrangement(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
         """Handle saving song arrangement."""
@@ -408,14 +399,7 @@ class WebSocketManager:
                 "message": f"Analysis failed: {str(e)}"
             })
 
-        # DEPRECATED: Test cue generation removed
-        create_test = message.get("renderTestCues", False)
-        if create_test:
-            print("� DEPRECATED: Test cue generation has been removed")
-            await websocket.send_json({
-                "type": "error",
-                "message": "DEPRECATED: Test cue generation functionality has been removed"
-            })
+
     
     async def _handle_reload_fixtures(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
         """Handle fixture configuration reload."""

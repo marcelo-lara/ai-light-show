@@ -1,6 +1,6 @@
 import { useState } from "preact/hooks";
 
-export default function PatternsTimeline({ songData, beats, currentTime, setCurrentTime, currentClusterBeat, currentClusterBeatRef }) {
+export default function AudioPatternsDisplay({ songData, beats, currentTime, setCurrentTime, currentClusterBeat, currentClusterBeatRef }) {
     const [patterns, setPatterns] = useState(songData.patterns || []);
 
     const ClusterTag = ({ cluster, currentTime, setCurrentTime }) => (
@@ -73,7 +73,7 @@ export default function PatternsTimeline({ songData, beats, currentTime, setCurr
 
     return (
         <div className="mt-4">
-            <h3 className="text-x1 font-bold mb-2">patterns timeline</h3>
+            <h3 className="text-x1 font-bold mb-2">audio patterns</h3>
             <div className="overflow-x-auto flex flex-row space-x-1">
                 {beats.map((beat, index) => (
                     <BeatBlock 

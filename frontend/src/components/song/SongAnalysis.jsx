@@ -1,7 +1,7 @@
 import { useState, useRef } from "preact/hooks";
 import { use, useEffect } from "react";
 import Bar from "./Bar";
-import PatternsTimeline from "../../PatternsTimeline";
+import AudioPatternsDisplay from "../../AudioPatternsDisplay";
 
 export default function SongAnalysis({ songData, currentTime, setCurrentTime, analyzeSong, analysisResult, currentSongFile }) {
 
@@ -12,7 +12,7 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime, an
     const [minEnergy, setMinEnergy] = useState(0);
     const [maxEnergy, setMaxEnergy] = useState(0);
     const [showPatterns, setShowPatterns] = useState(true);
-    const [showPatternsTimeline, setShowPatternsTimeline] = useState(false);
+    const [showAudioPatterns, setShowAudioPatterns] = useState(false);
     const [showBeats, setShowBeats] = useState(false);
     // DEPRECATED: generateCues state removed - cue system deprecated
     // const [generateCues, setGenerateCues] = useState(false);
@@ -118,11 +118,11 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime, an
             <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
-                checked={showPatternsTimeline}
-                onChange={(e) => setShowPatternsTimeline(e.target.checked)}
+                checked={showAudioPatterns}
+                onChange={(e) => setShowAudioPatterns(e.target.checked)}
                 className="form-checkbox h-4 w-4 text-blue-600"
               />
-              <span className="text-sm">Patterns Timeline</span>
+              <span className="text-sm">Audio Patterns</span>
             </label>
             
             <label className="flex items-center space-x-2">
@@ -198,8 +198,8 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime, an
 
 
       {/* Beats and patterns */}
-      {showPatternsTimeline && patterns.length > 0 && (
-        <PatternsTimeline 
+      {showAudioPatterns && patterns.length > 0 && (
+        <AudioPatternsDisplay 
           songData={songData}
           beats={beats}
           currentTime={currentTime}

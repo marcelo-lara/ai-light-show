@@ -83,13 +83,13 @@ class TestDmxCanvas(unittest.TestCase):
         canvas.paint_frame(0.5, {2: 20})
         
         # Export and check
-        timeline = canvas.export()
-        self.assertEqual(len(timeline), 10)  # Should have 10 frames
-        self.assertEqual(timeline[0.1][1], 10)
-        self.assertEqual(timeline[0.5][2], 20)
+        frames = canvas.export()
+        self.assertEqual(len(frames), 10)  # Should have 10 frames
+        self.assertEqual(frames[0.1][1], 10)
+        self.assertEqual(frames[0.5][2], 20)
         
         # Check that all frames are 512 bytes
-        for timestamp, frame in timeline.items():
+        for timestamp, frame in frames.items():
             self.assertEqual(len(frame), 512)
 
 

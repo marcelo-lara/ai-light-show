@@ -3,7 +3,7 @@
 DMX Canvas module for AI Light Show.
 
 This module provides a canvas for storing and manipulating DMX state over time.
-It represents a timeline of 512-byte DMX frames that can be painted with channel values
+It represents a sequence of 512-byte DMX frames that can be painted with channel values
 at specific timestamps.
 """
 import numpy as np
@@ -15,7 +15,7 @@ class DmxCanvas:
     """
     A canvas for storing and manipulating DMX state over time.
     
-    The DmxCanvas represents a timeline of DMX universe states (512 channels),
+    The DmxCanvas represents a sequence of DMX universe states (512 channels),
     quantized at a specific frame rate. It allows painting values at specific timestamps
     and retrieving the complete DMX frame at any point in time.
     
