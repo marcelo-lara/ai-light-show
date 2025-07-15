@@ -263,24 +263,6 @@ class SongMetadata:
         self._arrangement = data.get("arrangement", [])
         self._key_moments = data.get("key_moments", [])
 
-    def add_beat(self, time: float, volume: float = 0.0, energy: float = 1.0) -> None:
-        self.beats.append({"time": time, "volume": volume, "energy": energy})
-
-    def clear_beats(self) -> None:
-        self.beats = []
-
-    def get_beats_array(self) -> List[float]:
-        return [beat["time"] for beat in self.beats]
-
-    def set_beats_volume(self, beat_volume: List[Tuple[float, float]]) -> None:
-        if len(beat_volume) != len(self.beats):
-            print(f"⚠️ Warning: Volume list length {len(beat_volume)} does not match number of beats {len(self.beats)}.")
-            return
-        for i, (time, volume) in enumerate(beat_volume):
-            if abs(self.beats[i]["time"] - time) > 1e-6:
-                print(f"⚠️ Warning: Beat time mismatch at index {i}: expected {self.beats[i]['time']}, got {time}")
-            self.beats[i]["volume"] = float(volume)
-
     def to_dict(self) -> Dict[str, Any]:
         data = {
             "title": self.title,
