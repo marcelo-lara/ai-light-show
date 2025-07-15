@@ -10,8 +10,7 @@ _pending_actions_store = {}
 
 async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> None:
     """Handle userPrompt with streaming and action proposals/confirmation flow."""
-    from ...services.ollama import query_ollama_mistral_streaming, extract_action_proposals, execute_confirmed_action
-    global _pending_actions_store
+    from ...services.ollama import query_ollama_mistral_streaming
     
     prompt = message.get("text", "") or message.get("prompt", "")
     if not prompt:
@@ -92,8 +91,6 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
         # Stream the AI response
         try:
             await query_ollama_mistral_streaming(prompt, session_id, callback=send_chunk)
-            # Process action proposals from the full response only if AI succeeded
-            cleaned_response, action_proposals = extract_action_proposals(full_ai_response, session_id)
         except (ConnectionError, TimeoutError, ValueError, RuntimeError) as ai_error:
             # Handle AI service errors gracefully
             print(f"🤖 AI Service Error: {ai_error}")
@@ -101,38 +98,21 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
             # Send a helpful error message as a chunk
             error_chunk = f"\n\nSorry, I'm having trouble connecting to the AI service. {str(ai_error)}\n\nPlease check that Ollama is running and the 'mistral' model is installed."
             await send_chunk(error_chunk)
-            
-            # Don't process action proposals if AI failed
-            action_proposals = []
         
         # End streaming
         await websocket.send_json({"type": "chatResponseEnd"})
         
-        # If there are action proposals, store them and ask for confirmation
-        if action_proposals:
-            _pending_actions_store[session_id] = action_proposals
-            
-            # Create confirmation prompt
-            action_descriptions = []
-            for action in action_proposals:
-                if action.get('can_execute', False):
-                    action_descriptions.append(f"• {action.get('description', action.get('command', 'Unknown action'))}")
-            
-            if action_descriptions:
-                confirmation_text = f"\n\n**I want to make these lighting changes:**\n" + "\n".join(action_descriptions)
-                confirmation_text += f"\n\nDo you want me to execute these changes? Please reply 'yes' to confirm or 'no' to cancel."
-                
-                # Send the confirmation prompt as a follow-up message
-                await websocket.send_json({
-                    "type": "chatResponse", 
-                    "response": confirmation_text,
-                    "action_proposals": action_proposals
-                })
-                
-                print(f"🎭 ACTION PROPOSALS: {len(action_proposals)} actions proposed for session {session_id}")
-                for action in action_proposals:
-                    print(f"   - {action.get('description', action.get('command', 'Unknown'))}")
-        
+        # Send final response for any clients that didn't process the streaming chunks
+        await websocket.send_json({
+            "type": "chatResponse",
+            "response": full_ai_response
+        })
+        # Update status to complete
+        await broadcast_to_all({
+            "type": "chatStatus",
+            "status": "ready"
+        })
+    
     except Exception as e:
         print(f"❌ Error in handle_user_prompt: {e}")
         
