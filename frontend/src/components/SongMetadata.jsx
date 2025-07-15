@@ -2,6 +2,7 @@ import { h } from 'preact';
 import SongKeyMoments from './song/SongKeyMoments';
 import SongArrangement from './song/SongArrangement';
 import ChordsCard from './song/ChordsCard';
+import SongAnalysis from './song/SongAnalysis';
 
 /**
  * SongMetadata component that groups together song metadata related components
@@ -12,7 +13,9 @@ export default function SongMetadata({
   setCurrentTime, 
   songData, 
   seekTo, 
-  wsSend 
+  wsSend,
+  analysisResult,
+  currentSongFile
 }) {
   const handleSeekTo = (time) => {
     if (seekTo) seekTo(time);
@@ -50,6 +53,24 @@ export default function SongMetadata({
           setCurrentTime={setCurrentTime} 
         />
       </div>
+
+      {/* Song Analysis */}
+      <div>
+        <SongAnalysis 
+          songData={songData} 
+          currentTime={currentTime}
+          setCurrentTime={setCurrentTime}
+          analyzeSong={(data) => {
+            // Use the same pattern as in the original App component
+            const resetEvent = new CustomEvent('resetAnalysisResult');
+            window.dispatchEvent(resetEvent);
+            wsSend("analyzeSong", data);
+          }}
+          analysisResult={analysisResult}
+          currentSongFile={currentSongFile}
+        />
+      </div>
+
     </>
   );
 }

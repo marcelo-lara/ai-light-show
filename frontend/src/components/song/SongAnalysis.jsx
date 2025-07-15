@@ -105,6 +105,19 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime, an
         <h2 className="text-x2 font-bold">🤖 Song Analysis</h2>
         <div>
           <div className="flex items-center space-x-6">
+
+            {/* Analysis controls */}
+            <button 
+              onClick={() => handleAnalyzeSong()} 
+              className={`px-3 py-1 rounded text-sm ${!currentSongFile ? 'bg-gray-900 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`} 
+              disabled={!currentSongFile}
+            >
+              🔍 Analyze Song
+            </button>
+          </div>
+        </div>
+      </div>
+        <div>
             <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -134,29 +147,7 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime, an
               />
               <span className="text-sm">Beats</span>
             </label>
-
-            {/* Analysis controls */}
-            <button 
-              onClick={() => handleAnalyzeSong()} 
-              className={`px-3 py-1 rounded text-sm ${!currentSongFile ? 'bg-gray-900 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`} 
-              disabled={!currentSongFile}
-            >
-              🔍 Analyze Song
-            </button>
-            {/* DEPRECATED: Generate Cues checkbox removed - cue system deprecated */}
-            {/* <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={generateCues}
-                onChange={e => setGenerateCues(e.target.checked)}
-                className="form-checkbox h-4 w-4 text-blue-600"
-              />
-              <span className="text-sm">Generate Cues</span>
-            </label> */}
-
-          </div>
         </div>
-      </div>
 
         {showPatterns && (
         <div className="mt-4">

@@ -7,7 +7,6 @@ import ActionsCard from './components/ActionsCard';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import SongAnalysis from './components/song/SongAnalysis';
 import ChatAssistant from './ChatAssistant';
 import SongMetadata from './components/SongMetadata';
 
@@ -30,6 +29,13 @@ export function App() {
 
   // Song Analysis state
   const [analysisResult, setAnalysisResult] = useState({});
+
+  // Listen for reset analysis result event
+  useEffect(() => {
+    const handleResetAnalysisResult = () => setAnalysisResult(undefined);
+    window.addEventListener('resetAnalysisResult', handleResetAnalysisResult);
+    return () => window.removeEventListener('resetAnalysisResult', handleResetAnalysisResult);
+  }, []);
 
   // Lighting actions state
   const [lightingActions, setLightingActions] = useState([]);
@@ -234,20 +240,6 @@ export function App() {
             />
           </div>
 
-          {songData && songData?.bpm && ( 
-          <div className="bg-white/10 rounded-2xl p-6 mb-6">
-            <SongAnalysis 
-              songData={songData} 
-              currentTime={currentTime}
-              setCurrentTime={setCurrentTime}
-              analyzeSong={(data)=>{setAnalysisResult(undefined); wsSend("analyzeSong", data)}}
-              analysisResult={analysisResult}
-              currentSongFile={currentSongFile}
-            />
-          </div>
-          )}
-
-
           {/* Actions Card: Display lighting actions from the backend */}
           <ActionsCard wsActions={lightingActions} />
 
@@ -274,6 +266,8 @@ export function App() {
             songData={songData}
             seekTo={(time) => handleSeekTo(time)}
             wsSend={wsSend}
+            analysisResult={analysisResult}
+            currentSongFile={currentSongFile}
           />
         )}
 
