@@ -8,7 +8,7 @@ from typing import Optional, Callable, Any
 async def query_ollama_mistral_streaming(
     prompt: str, 
     session_id: str = "default", 
-    base_url: str = "http://backend-llm:11434", 
+    base_url: str = "http://llm-server:11434", 
     callback: Optional[Callable[[str], Any]] = None
 ):
     """Send a prompt to ollama/mistral and call callback for each chunk."""

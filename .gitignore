@@ -197,3 +197,4 @@ cython_debug/
 # Local sample files
 songs/
 .cache/
+.ollama_data/

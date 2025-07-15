@@ -20,10 +20,18 @@ The system consists of several microservices:
 - **Librosa + Scikit-learn** for pattern detection and clustering
 - **FastAPI** REST API for analysis requests
 
-### 🤖 LLM Backend (`backend-llm`)
+### 🤖 LLM Backend (`llm-server`)
 - **Ollama** service for AI language model capabilities
 - GPU acceleration support
 - Model management and inference
+- load models
+   ```bash
+   ollama pull mistral
+   ollama pull mixtral
+   ollama pull command-r
+   ollama pull phi3
+   ollama pull tinyllama
+   ```
 
 ## Features
 
@@ -96,7 +104,7 @@ For development with live reloading:
 
 ```bash
 # Start just the analysis service and LLM
-docker-compose up song-analysis backend-llm
+docker-compose up song-analysis llm-server
 
 # Run the main app in development mode
 cd backend
@@ -146,7 +154,7 @@ python backend/health_check_service.py
 ### Environment Variables
 
 - `SONG_ANALYSIS_SERVICE_URL`: URL of the song analysis service (default: http://song-analysis:8001)
-- `OLLAMA_URL`: URL of the Ollama service (default: http://backend-llm:11434)
+- `OLLAMA_URL`: URL of the Ollama service (default: http://llm-server:11434)
 - `DMX_INTERFACE`: DMX interface type (artnet, usb, etc.)
 
 ### Fixture Configuration

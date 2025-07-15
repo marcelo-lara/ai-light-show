@@ -121,7 +121,7 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
         
         # Check for specific error types
         if "Connection" in str(e) or "connect" in str(e).lower():
-            error_message = "Can't connect to the AI service. Please make sure Ollama is running on http://backend-llm:11434"
+            error_message = "Can't connect to the AI service. Please make sure Ollama is running on http://llm-server:11434"
         elif "timeout" in str(e).lower():
             error_message = "The AI service is taking too long to respond. Please try again in a moment."
         elif "model" in str(e).lower():
@@ -153,7 +153,7 @@ async def check_ai_service_health() -> tuple[bool, str]:
         await query_ollama_mistral_streaming("Hi", "health_check", callback=test_callback)
         return True, "AI service is ready"
     except ConnectionError:
-        return False, "Cannot connect to Ollama service. Please ensure Ollama is running on http://backend-llm:11434"
+        return False, "Cannot connect to Ollama service. Please ensure Ollama is running on http://llm-server:11434"
     except ValueError:
         return False, "Mistral model not found. Please install it with: ollama pull mistral"
     except Exception as e:

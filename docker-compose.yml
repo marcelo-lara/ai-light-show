@@ -28,12 +28,12 @@ services:
     ports:
       - "8001:8001" 
 
-  backend-llm:
+  llm-server:
     image: ollama/ollama
     networks:
       - ailightshow
     volumes:
-      - ollama:/root/.ollama
+      - ./.ollama_data:/root/.ollama
     restart: unless-stopped
     command: serve
     deploy:

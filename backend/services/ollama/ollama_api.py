@@ -4,8 +4,8 @@ import requests
 import json
 
 
-def query_ollama_mistral(prompt: str, base_url: str = "http://backend-llm:11434") -> str:
-    """Send a prompt to the backend-LLM and return the response text."""
+def query_ollama_mistral(prompt: str, base_url: str = "http://llm-server:11434") -> str:
+    """Send a prompt to the llm-server and return the response text."""
     request_data = {
         "model": "mistral",
         "messages": [{"role": "user", "content": prompt}]
