@@ -314,9 +314,6 @@ class WebSocketManager:
             "actions": actions
         })
     
-    
-
-    
     async def _handle_save_arrangement(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
         """Handle saving song arrangement."""
         arrangement = message["arrangement"]

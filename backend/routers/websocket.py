@@ -1,7 +1,7 @@
 """WebSocket router for real-time communication."""
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from ..services.websocket_service import ws_manager
+from ..services.websocket_manager import ws_manager
 
 router = APIRouter()
 
