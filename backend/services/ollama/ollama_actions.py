@@ -84,7 +84,7 @@ def execute_confirmed_action(action_id: str, proposals: List[Dict]) -> Tuple[boo
     # Import required modules
     from ...models.actions_sheet import ActionsSheet
     from pathlib import Path
-    from ...services.websocket_service import broadcast_to_all
+    from ..utils.broadcast import broadcast_to_all
     import asyncio
     
     try:
