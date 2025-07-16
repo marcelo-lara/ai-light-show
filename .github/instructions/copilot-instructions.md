@@ -129,6 +129,10 @@ actions_service.render_actions_to_canvas(actions_sheet)
 #### 🔌 Fixture Behavior Model
 DMX fixtures are dumb devices — they do not understand commands like "strobe" or "flash". They only respond to raw channel values over time.
 
+#### Fixtures are static
+DMX Fixtures are defined in `fixtures/fixtures.json` and can not be modified at runtime. 
+Fixtures are static objects that represent physical devices with fixed channel mappings.
+
 #### 🎬 Action-to-Channel Translation
 All high-level lighting instructions — referred to as actions (e.g. "strobe", "fade_in", "seek") — must be converted into sequences of channel values over time by the system.
 

@@ -26,14 +26,8 @@ The system consists of several microservices:
 - Model management and inference
 - load models
    ```bash
-   ollama pull mistral
-   ollama pull mixtral
-   ollama pull command-r
-   ollama pull phi3
-   ollama pull tinyllama
-   
-   nohup ./pull_models.sh > /tmp/ollama-download.log 2>&1 &
-   tail -f /tmp/ollama-download.log
+nohup /root/.ollama/pull_models.sh > /tmp/ollama-download.log 2>&1 &
+tail -f /tmp/ollama-download.log
    ```
 
 ## Features
@@ -56,12 +50,12 @@ The system consists of several microservices:
 - **Direct Commands**: Control lighting with #action commands in chat
 
 ### 🎨 User Interface
+- **AI Chat**: Natural language lighting control and suggestions
 - **Real-time Visualization**: Audio waveform with beat markers
 - **Interactive Timeline**: Click to seek, visual pattern display
 - **Fixture Control**: Intuitive sliders and controls for each light
 - **Song Library**: Manage and analyze your music collection
 - **Pattern Visualization**: See detected patterns and clusters
-- **AI Chat**: Natural language lighting control and suggestions
 - **Direct Commands**: Use #action commands in chat for precise control
 
 ## Quick Start

@@ -4,7 +4,7 @@ from typing import Dict, Any
 from fastapi import WebSocket
 from ...models.app_state import app_state
 from ..utils.broadcast import broadcast_to_all
-from ..direct_commands_parser import DirectCommandsParser
+from ..ollama.direct_commands_parser import DirectCommandsParser
 from .action_executor import execute_confirmed_action
 
 # Store pending actions for each WebSocket session

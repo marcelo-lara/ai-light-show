@@ -8,9 +8,9 @@ import re
 from typing import Dict, Any, Tuple, List, Optional
 from pathlib import Path
 
-from ..models.app_state import app_state
-from ..models.actions_sheet import ActionsSheet, ActionModel
-from ..services.actions_service import ActionsService
+from ...models.app_state import app_state
+from ...models.actions_sheet import ActionsSheet, ActionModel
+from ..actions_service import ActionsService
 
 
 class DirectCommandsParser:
