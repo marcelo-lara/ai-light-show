@@ -58,7 +58,7 @@ export default function ChatAssistant({ wsSend, lastResponse }) {
     if (!message.trim()) return;
     
     // Add to chat with special styling for direct commands
-    const isDirectCommand = message.trim().toLowerCase().startsWith("#action");
+    const isDirectCommand = message.trim().startsWith("#");
     setChat((prev) => [...prev, { 
       sender: 'user', 
       text: message,
@@ -128,7 +128,7 @@ export default function ChatAssistant({ wsSend, lastResponse }) {
       <div className="mt-4 flex gap-2 items-end">
         <textarea
           className="flex-1 min-h-[2.5rem] max-h-32 p-2 bg-gray-800 text-white rounded resize-none"
-          placeholder="Type a message or #action command (e.g. #action clear all)"
+          placeholder="Type a message or # command (e.g. #add flash to parcan at 1m23s duration 2b)"
           rows="1"
           value={message}
           onInput={(e) => {

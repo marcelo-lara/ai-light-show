@@ -1,35 +1,39 @@
 # Direct Commands in Chat Assistant
 
-The Chat Assistant now supports direct action commands that bypass the AI model for faster and more precise control.
+The Chat Assistant now supports direct action commands ("Direct Commands") that bypass the AI model for faster and more precise control.
 
 ## Usage
 
-Type commands starting with `#action` in the chat input, for example:
+Type commands starting with `#` in the chat input, for example:
 
 ```
-#action add flash to parcan_l at 5.2 duration 1.5
+#add flash to parcan_l at 5.2 duration 1.5
+#add strobe to moving_head at 10 duration 2
+#clear all actions
+#clear action 123
+#clear group chorus
+#render
+#help
 ```
 
 ## Supported Commands
 
-- `#action clear all` - Clear all actions from the current song
-- `#action clear id <action_id>` - Clear a specific action by ID
-- `#action clear group <group_id>` - Clear all actions with a specific group ID
-- `#action add <action> to <fixture> at <start_time> duration <duration_time>` - Add a new action
-- `#action render` - Render all actions to the DMX canvas
+- `#help` - Show a list of available commands
+- `#clear all actions` - Clear all actions from the current song
+- `#clear action <action_id>` - Clear a specific action by ID
+- `#clear group <group_id>` - Clear all actions with a specific group ID
+- `#add <action> to <fixture> at <start_time> duration <duration_time>` - Add a new action. Duration is optional, default is 1 beat.
+- `#render` - Render all actions to the DMX canvas
 
-## Examples
+## Accepted Time Formats
 
-```
-#action add flash to parcan_l at 5.2 duration 1.5
-#action add strobe to moving_head at 10 duration 2
-#action clear all
-#action render
-```
+- `1m23.45s` (1 minute 23.45 seconds)
+- `2b` (duration of 2 beats at the BPM of the current song)
+- `12.5` (seconds)
 
 ## Notes
 
-- All times are in seconds
+- All times are converted to seconds automatically
 - You need to have a song loaded for these commands to work
-- After adding actions, use `#action render` to see the results
+- After adding actions, use `#render` to see the results
 - Direct commands appear in purple in the chat interface

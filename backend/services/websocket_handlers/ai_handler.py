@@ -25,11 +25,11 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
     try:
         session_id = str(id(websocket))
         
-        # Check if this is a direct command (starts with "#action")
-        if prompt.strip().lower().startswith("#action"):
+        # Check if this is a direct command (starts with #)
+        if prompt.strip().startswith("#"):
             await _handle_direct_command(websocket, prompt)
             return
-            
+
         # Check if this is a confirmation message for pending actions
         pending_actions = _pending_actions_store.get(session_id)
         if pending_actions:

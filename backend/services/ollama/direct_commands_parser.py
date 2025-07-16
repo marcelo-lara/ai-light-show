@@ -11,6 +11,7 @@ from pathlib import Path
 from ...models.app_state import app_state
 from ...models.actions_sheet import ActionsSheet, ActionModel
 from ..actions_service import ActionsService
+from ..utils.time_conversion import string_to_time, beats_to_seconds
 
 
 class DirectCommandsParser:
@@ -33,9 +34,24 @@ class DirectCommandsParser:
                 - Message to return to the user
                 - Additional data (if any)
         """
-        # Strip the #action prefix and any whitespace
-        command = command_text.replace("#action", "", 1).strip()
-        
+        # Accept both #action and # as prefix
+        command = command_text.lstrip("#").strip()
+        command = command.replace("action", "", 1).strip() if command.lower().startswith("action") else command
+
+        # #help command
+        if command.lower() == "help":
+            help_text = (
+                "Direct Commands:\n"
+                "- #help - Show this help message\n"
+                "- #clear all actions - Clear all actions from the current song\n"
+                "- #clear action <action_id> - Clear a specific action by ID\n"
+                "- #clear group <group_id> - Clear all actions with a specific group ID\n"
+                "- #add <action> to <fixture> at <start_time> duration <duration_time> - Add a new action. duration is optional, default 1 beat.\n"
+                "- #render - Render all actions to the DMX canvas\n"
+                "\nAccepted time formats: 1m23.45s, 2b (beats), 12.5 (seconds)\n"
+            )
+            return True, help_text, None
+
         # Get current song
         if not app_state.current_song_file:
             return False, "No song loaded. Please load a song first.", None
@@ -157,31 +173,39 @@ class DirectCommandsParser:
         try:
             # Parse: add <action> to <fixture> at <start_time> duration <duration_time>
             add_match = re.match(
-                r'add\s+(\w+)\s+to\s+(\w+)\s+at\s+([\d.]+)(?:s)?\s+duration\s+([\d.]+)(?:s)?',
+                r'add\s+(\w+)\s+to\s+(\w+)\s+at\s+([^ ]+)(?:\s+duration\s+([^ ]+))?',
                 command
             )
-            
             if not add_match:
                 return False, "Invalid add command. Usage: add <action> to <fixture> at <start_time> duration <duration_time>", None
-            
             action_name = add_match.group(1)
             fixture_id = add_match.group(2)
-            start_time = float(add_match.group(3))
-            duration = float(add_match.group(4))
-            
+            start_time_str = add_match.group(3)
+            duration_str = add_match.group(4) if add_match.group(4) else "1b"
+
+            # Parse start_time and duration (support 1m23.45s, 2b, 12.5)
+            bpm = getattr(app_state.current_song, "bpm", 120) if app_state.current_song else 120
+            def parse_time(val):
+                val = val.strip().lower()
+                if val.endswith("b"):
+                    try:
+                        n_beats = float(val[:-1])
+                        return beats_to_seconds(n_beats, bpm)
+                    except Exception:
+                        return 0.0
+                return string_to_time(val)
+            start_time = parse_time(start_time_str)
+            duration = parse_time(duration_str)
+
             # Check if fixture exists
             if app_state.fixtures is None:
                 return False, "Fixtures not initialized.", None
-                
             if fixture_id not in app_state.fixtures.fixtures:
                 return False, f"Fixture '{fixture_id}' not found.", None
-            
-            # Check if action is supported by fixture
             fixture = app_state.fixtures.fixtures[fixture_id]
             if action_name not in fixture.actions:
                 supported_actions = ", ".join(fixture.actions)
                 return False, f"Action '{action_name}' not supported by fixture '{fixture_id}'. Supported actions: {supported_actions}", None
-            
             # Create action
             action = ActionModel(
                 action=action_name,
@@ -190,12 +214,8 @@ class DirectCommandsParser:
                 start_time=start_time,
                 duration=duration
             )
-            
-            # Add to actions sheet
             actions_sheet.add_action(action)
             actions_sheet.save_actions()
-            
-            return True, f"Added {action_name} to {fixture_id} at {start_time}s for {duration}s.", None
-            
+            return True, f"Added {action_name} to {fixture_id} at {start_time:.2f}s for {duration:.2f}s.", None
         except Exception as e:
             return False, f"Error adding action: {e}", None
