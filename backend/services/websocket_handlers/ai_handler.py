@@ -158,8 +158,8 @@ async def _handle_direct_command(websocket: WebSocket, command: str) -> None:
         command (str): The command text (starting with #action)
     """
     try:
-        # Parse and execute the command
-        success, message, additional_data = _direct_commands_parser.parse_command(command)
+        # Parse and execute the command (must await async)
+        success, message, additional_data = await _direct_commands_parser.parse_command(command, websocket=websocket)
         
         # Send the response to the user
         await websocket.send_json({
