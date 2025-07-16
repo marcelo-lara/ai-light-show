@@ -11,11 +11,16 @@ def string_to_time(string: str) -> float:
     if not string:
         return 0.0
     try:
+
       # Handle '1m0.05s' format
       if 'm' in string and 's' in string:
           minutes, seconds = string.split('m')
           seconds = seconds.replace('s', '')
           return float(minutes) * 60 + float(seconds)
+
+      # Handle '3.4s' format
+      if string.endswith('s'):
+          return float(string[:-1])
       
       # Handle 'MM:SS.sss' format
       if ':' in string:

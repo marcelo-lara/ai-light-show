@@ -4,6 +4,7 @@ import { marked } from 'marked';
 
 export default function ChatAssistant({ wsSend, lastResponse }) {
   const [message, setMessage] = useState("");
+  const lastSentMessageRef = useRef("");
   const [chat, setChat] = useState([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentStreamingMessage, setCurrentStreamingMessage] = useState("");
@@ -56,7 +57,6 @@ export default function ChatAssistant({ wsSend, lastResponse }) {
 
   const sendMessage = () => {
     if (!message.trim()) return;
-    
     // Add to chat with special styling for direct commands
     const isDirectCommand = message.trim().startsWith("#");
     setChat((prev) => [...prev, { 
@@ -64,10 +64,10 @@ export default function ChatAssistant({ wsSend, lastResponse }) {
       text: message,
       isDirectCommand
     }]);
-    
     if (wsSend) {
       wsSend('userPrompt', { prompt: message });
     }
+    lastSentMessageRef.current = message;
     setMessage("");
   };
 
@@ -141,6 +141,17 @@ export default function ChatAssistant({ wsSend, lastResponse }) {
               e.preventDefault();
               sendMessage();
               setMessage("");
+            } else if (e.key === 'ArrowUp' && !e.shiftKey && !message) {
+              // Recall last sent message if input is empty
+              if (lastSentMessageRef.current) {
+                setMessage(lastSentMessageRef.current);
+                // Move cursor to end
+                setTimeout(() => {
+                  if (e.target.setSelectionRange) {
+                    e.target.setSelectionRange(lastSentMessageRef.current.length, lastSentMessageRef.current.length);
+                  }
+                }, 0);
+              }
             }
           }}
         ></textarea>

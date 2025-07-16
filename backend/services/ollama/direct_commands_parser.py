@@ -21,12 +21,13 @@ class DirectCommandsParser:
         """Initialize the direct commands parser."""
         pass
     
-    def parse_command(self, command_text: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+    async def parse_command(self, command_text: str, websocket=None) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """
-        Parse a direct command and execute it.
+        Parse a direct command and execute it. Async to allow calling async handlers.
         
         Args:
             command_text (str): The command text from the user (starts with #action)
+            websocket: WebSocket, required for #analyze
             
         Returns:
             Tuple[bool, str, Optional[Dict[str, Any]]]: 
@@ -46,38 +47,99 @@ class DirectCommandsParser:
                 "- #clear all actions - Clear all actions from the current song\n"
                 "- #clear action <action_id> - Clear a specific action by ID\n"
                 "- #clear group <group_id> - Clear all actions with a specific group ID\n"
-                "- #add <action> to <fixture> at <start_time> duration <duration_time> - Add a new action. duration is optional, default 1 beat.\n"
+                "- #add <action> to <fixture> at <start_time> duration <duration_time> OR for <duration_time> - Add a new action. Duration is optional, default is 1 beat.\n"
                 "- #render - Render all actions to the DMX canvas\n"
+                "- #analyze - Analyze the current song using the analysis service\n"
                 "\nAccepted time formats: 1m23.45s, 2b (beats), 12.5 (seconds)\n"
             )
             return True, help_text, None
 
+        # #analyze command
+        if command.lower() == "analyze":
+            if websocket is not None:
+                try:
+                    from ..song_analysis_client import SongAnalysisClient
+                    from ...models.app_state import app_state
+                    current_song = getattr(app_state, 'current_song', None)
+                    song_name = Path(current_song.mp3_path).stem if current_song and getattr(current_song, 'mp3_path', None) else None
+                    if not song_name or not current_song:
+                        await websocket.send_json({
+                            "type": "analyzeResult",
+                            "status": "error",
+                            "message": "No song loaded for analysis"
+                        })
+                        return False, "No song loaded for analysis.", None
+                    async with SongAnalysisClient() as client:
+                        health = await client.health_check()
+                        if health.get("status") != "healthy":
+                            await websocket.send_json({
+                                "type": "analyzeResult",
+                                "status": "error",
+                                "message": f"Song analysis service is not healthy: {health.get('error', 'Unknown error')}"
+                            })
+                            return False, "Song analysis service is not healthy.", None
+                        result = await client.analyze_song(song_name=song_name, reset_file=True, debug=False)
+                        if result.get("status") == "success":
+                            metadata = result.get("metadata", {})
+                            # Update app_state.current_song with new metadata
+                            if current_song:
+                                current_song.bpm = metadata.get("bpm", getattr(current_song, "bpm", None))
+                                current_song.duration = metadata.get("duration", getattr(current_song, "duration", None))
+                                current_song.beats = metadata.get("beats", [])
+                                current_song.patterns = metadata.get("patterns", [])
+                                current_song.chords = metadata.get("chords", [])
+                                current_song.drums = metadata.get("drums", [])
+                                current_song.arrangement = metadata.get("arrangement", [])
+                                current_song.key_moments = metadata.get("key_moments", [])
+                                if hasattr(current_song, "save"):
+                                    current_song.save()
+                            await websocket.send_json({
+                                "type": "analyzeResult",
+                                "status": "ok",
+                                "metadata": metadata
+                            })
+                            return True, "Song analysis completed successfully.", None
+                        else:
+                            await websocket.send_json({
+                                "type": "analyzeResult",
+                                "status": "error",
+                                "message": result.get("message", "Analysis failed")
+                            })
+                            return False, result.get("message", "Analysis failed"), None
+                except Exception as e:
+                    await websocket.send_json({
+                        "type": "analyzeResult",
+                        "status": "error",
+                        "message": f"Analysis failed: {str(e)}"
+                    })
+                    return False, f"Analysis failed: {str(e)}", None
+            else:
+                return False, "WebSocket required for #analyze command.", None
+
         # Get current song
-        if not app_state.current_song_file:
+        from ...models.app_state import app_state
+        if not getattr(app_state, 'current_song_file', None):
             return False, "No song loaded. Please load a song first.", None
-        
-        song_name = Path(app_state.current_song_file).stem
+        song_file = getattr(app_state, 'current_song_file', None)
+        if not song_file:
+            return False, "No song loaded. Please load a song first.", None
+        song_name = Path(song_file).stem
         actions_sheet = ActionsSheet(song_name)
         actions_sheet.load_actions()
-        
-        # Create actions service
-        if app_state.fixtures is None or app_state.dmx_canvas is None:
+        fixtures = getattr(app_state, 'fixtures', None)
+        dmx_canvas = getattr(app_state, 'dmx_canvas', None)
+        if fixtures is None or dmx_canvas is None:
             return False, "Fixtures or DMX canvas not initialized.", None
-            
-        actions_service = ActionsService(app_state.fixtures, app_state.dmx_canvas)
-        
+        actions_service = ActionsService(fixtures, dmx_canvas)
         # Handle different command types
         if command == "render":
             return self._handle_render_command(actions_sheet, actions_service)
-            
         elif command.startswith("clear"):
             return self._handle_clear_command(command, actions_sheet)
-            
         elif command.startswith("add"):
             return self._handle_add_command(command, actions_sheet)
-            
         else:
-            return False, f"Unknown command: {command}. Supported commands: clear all, clear id, clear group, add, render", None
+            return False, f"Unknown command: {command}. Supported commands: clear all, clear id, clear group, add, render, analyze", None
     
     def _handle_render_command(self, actions_sheet: ActionsSheet, actions_service: ActionsService) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """Handle the 'render' command to render all actions to DMX canvas."""
@@ -171,13 +233,13 @@ class DirectCommandsParser:
     def _handle_add_command(self, command: str, actions_sheet: ActionsSheet) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """Handle the 'add' command to add a new action."""
         try:
-            # Parse: add <action> to <fixture> at <start_time> duration <duration_time>
+            # Parse: add <action> to <fixture> at <start_time> duration <duration_time> or for <duration_time>
             add_match = re.match(
-                r'add\s+(\w+)\s+to\s+(\w+)\s+at\s+([^ ]+)(?:\s+duration\s+([^ ]+))?',
+                r'add\s+(\w+)\s+to\s+(\w+)\s+at\s+([^ ]+)(?:\s+(?:duration|for)\s+([^ ]+))?',
                 command
             )
             if not add_match:
-                return False, "Invalid add command. Usage: add <action> to <fixture> at <start_time> duration <duration_time>", None
+                return False, "Invalid add command. Usage: add <action> to <fixture> at <start_time> duration <duration_time> or for <duration_time>", None
             action_name = add_match.group(1)
             fixture_id = add_match.group(2)
             start_time_str = add_match.group(3)

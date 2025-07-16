@@ -9,6 +9,7 @@ Type commands starting with `#` in the chat input, for example:
 ```
 #add flash to parcan_l at 5.2 duration 1.5
 #add strobe to moving_head at 10 duration 2
+#add flash to parcan_l at 5.2 for 1.5
 #clear all actions
 #clear action 123
 #clear group chorus
@@ -23,6 +24,7 @@ Type commands starting with `#` in the chat input, for example:
 - `#clear action <action_id>` - Clear a specific action by ID
 - `#clear group <group_id>` - Clear all actions with a specific group ID
 - `#add <action> to <fixture> at <start_time> duration <duration_time>` - Add a new action. Duration is optional, default is 1 beat.
+- `#add <action> to <fixture> at <start_time> for <duration_time>` - Add a new action. Duration is optional, default is 1 beat.
 - `#render` - Render all actions to the DMX canvas
 
 ## Accepted Time Formats
