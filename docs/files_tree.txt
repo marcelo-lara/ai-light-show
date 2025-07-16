@@ -47,7 +47,6 @@
 │   │   ├── websocket_handlers
 │   │   │   ├── ai_handler.py
 │   │   │   ├── dmx_handler.py
-│   │   │   ├── fixture_handler.py
 │   │   │   ├── __init__.py
 │   │   │   ├── song_handler.py
 │   │   │   └── sync_handler.py

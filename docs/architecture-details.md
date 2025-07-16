@@ -61,7 +61,6 @@ curl -X POST "http://localhost:8000/api/ai/chat" \
 | `ai_handler` | `userPrompt`, `confirmAction` | Processes AI chat requests and action confirmations |
 | `dmx_handler` | `dmxUpdate`, `presetRecall` | Manages real-time DMX value updates and preset operations |
 | `song_handler` | `loadSong`, `syncSongPosition` | Handles song loading and timeline synchronization |
-| `fixture_handler` | `addFixture`, `updateFixture` | Manages fixture configuration changes |
 | `sync_handler` | `requestFullSync` | Coordinates state synchronization between clients |
 
 **Connection Flow Implementation** (websocket_manager.py):

@@ -12,7 +12,6 @@ from .websocket_handlers import (
     handle_analyze_song,
     handle_set_dmx,
     handle_user_prompt,
-    handle_reload_fixtures,
 )
 from .utils.broadcast import broadcast_to_all
 from pathlib import Path
@@ -27,7 +26,6 @@ class WebSocketManager:
             "saveArrangement": handle_save_arrangement,
             "saveKeyMoments": handle_save_key_moments,
             "analyzeSong": handle_analyze_song,
-            "reloadFixtures": handle_reload_fixtures,
             "setDmx": handle_set_dmx,
             "userPrompt": handle_user_prompt,
             "blackout": handle_blackout,
