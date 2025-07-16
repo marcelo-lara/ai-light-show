@@ -11,9 +11,11 @@ services:
       # Mount source code for live reloading
       - ./backend:/app/backend
       - ./frontend:/app/frontend
+      - ./shared:/app/shared
     environment:
       - DEBUG=true
       - RELOAD=true
+      - PYTHONPATH=/app
 
   song-analysis:
     volumes:
@@ -21,9 +23,11 @@ services:
       - ./song_analysis:/app
       # Mount songs with write access for development
       - ./songs:/app/songs
+      - ./shared:/app/shared
     environment:
       - DEBUG=true
       - RELOAD=true
+      - PYTHONPATH=/app
     command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
 
   # Development database (if needed)

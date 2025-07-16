@@ -11,6 +11,7 @@ services:
       - ./songs:/app/static/songs
       - ./fixtures:/app/static/fixtures
       - ./.cache:/root/.cache
+      - ./shared:/app/shared
     restart: unless-stopped
     environment:
       - SONG_ANALYSIS_SERVICE_URL=http://song-analysis:8001
@@ -24,9 +25,12 @@ services:
     volumes:
       - ./songs:/app/static/songs
       - ./.cache:/app/cache
+      - ./shared:/app/shared
     restart: unless-stopped
     ports:
-      - "8001:8001" 
+      - "8001:8001"
+    environment:
+      - PYTHONPATH=/app
 
   llm-server:
     image: ollama/ollama

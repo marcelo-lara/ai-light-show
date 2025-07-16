@@ -32,9 +32,13 @@ RUN pip install -r requirements.txt
 # Copy the rest of the backend code
 COPY backend/ ./backend/
 
+# Copy the shared module
+COPY shared/ ./shared/
+
 # Copy static frontend files
 COPY --from=frontend /app/dist ./static/
 
 EXPOSE 5000
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
 CMD ["uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "5500"]
