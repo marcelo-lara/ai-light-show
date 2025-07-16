@@ -113,13 +113,13 @@ async def handle_analyze_song(websocket: WebSocket, message: Dict[str, Any]) -> 
                 # Update the current song with analysis results
                 metadata = result.get("metadata", {})
                 
-                # Update song properties
+                # FIXME: current song should be loaded, not recreated
                 app_state.current_song.bpm = metadata.get("bpm", app_state.current_song.bpm)
                 app_state.current_song.duration = metadata.get("duration", app_state.current_song.duration)
                 app_state.current_song.beats = metadata.get("beats", [])
                 app_state.current_song.patterns = metadata.get("patterns", [])
                 app_state.current_song.chords = metadata.get("chords", [])
-                app_state.current_song.drums = metadata.get("drums", [])
+                app_state.current_song.analysis = metadata.get("analysis", [])
                 app_state.current_song.arrangement = metadata.get("arrangement", [])
                 app_state.current_song.key_moments = metadata.get("key_moments", [])
                 

@@ -1,7 +1,7 @@
 import { formatTime } from "../../utils";
 import { useEffect, useState, useRef } from 'preact/hooks';
 
-// Key moment schema: { time, name, description, duration }
+// Key moment schema: { start, end, name, description }
 // Key moments is an array of key moment objects
 
 export default function SongKeyMoments({
@@ -27,15 +27,15 @@ export default function SongKeyMoments({
         let currentIdx = null;
         for (let i = 0; i < keyMoments.length; i++) {
             const moment = keyMoments[i];
-            // If moment has duration > 0, check if current time is within the duration
-            if (moment.duration && moment.duration > 0) {
-                if (currentTime >= moment.time && currentTime <= moment.time + moment.duration) {
+            // If moment has end time defined, check if current time is within the range
+            if (moment.end && moment.end > moment.start) {
+                if (currentTime >= moment.start && currentTime <= moment.end) {
                     currentIdx = i;
                     break;
                 }
             } else {
-                // If no duration or duration is 0, use proximity-based selection
-                if (currentTime >= moment.time) {
+                // If no end time or end equals start, use proximity-based selection
+                if (currentTime >= moment.start) {
                     currentIdx = i;
                 } else {
                     break;
@@ -79,10 +79,10 @@ export default function SongKeyMoments({
             idx++;
             name = `Moment ${idx}`;
         }
-        const time = parseFloat(currentTime.toFixed(3));
+        const start = parseFloat(currentTime.toFixed(3));
         setKeyMoments(prev => ([
             ...prev,
-            { time, name, description: `Key moment at ${formatTime(time)}`, duration: 0 }
+            { start, end: null, name, description: `Key moment at ${formatTime(start)}` }
         ]));
     };
 
@@ -91,7 +91,7 @@ export default function SongKeyMoments({
             <h2 className="text-lg mb-2 font-semibold">Key Moments</h2>
             <ul className="space-y-1 max-h-36 overflow-y-auto">
                 {keyMoments
-                    .sort((a, b) => a.time - b.time)
+                    .sort((a, b) => a.start - b.start)
                     .map((moment, idx) => (
                         <li 
                             key={idx} 
@@ -104,8 +104,8 @@ export default function SongKeyMoments({
                                         className="text-black px-1 rounded w-16" 
                                         type="number" 
                                         step="0.1"
-                                        value={moment.time} 
-                                        onChange={e => updateMoment(idx, 'time', parseFloat(e.target.value))} 
+                                        value={moment.start} 
+                                        onChange={e => updateMoment(idx, 'start', parseFloat(e.target.value))} 
                                     />
                                     <input 
                                         className="text-black px-1 rounded w-24" 
@@ -122,9 +122,9 @@ export default function SongKeyMoments({
                                         type="number" 
                                         step="0.1"
                                         min="0"
-                                        value={moment.duration || 0} 
-                                        onChange={e => updateMoment(idx, 'duration', parseFloat(e.target.value) || 0)} 
-                                        placeholder="Duration"
+                                        value={moment.end || moment.start} 
+                                        onChange={e => updateMoment(idx, 'end', parseFloat(e.target.value) || null)} 
+                                        placeholder="End Time"
                                     />
                                     <button onClick={() => deleteMoment(idx)}>❌</button>
                                 </div>
@@ -132,9 +132,9 @@ export default function SongKeyMoments({
                                 <>
                                     <span
                                         className="cursor-pointer hover:text-gray-500"
-                                        onClick={() => seekTo(moment.time)}
+                                        onClick={() => seekTo(moment.start)}
                                     >
-                                        {formatTime(moment.time)} - {moment.name}{moment.duration > 0 ? ` (${moment.duration}s)` : ''}
+                                        {formatTime(moment.start)} - {moment.name}{moment.end && moment.end > moment.start ? ` (to ${formatTime(moment.end)})` : ''}
                                     </span>
                                     
                                     <span className="text-gray-400" style="display: block"> 

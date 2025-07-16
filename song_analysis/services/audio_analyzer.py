@@ -2,6 +2,7 @@
 Main audio analyzer service that orchestrates all analysis tasks.
 """
 
+import os
 from typing import Dict, Any
 import logging
 from pathlib import Path
@@ -13,7 +14,8 @@ from .audio import (
     extract_stems,
     get_stem_clusters,
     noise_gate,
-    guess_arrangement
+    guess_arrangement,
+    extract_song_features    
 )
 
 logger = logging.getLogger(__name__)
@@ -27,6 +29,7 @@ class SongAnalyzer:
         self.analyze_patterns_using_model = False
         self.infer_drums_using_model = False
         self.noise_gate_stems = True
+        self.data_path = Path("/app/songs/data")  # Default path for Docker, can be overridden
     
     def analyze(self, song: SongMetadata, reset_file: bool = True, debug: bool = False) -> SongMetadata:
         """
@@ -71,45 +74,54 @@ class SongAnalyzer:
         if not stems_folder or 'output_folder' not in stems_folder:
             raise ValueError("Failed to extract stems - no output folder returned")
 
+        song.analysis = extract_song_features(
+            stems_dir=stems_folder['output_folder'],
+            # chunk_size=chunk_size,
+            # hop=hop,
+            # sample_rate=sample_rate,
+            output_json_path=os.path.join(song.data_path, f"{song.song_name}.features.json"),
+            save_file=debug
+        )
+
         # Analyze stems for patterns
-        stems_list = ['drums', 'bass']
-        song.clear_patterns()
+        # stems_list = ['drums', 'bass']
+        # song.clear_patterns()
 
-        for stem in stems_list:
-            stem_path = f"{stems_folder['output_folder']}/{stem}.wav"
+        # for stem in stems_list:
+        #     stem_path = f"{stems_folder['output_folder']}/{stem}.wav"
             
-            if not Path(stem_path).exists():
-                logger.warning(f"⚠️ Stem file not found: {stem_path}")
-                continue
+        #     if not Path(stem_path).exists():
+        #         logger.warning(f"⚠️ Stem file not found: {stem_path}")
+        #         continue
 
-            # Apply noise gate to stem
-            if self.noise_gate_stems:
-                logger.info(f"🔇 Applying noise gate to {stem} stem...")
-                noise_gate(input_path=stem_path, threshold_db=-35.0)
+        #     # Apply noise gate to stem
+        #     if self.noise_gate_stems:
+        #         logger.info(f"🔇 Applying noise gate to {stem} stem...")
+        #         noise_gate(input_path=stem_path, threshold_db=-35.0)
 
-            # Get clusters (librosa)
-            try:
-                logger.info(f"🔍 Analyzing patterns for {stem} stem...")
-                stem_clusters = get_stem_clusters(
-                    song.get_beats_array(),
-                    stem_path,
-                    debug=debug
-                )
+        #     # Get clusters (librosa)
+        #     try:
+        #         logger.info(f"🔍 Analyzing patterns for {stem} stem...")
+        #         stem_clusters = get_stem_clusters(
+        #             song.get_beats_array(),
+        #             stem_path,
+        #             debug=debug
+        #         )
                 
-                if not stem_clusters:
-                    continue
+        #         if not stem_clusters:
+        #             continue
                 
-                if 'clusters_timeline' in stem_clusters:
-                    n_clusters = stem_clusters.get('n_clusters', 0)
-                    score = stem_clusters.get('clusterization_score', 0.0)
-                    logger.info(f"  Adding {n_clusters} clusters for {stem} → Score: {score:.4f}")
-                    song.add_patterns(stem, stem_clusters['clusters_timeline'])
-                else:
-                    logger.warning(f"⚠️ No clusters timeline found for {stem}")
+        #         if 'clusters_timeline' in stem_clusters:
+        #             n_clusters = stem_clusters.get('n_clusters', 0)
+        #             score = stem_clusters.get('clusterization_score', 0.0)
+        #             logger.info(f"  Adding {n_clusters} clusters for {stem} → Score: {score:.4f}")
+        #             song.add_patterns(stem, stem_clusters['clusters_timeline'])
+        #         else:
+        #             logger.warning(f"⚠️ No clusters timeline found for {stem}")
 
-            except Exception as e:
-                logger.error(f"⚠️ Failed to process {stem}: {str(e)}")
-                continue
+        #     except Exception as e:
+        #         logger.error(f"⚠️ Failed to process {stem}: {str(e)}")
+        #         continue
 
         # Guess arrangement if needed
         if len(song.arrangement) == 0:

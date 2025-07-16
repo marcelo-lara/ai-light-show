@@ -7,6 +7,11 @@ from .demucs_split import extract_stems
 from .pattern_finder import get_stem_clusters
 from .audio_process import noise_gate
 from .arrangement_guess import guess_arrangement, guess_arrangement_using_drum_patterns
+from .section_features import (
+    extract_section_features,
+    extract_song_features,
+    extract_features_from_stems
+)
 
 __all__ = [
     'extract_with_essentia',
@@ -14,5 +19,8 @@ __all__ = [
     'get_stem_clusters',
     'noise_gate',
     'guess_arrangement',
-    'guess_arrangement_using_drum_patterns'
+    'guess_arrangement_using_drum_patterns',
+    'extract_section_features',
+    'extract_song_features',
+    'extract_features_from_stems'
 ]

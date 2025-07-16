@@ -46,7 +46,7 @@ async def test_song_analysis_service(base_url="http://localhost:8001"):
         
         # Test 3: Song analysis (if test file exists)
         test_song_path = "/app/songs/born_slippy.mp3"  # Docker path
-        local_test_song = "./test_song.mp3"  # Local test file
+        local_test_song = "/home/darkangel/ai-light-show/songs/born_slippy.mp3"  # Local test file
         
         print(f"\n3. Testing song analysis...")
         
@@ -75,6 +75,8 @@ async def test_song_analysis_service(base_url="http://localhost:8001"):
                     print(f"   Duration: {metadata.get('duration', 'N/A'):.1f}s")
                     print(f"   Beats: {len(metadata.get('beats', []))}")
                     print(f"   Patterns: {len(metadata.get('patterns', []))}")
+                    print(f"   Arrangement: {len(metadata.get('arrangement', []))} sections")
+                    print(f"   Analysis: {len(metadata.get('analysis', []))} chunks")
                 else:
                     error_text = await response.text()
                     print(f"❌ Song analysis failed: HTTP {response.status}")

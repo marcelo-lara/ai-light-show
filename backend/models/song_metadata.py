@@ -29,21 +29,21 @@ def ensure_json_serializable(obj):
 @dataclass
 class KeyMoment:
     """Represents a key moment in a song, such as a drop or significant change."""
-    time: float
-    duration: Optional[float] = None
+    start: float
+    end: Optional[float] = None
     name: str = ''
     description: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            "time": float(self.time),
-            "duration": float(self.duration) if self.duration is not None else None,
+            "start": float(self.start),
+            "end": float(self.end) if self.end is not None else None,
             "name": self.name,
             "description": self.description,
         }
 
     def __str__(self) -> str:
-        return f"KeyMoment(time={self.time}, duration={self.duration}, name='{self.name}', description='{self.description}')"
+        return f"KeyMoment(start={self.start}, end={self.end}, name='{self.name}', description='{self.description}')"
 
 
 class Section:
@@ -119,7 +119,7 @@ class SongMetadata:
         self._patterns: List[Dict[str, Any]] = []
         self._arrangement: List[Section] = []
         self._duration = 2.0 * 60.0 # Default duration of 2 minutes
-        self._drums: List[Dict[str, Any]] = []
+        self._analysis: List[Dict[str, Any]] = []
         self._key_moments: List[Dict[str, Any]] = []
         
         if not songs_folder:
@@ -155,12 +155,12 @@ class SongMetadata:
         self._title = value
 
     @property
-    def drums(self) -> List[Dict[str, Any]]:
-        return self._drums
+    def analysis(self) -> List[Dict[str, Any]]:
+        return self._analysis
 
-    @drums.setter
-    def drums(self, value: List[Dict[str, Any]]):
-        self._drums = value
+    @analysis.setter
+    def analysis(self, value: List[Dict[str, Any]]):
+        self._analysis = value
 
     @property
     def genre(self) -> str:
@@ -278,7 +278,7 @@ class SongMetadata:
         self._beats = data.get("beats", [])
         self._patterns = data.get("patterns", [])
         self._chords = data.get("chords", [])
-        self._drums = data.get("drums", [])
+        self._analysis = data.get("analysis", [])
         self._duration = data.get("duration", 0.0)
         self._arrangement = data.get("arrangement", [])
         self._key_moments = data.get("key_moments", [])
@@ -291,7 +291,7 @@ class SongMetadata:
             "bpm": self.bpm,
             "chords": self.chords,
             "beats": self.beats,
-            "drums": self.drums,
+            "analysis": self.analysis,
             "patterns": self._patterns,
             # Serialize arrangement as list of dicts
             "arrangement": [s.to_dict() if isinstance(s, Section) else s for s in self.arrangement],
