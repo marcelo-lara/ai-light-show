@@ -4,9 +4,14 @@ from typing import Dict, Any
 from fastapi import WebSocket
 from ...models.app_state import app_state
 from ..utils.broadcast import broadcast_to_all
+from ..direct_commands_parser import DirectCommandsParser
+from .action_executor import execute_confirmed_action
 
 # Store pending actions for each WebSocket session
 _pending_actions_store = {}
+
+# Create direct commands parser
+_direct_commands_parser = DirectCommandsParser()
 
 async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> None:
     """Handle userPrompt with streaming and action proposals/confirmation flow."""
@@ -20,6 +25,11 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
     try:
         session_id = str(id(websocket))
         
+        # Check if this is a direct command (starts with "#action")
+        if prompt.strip().lower().startswith("#action"):
+            await _handle_direct_command(websocket, prompt)
+            return
+            
         # Check if this is a confirmation message for pending actions
         pending_actions = _pending_actions_store.get(session_id)
         if pending_actions:
@@ -48,7 +58,7 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
                 
                 # Broadcast updates to all clients if any action succeeded
                 if any_success:
-                    from ...dmx_controller import get_universe
+                    from backend.dmx_controller import get_universe
                     current_universe = get_universe()
                     await broadcast_to_all({
                         "type": "dmxCanvasUpdated",
@@ -137,6 +147,62 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
         await websocket.send_json({
             "type": "chatResponse", 
             "response": error_message
+        })
+
+async def _handle_direct_command(websocket: WebSocket, command: str) -> None:
+    """
+    Handle direct action commands that bypass the LLM.
+    
+    Args:
+        websocket (WebSocket): The WebSocket connection
+        command (str): The command text (starting with #action)
+    """
+    try:
+        # Parse and execute the command
+        success, message, additional_data = _direct_commands_parser.parse_command(command)
+        
+        # Send the response to the user
+        await websocket.send_json({
+            "type": "chatResponse",
+            "response": f"**Direct Command Result**: {message}",
+            "action_proposals": []
+        })
+        
+        # If command execution was successful, update clients
+        if success:
+            # If command execution generated universe updates to broadcast (like render command)
+            if additional_data and "universe" in additional_data:
+                await broadcast_to_all({
+                    "type": "dmxCanvasUpdated",
+                    "universe": additional_data["universe"],
+                    "message": additional_data.get("message", "DMX Canvas updated by direct command")
+                })
+                
+            # Always broadcast actions update to refresh the UI for any successful direct command
+            if app_state.current_song_file:
+                from pathlib import Path
+                from ...models.actions_sheet import ActionsSheet
+                
+                # Get current actions
+                song_name = Path(app_state.current_song_file).stem
+                actions_sheet = ActionsSheet(song_name)
+                actions_sheet.load_actions()
+                
+                # Log the actions update
+                action_count = len(actions_sheet.actions)
+                print(f"📊 Broadcasting actions update: {action_count} actions for song '{song_name}'")
+                
+                # Broadcast actions update
+                await broadcast_to_all({
+                    "type": "actionsUpdate",
+                    "actions": [action.to_dict() for action in actions_sheet.actions]
+                })
+        
+    except Exception as e:
+        print(f"❌ Error in _handle_direct_command: {e}")
+        await websocket.send_json({
+            "type": "chatResponse",
+            "response": f"**Direct Command Error**: {str(e)}"
         })
 
 async def check_ai_service_health() -> tuple[bool, str]:

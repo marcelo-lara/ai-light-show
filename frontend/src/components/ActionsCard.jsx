@@ -1,9 +1,24 @@
 import { useState, useEffect } from 'preact/hooks';
 
 export default function ActionsCard({ wsActions = [] }) {
+  const [lastUpdated, setLastUpdated] = useState(null);
+  
+  useEffect(() => {
+    if (wsActions.length > 0 || lastUpdated === null) {
+      setLastUpdated(new Date());
+    }
+  }, [wsActions]);
+  
   return (
     <div className="bg-white/10 rounded-2xl p-6 mb-6">
-      <h2 className="text-xl font-semibold mb-4">⚡ Lighting Actions</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">⚡ Lighting Actions</h2>
+        {lastUpdated && (
+          <div className="text-xs text-gray-400">
+            Updated: {lastUpdated.toLocaleTimeString()}
+          </div>
+        )}
+      </div>
       
       {wsActions.length === 0 ? (
         <div className="text-gray-400 italic">No lighting actions available</div>

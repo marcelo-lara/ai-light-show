@@ -56,7 +56,15 @@ export default function ChatAssistant({ wsSend, lastResponse }) {
 
   const sendMessage = () => {
     if (!message.trim()) return;
-    setChat((prev) => [...prev, { sender: 'user', text: message }]);
+    
+    // Add to chat with special styling for direct commands
+    const isDirectCommand = message.trim().toLowerCase().startsWith("#action");
+    setChat((prev) => [...prev, { 
+      sender: 'user', 
+      text: message,
+      isDirectCommand
+    }]);
+    
     if (wsSend) {
       wsSend('userPrompt', { prompt: message });
     }
@@ -82,7 +90,9 @@ export default function ChatAssistant({ wsSend, lastResponse }) {
             className={
               'max-w-[75%] px-4 py-2 rounded-lg text-sm ' +
               (msg.sender === 'user'
-                ? 'bg-blue-600 text-white self-end ml-auto text-right'
+                ? (msg.isDirectCommand 
+                   ? 'bg-purple-600 text-white self-end ml-auto text-right'
+                   : 'bg-blue-600 text-white self-end ml-auto text-right')
                 : 'bg-gray-200 text-gray-900 self-start mr-auto text-left')
             }
             style={{ alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}
@@ -93,7 +103,12 @@ export default function ChatAssistant({ wsSend, lastResponse }) {
                 dangerouslySetInnerHTML={renderMarkdown(msg.text)}
               />
             ) : (
-              msg.text
+              <div>
+                {msg.isDirectCommand ? (
+                  <strong>Direct Command:</strong>
+                ) : null}
+                <div>{msg.text}</div>
+              </div>
             )}
           </div>
         ))}
@@ -113,7 +128,7 @@ export default function ChatAssistant({ wsSend, lastResponse }) {
       <div className="mt-4 flex gap-2 items-end">
         <textarea
           className="flex-1 min-h-[2.5rem] max-h-32 p-2 bg-gray-800 text-white rounded resize-none"
-          placeholder="Type your message here..."
+          placeholder="Type a message or #action command (e.g. #action clear all)"
           rows="1"
           value={message}
           onInput={(e) => {

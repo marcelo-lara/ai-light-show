@@ -31,6 +31,9 @@ The system consists of several microservices:
    ollama pull command-r
    ollama pull phi3
    ollama pull tinyllama
+   
+   nohup ./pull_models.sh > /tmp/ollama-download.log 2>&1 &
+   tail -f /tmp/ollama-download.log
    ```
 
 ## Features
@@ -50,6 +53,7 @@ The system consists of several microservices:
 - **Pattern Synchronization**: Music-synchronized lighting patterns
 - **Manual Override**: Direct control of individual fixtures
 - **Preset Management**: Save and recall lighting presets
+- **Direct Commands**: Control lighting with #action commands in chat
 
 ### 🎨 User Interface
 - **Real-time Visualization**: Audio waveform with beat markers
@@ -58,6 +62,7 @@ The system consists of several microservices:
 - **Song Library**: Manage and analyze your music collection
 - **Pattern Visualization**: See detected patterns and clusters
 - **AI Chat**: Natural language lighting control and suggestions
+- **Direct Commands**: Use #action commands in chat for precise control
 
 ## Quick Start
 
@@ -134,8 +139,9 @@ npm run dev
 1. **Manual Control**: Use sliders to adjust individual fixtures
 2. **Pattern Sync**: Enable pattern synchronization for automatic lighting
 3. **AI Suggestions**: Chat with the AI for lighting recommendations
-4. **Presets**: Save and load lighting configurations
-5. **Real-time**: All changes are applied instantly via WebSocket
+4. **Direct Commands**: Use #action commands for precise control
+5. **Presets**: Save and load lighting configurations
+6. **Real-time**: All changes are applied instantly via WebSocket
 
 ### Batch Processing
 
