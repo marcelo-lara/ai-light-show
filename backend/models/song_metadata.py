@@ -1,5 +1,6 @@
 """Song metadata models for the AI Light Show system."""
 
+from dataclasses import dataclass
 import json
 import os
 import numpy as np
@@ -24,6 +25,25 @@ def ensure_json_serializable(obj):
         return tuple(ensure_json_serializable(item) for item in obj)
     else:
         return obj
+    
+@dataclass
+class KeyMoment:
+    """Represents a key moment in a song, such as a drop or significant change."""
+    time: float
+    duration: Optional[float] = None
+    name: str = ''
+    description: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "time": float(self.time),
+            "duration": float(self.duration) if self.duration is not None else None,
+            "name": self.name,
+            "description": self.description,
+        }
+
+    def __str__(self) -> str:
+        return f"KeyMoment(time={self.time}, duration={self.duration}, name='{self.name}', description='{self.description}')"
 
 
 class Section:

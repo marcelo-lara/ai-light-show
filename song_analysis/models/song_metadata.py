@@ -1,5 +1,6 @@
 """Song metadata models for the Song Analysis Service."""
 
+from dataclasses import dataclass
 import json
 import os
 import numpy as np
@@ -25,6 +26,24 @@ def ensure_json_serializable(obj):
     else:
         return obj
 
+@dataclass
+class KeyMoment:
+    """Represents a key moment in a song, such as a drop or significant change."""
+    time: float
+    duration: Optional[float] = None
+    name: str = ''
+    description: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "time": float(self.time),
+            "duration": float(self.duration) if self.duration is not None else None,
+            "name": self.name,
+            "description": self.description,
+        }
+
+    def __str__(self) -> str:
+        return f"KeyMoment(time={self.time}, duration={self.duration}, name='{self.name}', description='{self.description}')"
 
 class Section:
     """Represents a section of a song (verse, chorus, bridge, etc.)."""
@@ -100,7 +119,7 @@ class SongMetadata:
         self._arrangement: List[Section] = []
         self._duration = 2.0 * 60.0 # Default duration of 2 minutes
         self._drums: List[Dict[str, Any]] = []
-        self._key_moments: List[Dict[str, Any]] = []
+        self._key_moments: List[KeyMoment] = []
         
         if not songs_folder:
             # Default to current directory if no songs folder specified
@@ -193,12 +212,23 @@ class SongMetadata:
         self._chords = value
 
     @property
-    def key_moments(self) -> List[Dict[str, Any]]:
+    def key_moments(self) -> List[KeyMoment]:
         return self._key_moments
 
     @key_moments.setter
-    def key_moments(self, value: List[Dict[str, Any]]):
-        self._key_moments = value
+    def key_moments(self, value: List[Any]):
+        # Accepts list of KeyMoment or dicts
+        if not isinstance(value, list):
+            raise TypeError("key_moments must be a list of KeyMoment or dict objects.")
+        new_list = []
+        for v in value:
+            if isinstance(v, KeyMoment):
+                new_list.append(v)
+            elif isinstance(v, dict):
+                new_list.append(KeyMoment(**v))
+            else:
+                raise TypeError("Elements of key_moments must be KeyMoment or dict.")
+        self._key_moments = new_list
 
     @property
     def arrangement(self) -> List[Section]:
@@ -254,7 +284,9 @@ class SongMetadata:
         self._drums = data.get("drums", [])
         self._duration = data.get("duration", 0.0)
         self._arrangement = data.get("arrangement", [])
-        self._key_moments = data.get("key_moments", [])
+        # Convert key_moments dicts to KeyMoment objects
+        key_moments_data = data.get("key_moments", [])
+        self._key_moments = [KeyMoment(**km) if not isinstance(km, KeyMoment) else km for km in key_moments_data]
 
     def initialize_song_metadata(self) -> None:
         """Initialize song metadata with default values."""
@@ -321,7 +353,7 @@ class SongMetadata:
             "patterns": self._patterns,
             # Serialize arrangement as list of dicts
             "arrangement": [s.to_dict() if isinstance(s, Section) else s for s in self.arrangement],
-            "key_moments": self.key_moments,
+            "key_moments": [km.to_dict() if isinstance(km, KeyMoment) else km for km in self.key_moments],
         }
         # Ensure all data is JSON serializable
         return ensure_json_serializable(data)
