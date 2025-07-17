@@ -53,6 +53,7 @@ class DirectCommandsParser:
                 "- #render - Render all actions to the DMX canvas\n"
                 "- #analyze - Analyze the current song using the analysis service\n"
                 "- #analyze context - Generate lighting context for the current song using AI (runs in background)\n"
+                "- #analyze context reset - Clear existing context analysis and start fresh\n"
                 "- #tasks - Show status of background tasks\n"
                 "\nAccepted time formats: 1m23.45s, 2b (beats), 12.5 (seconds)\n"
                 "\nNote: Background tasks continue running even if you close the browser.\n"
@@ -89,7 +90,7 @@ class DirectCommandsParser:
             return True, "\n".join(task_list), None
 
         # #analyze context command
-        if command.lower() == "analyze context":
+        if command.lower().startswith("analyze context"):
             if websocket is not None:
                 try:
                     # Check if a song is loaded
@@ -103,6 +104,51 @@ class DirectCommandsParser:
                         })
                         return False, "No song loaded for context analysis.", None
                     
+                    # Check for reset flag
+                    is_reset = "reset" in command.lower()
+                    
+                    if is_reset:
+                        # Clear existing context file
+                        from pathlib import Path as PathLib
+                        context_file_path = PathLib(current_song.context_file)
+                        if context_file_path.exists():
+                            try:
+                                context_file_path.unlink()
+                                await websocket.send_json({
+                                    "type": "analyzeContextResult", 
+                                    "status": "info",
+                                    "message": "Cleared existing context analysis. Starting fresh..."
+                                })
+                            except Exception as e:
+                                await websocket.send_json({
+                                    "type": "analyzeContextResult",
+                                    "status": "error", 
+                                    "message": f"Failed to clear context file: {str(e)}"
+                                })
+                                return False, f"Failed to clear context file: {str(e)}", None
+                    
+                    # Check if there's already a context analysis in progress or completed
+                    from pathlib import Path as PathLib
+                    context_file_path = PathLib(current_song.context_file)
+                    resume_info = ""
+                    
+                    if not is_reset and context_file_path.exists():
+                        try:
+                            import json
+                            with open(context_file_path, 'r') as f:
+                                existing_data = json.load(f)
+                            
+                            if isinstance(existing_data, dict) and 'analysis_progress' in existing_data:
+                                progress = existing_data['analysis_progress']
+                                if progress.get('progress_percent', 0) < 100:
+                                    completed = progress.get('completed_chunks', 0)
+                                    total = progress.get('total_chunks', 0)
+                                    resume_info = f" Will resume from chunk {completed + 1}/{total}."
+                                else:
+                                    resume_info = " Previous analysis found, will refresh with new analysis."
+                        except Exception:
+                            pass
+                    
                     # Import and use the SongContextAgent
                     agent = SongContextAgent()
                     
@@ -110,7 +156,7 @@ class DirectCommandsParser:
                     await websocket.send_json({
                         "type": "analyzeContextResult",
                         "status": "processing",
-                        "message": "Generating lighting context, please wait..."
+                        "message": f"Generating lighting context, please wait...{resume_info}"
                     })
                     
                     # Call the analyze_song_context method in the background
@@ -151,7 +197,8 @@ class DirectCommandsParser:
                             app_state.background_tasks[task_id].task = task
                         
                         # Return immediately to user
-                        return True, f"Context analysis started in background (Task ID: {task_id}). Process will continue even if you close the browser.", None
+                        action_word = "restarted" if is_reset else "started"
+                        return True, f"Context analysis {action_word} in background (Task ID: {task_id}). Process will continue even if you close the browser.{resume_info}", None
                     except Exception as e:
                         error_message = f"Error generating lighting context: {str(e)}"
                         await websocket.send_json({

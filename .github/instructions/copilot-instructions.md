@@ -299,6 +299,49 @@ async def handle_persistent_operation_command(websocket):
 - Any operation where user might close browser before completion
 - Operations that benefit from persistence across sessions
 
+### Checkpoint Resume Pattern for Long Operations
+For very long operations that may be interrupted, implement checkpoint/resume functionality:
+
+```python
+# Load existing progress from checkpoint file
+existing_progress = []
+last_processed_item = -1
+
+if checkpoint_file.exists():
+    try:
+        with open(checkpoint_file, 'r') as f:
+            checkpoint_data = json.load(f)
+        existing_progress = checkpoint_data.get('results', [])
+        last_processed_item = checkpoint_data.get('last_processed_item', -1)
+        print(f"🔄 Resuming from item {last_processed_item + 1}")
+    except Exception:
+        print("⚠️ Could not read checkpoint, starting fresh")
+
+# Process items starting from resume point
+start_index = last_processed_item + 1
+for i in range(start_index, len(all_items)):
+    # Process item
+    result = process_item(all_items[i])
+    results.append(result)
+    
+    # Save checkpoint every N items
+    if (i + 1) % 5 == 0:
+        checkpoint_data = {
+            "results": results,
+            "last_processed_item": i,
+            "total_items": len(all_items),
+            "progress_percent": int(((i + 1) / len(all_items)) * 100)
+        }
+        with open(checkpoint_file, 'w') as f:
+            json.dump(checkpoint_data, f, indent=2)
+```
+
+**Benefits:**
+- Resilient to interruptions and crashes
+- No lost work if process is stopped
+- Can resume exactly where it left off
+- Periodic saves prevent data loss
+
 ### Fixture Action Rendering
 ```python
 # Create actions
