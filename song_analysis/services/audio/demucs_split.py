@@ -56,6 +56,18 @@ def extract_stems(input_file: str, songs_temp_folder: str = '', song_prefix: str
 
     # Return output paths
     output_folder = f"{songs_temp_folder}/htdemucs/{song_prefix}"
+
+    stems_dict = {}
+    if stems == 'all' or stems == 'vocals':
+        stems_dict['vocals'] = f"{output_folder}/vocals.wav"
+    if stems == 'all' or stems == 'drums':
+        stems_dict['drums'] = f"{output_folder}/drums.wav"
+    if stems == 'all' or stems == 'bass':
+        stems_dict['bass'] = f"{output_folder}/bass.wav"
+    if stems == 'all' or stems == 'other':
+        stems_dict['other'] = f"{output_folder}/other.wav"
+
     return {
-        "output_folder": output_folder
+        "output_folder": output_folder,
+        "stems": stems_dict
     }
