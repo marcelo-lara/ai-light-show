@@ -14,26 +14,8 @@ import json
 import os
 import numpy as np
 from typing import List, Dict, Any, Optional, Tuple, Union
+from pathlib import Path
 
-
-def ensure_json_serializable(obj) -> Any:
-    """
-    Recursively convert numpy types to native Python types for JSON serialization.
-    """
-    if isinstance(obj, np.integer):
-        return int(obj)
-    elif isinstance(obj, np.floating):
-        return float(obj)
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
-    elif isinstance(obj, dict):
-        return {key: ensure_json_serializable(value) for key, value in obj.items()}
-    elif isinstance(obj, list):
-        return [ensure_json_serializable(item) for item in obj]
-    elif isinstance(obj, tuple):
-        return tuple(ensure_json_serializable(item) for item in obj)
-    else:
-        return obj
     
 @dataclass
 class KeyMoment:
@@ -114,11 +96,20 @@ class Cluster:
     def __str__(self) -> str:
         return f"Cluster(part={self.part}, segments={self.segments})"
 
-
 class SongMetadata:
     """Main class for managing song metadata including beats, chords, and arrangement."""
 
     def __init__(self, song_name: str, songs_folder: Optional[str] = None, ignore_existing: bool = False):
+
+        # Determine songs folder from different sources
+        if not songs_folder:
+            self._songs_folder = str(Path("/app/static/songs")) if Path("/app/static/songs").exists() else str(Path(__file__).parent.parent / "songs")
+        else:
+            self._songs_folder = songs_folder
+        if not Path(self._songs_folder).exists():
+            raise FileNotFoundError(f"Base directory {self._songs_folder} does not exist.")
+
+        # Initialize metadata attributes
         self._song_name = song_name[:-4] if song_name.endswith(".mp3") else song_name
         self._title = song_name.replace("_", " ")
         self._genre = "unknown"
@@ -130,23 +121,6 @@ class SongMetadata:
         self._duration = 2.0 * 60.0 # Default duration of 2 minutes
         self._analysis: List[Dict[str, Any]] = []
         self._key_moments: List[KeyMoment] = []
-        
-        # Try to determine songs folder from different sources
-        if not songs_folder:
-            try:
-                # First try to get from backend config (if we're in backend)
-                import sys
-                if 'backend' in sys.modules:
-                    from backend.config import SONGS_DIR
-                    self._songs_folder = str(SONGS_DIR)
-                else:
-                    # Otherwise default to current directory
-                    self._songs_folder = os.getcwd()
-            except (ImportError, ModuleNotFoundError):
-                # Otherwise default to current directory
-                self._songs_folder = os.getcwd()
-        else:
-            self._songs_folder = songs_folder
 
         self._mp3_path = self._find_mp3_path()
         self._hints_folder = os.path.join(self._songs_folder, "hints")
@@ -231,6 +205,11 @@ class SongMetadata:
     @chords.setter
     def chords(self, value: List[Dict[str, Any]]):
         self._chords = value
+
+    @property
+    def analysis_file(self) -> str:
+        """Get the path to the analysis file."""
+        return os.path.join(self._songs_folder, "data", f"{self._song_name}.analysis.json")
 
     @property
     def key_moments(self) -> List[KeyMoment]:
@@ -415,3 +394,25 @@ class SongMetadata:
 
     def __str__(self) -> str:
         return f"SongMetadata(song_name={self._song_name}, title={self.title}, genre={self.genre}, bpm={self.bpm}, duration={self.duration}, beats={len(self.beats)}, arrangement={len(self.arrangement)})"
+
+
+
+def ensure_json_serializable(obj) -> Any:
+    """
+    Recursively convert numpy types to native Python types for JSON serialization.
+    """
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {key: ensure_json_serializable(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [ensure_json_serializable(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple(ensure_json_serializable(item) for item in obj)
+    else:
+        return obj
+

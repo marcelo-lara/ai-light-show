@@ -74,12 +74,12 @@ class SongAnalyzer:
         if not stems_folder or 'output_folder' not in stems_folder:
             raise ValueError("Failed to extract stems - no output folder returned")
 
-        song.analysis = extract_song_features(
+        features_analysis = extract_song_features(
             stems_dir=stems_folder['output_folder'],
             # chunk_size=chunk_size,
             # hop=hop,
             # sample_rate=sample_rate,
-            output_json_path=os.path.join(song.data_path, f"{song.song_name}.features.json"),
+            output_json_path=song.analysis_file,
             save_file=debug
         )
 
