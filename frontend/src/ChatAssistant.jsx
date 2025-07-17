@@ -73,9 +73,18 @@ export default function ChatAssistant({ wsSend, lastResponse }) {
 
   useEffect(() => {
     if (lastResponse) {
-      setChat((prev) => [...prev, { sender: 'assistant', text: lastResponse }]);
+      // Only add lastResponse if streaming was never started (non-streaming response)
+      if (!isStreaming && currentStreamingMessage === "") {
+        // Check if the last message in chat is already this response
+        setChat((prev) => {
+          if (prev.length > 0 && prev[prev.length - 1].sender === 'assistant' && prev[prev.length - 1].text === lastResponse) {
+            return prev; // Don't add duplicate
+          }
+          return [...prev, { sender: 'assistant', text: lastResponse }];
+        });
+      }
     }
-  }, [lastResponse]);
+  }, [lastResponse, isStreaming, currentStreamingMessage]);
   
   return (
     <div>
