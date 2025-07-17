@@ -106,6 +106,75 @@ dmx_handler.py: _handle_set_dmx
 ai_handler.py: _handle_user_prompt
 ```
 
+### Backend Progress Reporting Pattern
+For any long-running backend operation, use the standardized progress reporting pattern:
+
+```python
+# Backend: Send progress updates during long operations
+async def long_running_operation(websocket=None):
+    total_steps = 100
+    
+    # Send initial progress
+    if websocket:
+        await websocket.send_json({
+            "type": "backendProgress",
+            "operation": "operationName",  # Unique identifier for this operation
+            "progress": 0,
+            "current": 0,
+            "total": total_steps,
+            "message": "Starting operation..."
+        })
+    
+    for i in range(total_steps):
+        # Do work...
+        
+        # Send progress update
+        if websocket:
+            await websocket.send_json({
+                "type": "backendProgress",
+                "operation": "operationName",
+                "progress": int((i / total_steps) * 100),
+                "current": i,
+                "total": total_steps,
+                "message": f"Processing step {i+1}/{total_steps}"
+            })
+    
+    # Send completion
+    if websocket:
+        await websocket.send_json({
+            "type": "backendProgress",
+            "operation": "operationName",
+            "progress": 100,
+            "current": total_steps,
+            "total": total_steps,
+            "message": "Operation complete"
+        })
+```
+
+```javascript
+// Frontend: Handle progress in app.jsx
+case "backendProgress": {
+  if (msg.operation === "operationName") {
+    setOperationProgress({
+      isRunning: msg.progress < 100,
+      progress: msg.progress || 0,
+      current: msg.current || 0,
+      total: msg.total || 0,
+      message: msg.message || ""
+    });
+  }
+  // Add more operations as needed
+  break;
+}
+```
+
+**Usage Guidelines:**
+- Use `"backendProgress"` type for ALL long-running operations
+- Include unique `operation` field to identify the specific process
+- Always send initial (0%), intermediate, and completion (100%) progress
+- Include descriptive `message` field for user feedback
+- Handle errors by sending progress with `error: true` field
+
 ### Fixture Action Rendering
 ```python
 # Create actions

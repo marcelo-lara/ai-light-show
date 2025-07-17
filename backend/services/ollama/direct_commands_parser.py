@@ -51,7 +51,7 @@ class DirectCommandsParser:
                 "- #add <action> to <fixture> at <start_time> duration <duration_time> OR for <duration_time> - Add a new action. Duration is optional, default is 1 beat.\n"
                 "- #render - Render all actions to the DMX canvas\n"
                 "- #analyze - Analyze the current song using the analysis service\n"
-                "- #analyze context - Generate lighting context for the current song using AI\n"
+                "- #analyze context - Generate lighting context for the current song using AI using AI\n"
                 "\nAccepted time formats: 1m23.45s, 2b (beats), 12.5 (seconds)\n"
             )
             return True, help_text, None
@@ -83,7 +83,7 @@ class DirectCommandsParser:
                     
                     # Call the analyze_song_context method
                     try:
-                        timeline = agent.analyze_song_context()
+                        timeline = await agent.analyze_song_context(websocket=websocket)
                         await websocket.send_json({
                             "type": "analyzeContextResult",
                             "status": "ok",

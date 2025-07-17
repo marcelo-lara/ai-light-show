@@ -87,7 +87,7 @@ class SongContextAgent:
         actions.append(default_action)
         return actions
 
-    def analyze_song_context(self):
+    async def analyze_song_context(self, websocket=None):
         """
         Analyze the song data to generate context for light show design.
         Expects song_data to contain chunks with 'start', 'end', and 'stems'.
@@ -122,8 +122,30 @@ class SongContextAgent:
         print(f"🎵 Analyzing song context for {song_name}")
         print(f"Found {len(song_data)} chunks in analysis data")
         
+        # Send initial progress
+        if websocket:
+            await websocket.send_json({
+                "type": "backendProgress",
+                "operation": "analyzeContext",
+                "progress": 0,
+                "current": 0,
+                "total": len(song_data),
+                "message": f"Starting analysis of {len(song_data)} chunks..."
+            })
+        
         for i, chunk in enumerate(song_data):
             print(f"Processing chunk {i+1}/{len(song_data)}: {chunk['start']:.2f}s - {chunk['end']:.2f}s")
+            
+            # Send progress update before processing chunk
+            if websocket:
+                await websocket.send_json({
+                    "type": "backendProgress",
+                    "operation": "analyzeContext",
+                    "progress": int((i / len(song_data)) * 100),
+                    "current": i,
+                    "total": len(song_data),
+                    "message": f"Processing chunk {i+1}/{len(song_data)} ({chunk['start']:.2f}s - {chunk['end']:.2f}s)"
+                })
             
             # build the prompt for this chunk
             prompt = self.build_prompt_from_stem_chunk(chunk)
@@ -141,6 +163,29 @@ class SongContextAgent:
             except Exception as e:
                 print(f"Error processing chunk {i}: {e}")
                 print(f"Response: {response[:200]}...")
+                
+                # Send error progress update
+                if websocket:
+                    await websocket.send_json({
+                        "type": "backendProgress",
+                        "operation": "analyzeContext",
+                        "progress": int(((i+1) / len(song_data)) * 100),
+                        "current": i+1,
+                        "total": len(song_data),
+                        "message": f"Error in chunk {i+1}: {str(e)[:50]}...",
+                        "error": True
+                    })
+        
+        # Send completion progress
+        if websocket:
+            await websocket.send_json({
+                "type": "backendProgress",
+                "operation": "analyzeContext",
+                "progress": 100,
+                "current": len(song_data),
+                "total": len(song_data),
+                "message": "Finalizing timeline..."
+            })
         
         # Finalize the timeline
         timeline = assembler.finalize()

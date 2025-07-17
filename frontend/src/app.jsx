@@ -29,6 +29,15 @@ export function App() {
 
   // Song Analysis state
   const [analysisResult, setAnalysisResult] = useState({});
+  
+  // Context Analysis progress state
+  const [contextProgress, setContextProgress] = useState({
+    isRunning: false,
+    progress: 0,
+    current: 0,
+    total: 0,
+    message: ""
+  });
 
   // Listen for reset analysis result event
   useEffect(() => {
@@ -98,6 +107,34 @@ export function App() {
             setAnalysisResult({"status": msg.status});
             if (msg.metadata) setSongData(msg.metadata);
             setToast("Song analysis complete!");
+            break;
+          }
+          case "analyzeContextResult": {
+            console.log("Received context analysis result:", msg);
+            if (msg.status === "processing") {
+              setContextProgress(prev => ({...prev, isRunning: true, message: msg.message}));
+            } else if (msg.status === "ok") {
+              setContextProgress({isRunning: false, progress: 100, current: 0, total: 0, message: ""});
+              setToast(`Context analysis complete! Generated ${msg.timeline?.length || 0} actions`);
+            } else if (msg.status === "error") {
+              setContextProgress({isRunning: false, progress: 0, current: 0, total: 0, message: ""});
+              setToast(`Context analysis failed: ${msg.message}`);
+            }
+            break;
+          }
+          case "backendProgress": {
+            console.log("Received backend progress:", msg);
+            // Handle different operations
+            if (msg.operation === "analyzeContext") {
+              setContextProgress({
+                isRunning: true,
+                progress: msg.progress || 0,
+                current: msg.current || 0,
+                total: msg.total || 0,
+                message: msg.message || ""
+              });
+            }
+            // Future operations can be handled here by checking msg.operation
             break;
           }
           case "songLoaded": {
@@ -237,6 +274,7 @@ export function App() {
             <ChatAssistant 
               wsSend={wsSend} 
               lastResponse={lastResponse}
+              contextProgress={contextProgress}
             />
           </div>
 

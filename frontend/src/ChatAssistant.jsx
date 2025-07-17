@@ -2,7 +2,7 @@ import { useRef, useState } from 'preact/hooks';
 import { useEffect } from 'react';
 import { marked } from 'marked';
 
-export default function ChatAssistant({ wsSend, lastResponse }) {
+export default function ChatAssistant({ wsSend, lastResponse, contextProgress }) {
   const [message, setMessage] = useState("");
   const lastSentMessageRef = useRef("");
   const [chat, setChat] = useState([]);
@@ -89,6 +89,26 @@ export default function ChatAssistant({ wsSend, lastResponse }) {
   return (
     <div>
       <h2 className="text-lg mb-2 font-semibold">Assistant</h2>
+      
+      {/* Context Analysis Progress Bar */}
+      {contextProgress?.isRunning && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-blue-800">Analyzing Context</span>
+            <span className="text-sm text-blue-600">{contextProgress.progress}%</span>
+          </div>
+          <div className="w-full bg-blue-200 rounded-full h-2">
+            <div 
+              className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${contextProgress.progress}%` }}
+            ></div>
+          </div>
+          <div className="mt-2 text-xs text-blue-700">
+            {contextProgress.message || `Processing chunk ${contextProgress.current}/${contextProgress.total}`}
+          </div>
+        </div>
+      )}
+      
       <div className="flex flex-col gap-2 mb-4 max-h-60 overflow-y-auto" ref={chatContainerRef}>
         {chat.length === 0 && (
           <p className="text-sm text-gray-400">No messages yet.</p>
