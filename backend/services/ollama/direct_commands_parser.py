@@ -7,6 +7,7 @@ Commands start with #action and bypass the LLM processing.
 import re
 from typing import Dict, Any, Tuple, List, Optional
 from pathlib import Path
+from datetime import datetime
 
 from ...models.app_state import app_state
 from ...models.actions_sheet import ActionsSheet, ActionModel
@@ -51,10 +52,41 @@ class DirectCommandsParser:
                 "- #add <action> to <fixture> at <start_time> duration <duration_time> OR for <duration_time> - Add a new action. Duration is optional, default is 1 beat.\n"
                 "- #render - Render all actions to the DMX canvas\n"
                 "- #analyze - Analyze the current song using the analysis service\n"
-                "- #analyze context - Generate lighting context for the current song using AI using AI\n"
+                "- #analyze context - Generate lighting context for the current song using AI (runs in background)\n"
+                "- #tasks - Show status of background tasks\n"
                 "\nAccepted time formats: 1m23.45s, 2b (beats), 12.5 (seconds)\n"
+                "\nNote: Background tasks continue running even if you close the browser.\n"
             )
             return True, help_text, None
+
+        # #tasks command
+        if command.lower() == "tasks":
+            from ...models.app_state import app_state
+            
+            if not app_state.background_tasks:
+                return True, "No background tasks found.", None
+            
+            task_list = []
+            task_list.append("Background Tasks:")
+            task_list.append("-" * 50)
+            
+            for task_id, task_state in app_state.background_tasks.items():
+                status_emoji = "🔄" if task_state.status == "running" else "✅" if task_state.status == "completed" else "❌"
+                elapsed = (datetime.now() - task_state.started_at).total_seconds()
+                
+                task_list.append(f"{status_emoji} {task_id}")
+                task_list.append(f"   Song: {task_state.song_name}")
+                task_list.append(f"   Operation: {task_state.operation}")
+                task_list.append(f"   Status: {task_state.status}")
+                task_list.append(f"   Progress: {task_state.progress}% ({task_state.current}/{task_state.total})")
+                task_list.append(f"   Started: {elapsed:.1f}s ago")
+                if task_state.message:
+                    task_list.append(f"   Message: {task_state.message}")
+                if task_state.error:
+                    task_list.append(f"   Error: {task_state.error}")
+                task_list.append("")
+            
+            return True, "\n".join(task_list), None
 
         # #analyze context command
         if command.lower() == "analyze context":
@@ -81,16 +113,45 @@ class DirectCommandsParser:
                         "message": "Generating lighting context, please wait..."
                     })
                     
-                    # Call the analyze_song_context method
+                    # Call the analyze_song_context method in the background
                     try:
-                        timeline = await agent.analyze_song_context(websocket=websocket)
-                        await websocket.send_json({
-                            "type": "analyzeContextResult",
-                            "status": "ok",
-                            "message": f"Successfully generated lighting context with {len(timeline)} actions",
-                            "timeline": timeline
-                        })
-                        return True, f"Successfully generated lighting context with {len(timeline)} actions", {"timeline": timeline}
+                        import asyncio
+                        import uuid
+                        
+                        # Generate unique task ID
+                        task_id = f"analyze_context_{current_song.song_name}_{uuid.uuid4().hex[:8]}"
+                        
+                        # Create a background task
+                        async def run_analysis():
+                            try:
+                                timeline = await agent.analyze_song_context(websocket=websocket, task_id=task_id)
+                                
+                                # Send final result to all connected clients
+                                app_state.broadcast_to_clients({
+                                    "type": "analyzeContextResult",
+                                    "status": "ok",
+                                    "task_id": task_id,
+                                    "message": f"Successfully generated lighting context with {len(timeline)} actions",
+                                    "timeline": timeline
+                                })
+                            except Exception as e:
+                                error_message = f"Error generating lighting context: {str(e)}"
+                                app_state.broadcast_to_clients({
+                                    "type": "analyzeContextResult",
+                                    "status": "error",
+                                    "task_id": task_id,
+                                    "message": error_message
+                                })
+                        
+                        # Start the background task
+                        task = asyncio.create_task(run_analysis())
+                        
+                        # Store task reference in app_state
+                        if task_id in app_state.background_tasks:
+                            app_state.background_tasks[task_id].task = task
+                        
+                        # Return immediately to user
+                        return True, f"Context analysis started in background (Task ID: {task_id}). Process will continue even if you close the browser.", None
                     except Exception as e:
                         error_message = f"Error generating lighting context: {str(e)}"
                         await websocket.send_json({

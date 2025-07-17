@@ -29,7 +29,8 @@ Type commands starting with `#` in the chat input, for example:
 - `#add <action> to <fixture> at <start_time> for <duration_time>` - Add a new action. Duration is optional, default is 1 beat.
 - `#render` - Render all actions to the DMX canvas
 - `#analyze` - Analyze the current song using the analysis service
-- `#analyze context` - Generate lighting context for the current song using AI (shows progress)
+- `#analyze context` - Generate lighting context for the current song using AI (runs in background, continues even if browser is closed)
+- `#tasks` - Show status of background tasks
 
 ## Accepted Time Formats
 
@@ -43,3 +44,6 @@ Type commands starting with `#` in the chat input, for example:
 - You need to have a song loaded for these commands to work
 - After adding actions, use `#render` to see the results
 - Direct commands appear in purple in the chat interface
+- Background tasks (like `#analyze context`) continue running even if you close the browser
+- Use `#tasks` to check the status of background operations
+- Each background task gets a unique task ID for tracking

@@ -175,6 +175,130 @@ case "backendProgress": {
 - Include descriptive `message` field for user feedback
 - Handle errors by sending progress with `error: true` field
 
+### Background Processing for Long Operations
+For very long operations, run them in the background to avoid blocking the UI:
+
+```python
+# Backend: Run long operations in background
+async def handle_long_operation_command(websocket):
+    import asyncio
+    
+    async def run_operation():
+        try:
+            result = await long_running_operation(websocket=websocket)
+            await websocket.send_json({
+                "type": "operationResult",
+                "status": "ok",
+                "result": result
+            })
+        except Exception as e:
+            await websocket.send_json({
+                "type": "operationResult", 
+                "status": "error",
+                "message": str(e)
+            })
+    
+    # Start background task
+    asyncio.create_task(run_operation())
+    
+    # Return immediately to user
+    return True, "Operation started in background. Check progress above.", None
+```
+
+This pattern allows:
+- Non-blocking command execution
+- Immediate user feedback that operation has started
+- Progress updates during execution
+- Final result notification when complete
+
+### Persistent Background Tasks (Survives Browser Disconnection)
+For critical long-running operations that must continue even if the user closes the browser, use the persistent task tracking system:
+
+```python
+# Backend: Create persistent background task
+from backend.models.app_state import app_state
+import uuid
+
+async def handle_persistent_operation_command(websocket):
+    # Generate unique task ID
+    task_id = f"operation_name_{uuid.uuid4().hex[:8]}"
+    
+    async def run_persistent_operation():
+        try:
+            # Create task state for tracking
+            task_state = app_state.create_background_task(
+                task_id=task_id,
+                song_name="current_song",
+                operation="operationName",
+                total=100  # Total steps/chunks
+            )
+            
+            # Your long operation here with progress updates
+            for i in range(100):
+                # Update progress in app_state
+                app_state.update_task_progress(
+                    task_id, 
+                    progress=int((i/100)*100),
+                    current=i,
+                    message=f"Processing step {i}/100"
+                )
+                
+                # Broadcast to ALL connected clients (resilient to disconnections)
+                app_state.broadcast_to_clients({
+                    "type": "backendProgress",
+                    "operation": "operationName",
+                    "task_id": task_id,
+                    "progress": int((i/100)*100),
+                    "current": i,
+                    "total": 100,
+                    "message": f"Processing step {i}/100"
+                })
+                
+                # Your actual work here
+                await asyncio.sleep(0.1)
+            
+            # Mark as completed
+            app_state.complete_task(task_id, result="operation_result")
+            
+            # Broadcast final result
+            app_state.broadcast_to_clients({
+                "type": "operationResult",
+                "status": "ok",
+                "task_id": task_id,
+                "message": "Operation completed successfully"
+            })
+            
+        except Exception as e:
+            # Mark as failed
+            app_state.complete_task(task_id, error=str(e))
+            app_state.broadcast_to_clients({
+                "type": "operationResult",
+                "status": "error", 
+                "task_id": task_id,
+                "message": str(e)
+            })
+    
+    # Start background task and store reference
+    task = asyncio.create_task(run_persistent_operation())
+    if task_id in app_state.background_tasks:
+        app_state.background_tasks[task_id].task = task
+    
+    return True, f"Persistent operation started (Task ID: {task_id}). Will continue even if browser is closed.", None
+```
+
+**Key Features:**
+- Tasks survive browser disconnections
+- Progress is broadcast to all connected clients
+- Task state is tracked in global app_state
+- Unique task IDs for tracking multiple operations
+- Use `#tasks` command to check status of background operations
+
+**When to Use:**
+- Long audio analysis operations (>30 seconds)
+- File processing that takes significant time  
+- Any operation where user might close browser before completion
+- Operations that benefit from persistence across sessions
+
 ### Fixture Action Rendering
 ```python
 # Create actions

@@ -3,11 +3,31 @@
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, field
 from fastapi import WebSocket
+import asyncio
+from datetime import datetime
 
 from backend.services.dmx.dmx_canvas import DmxCanvas
 from shared.models.song_metadata import SongMetadata
 from ..config import SONGS_DIR, FIXTURES_FILE
 from ..models.fixtures import FixturesListModel
+
+
+@dataclass
+class TaskState:
+    """State tracking for background tasks."""
+    task_id: str
+    song_name: str
+    operation: str
+    status: str  # "running", "completed", "error"
+    progress: int = 0
+    current: int = 0
+    total: int = 0
+    message: str = ""
+    started_at: datetime = field(default_factory=datetime.now)
+    completed_at: Optional[datetime] = None
+    result: Optional[Any] = None
+    error: Optional[str] = None
+    task: Optional[asyncio.Task] = None
 
 
 @dataclass
@@ -31,6 +51,9 @@ class AppState:
     
     # WebSocket connections
     websocket_clients: List[WebSocket] = field(default_factory=list)
+    
+    # Background task tracking
+    background_tasks: Dict[str, TaskState] = field(default_factory=dict)
     
     # Cached services to avoid re-initialization
     _actions_parser_service: Optional[Any] = None
@@ -74,6 +97,61 @@ class AppState:
         """Invalidate cached services when fixtures or canvas change."""
         self._actions_parser_service = None
         self._actions_service = None
+    
+    def create_background_task(self, task_id: str, song_name: str, operation: str, total: int = 0) -> TaskState:
+        """Create a new background task state."""
+        task_state = TaskState(
+            task_id=task_id,
+            song_name=song_name,
+            operation=operation,
+            status="running",
+            total=total
+        )
+        self.background_tasks[task_id] = task_state
+        return task_state
+    
+    def update_task_progress(self, task_id: str, progress: int, current: int, message: str = "", error: bool = False):
+        """Update progress for a background task."""
+        if task_id in self.background_tasks:
+            task_state = self.background_tasks[task_id]
+            task_state.progress = progress
+            task_state.current = current
+            task_state.message = message
+            if error:
+                task_state.status = "error"
+                task_state.error = message
+    
+    def complete_task(self, task_id: str, result: Any = None, error: Optional[str] = None):
+        """Mark a background task as completed."""
+        if task_id in self.background_tasks:
+            task_state = self.background_tasks[task_id]
+            task_state.completed_at = datetime.now()
+            task_state.result = result
+            if error:
+                task_state.status = "error"
+                task_state.error = error
+            else:
+                task_state.status = "completed"
+                task_state.progress = 100
+    
+    def get_task_state(self, task_id: str) -> Optional[TaskState]:
+        """Get the state of a background task."""
+        return self.background_tasks.get(task_id)
+    
+    def get_tasks_for_song(self, song_name: str) -> List[TaskState]:
+        """Get all tasks for a specific song."""
+        return [task for task in self.background_tasks.values() if task.song_name == song_name]
+    
+    def broadcast_to_clients(self, message: Dict[str, Any]):
+        """Broadcast a message to all connected WebSocket clients."""
+        import asyncio
+        for client in self.websocket_clients[:]:  # Copy list to avoid modification during iteration
+            try:
+                # Use create_task to avoid blocking
+                asyncio.create_task(client.send_json(message))
+            except Exception:
+                # Remove disconnected clients
+                self.remove_client(client)
 
     # List of available songs in the songs folder
     def get_songs_list(self) -> List[str]:
