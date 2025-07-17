@@ -31,6 +31,23 @@ from backend.models.app_state import app_state
 # Use existing instances: app_state.dmx_canvas, app_state.fixtures
 ```
 
+### Accessing Current Song Pattern
+When accessing the current song from app_state in backend code, always follow this exact pattern:
+```python
+# Get the current song (SongMetadata) from app state
+from ...models.app_state import app_state
+from ...models.song_metadata import SongMetadata
+
+if not app_state.current_song:
+    raise ValueError("No song is currently loaded")
+song: SongMetadata = app_state.current_song
+```
+**IMPORTANT**: 
+- This pattern applies only to backend code
+- Don't try to parse folder names or other song-related data directly
+- Always access properties through the SongMetadata object
+- The song_analysis service does not use app_state
+
 ### The Actions-Based Flow
 1. **Actions Sheet** (`ActionModel`) - Commands like "flash parcan_l blue at 5.2s"
 2. **Actions Service** - Renders actions to DMX Canvas
@@ -91,6 +108,22 @@ from backend.services.song_analysis_client import SongAnalysisClient
 async with SongAnalysisClient() as client:
     analysis_result = await client.analyze_song(song_path)
 ```
+
+### Current Song Access Pattern
+Always access the current song in the backend using this standardized pattern:
+```python
+# Get the current song (SongMetadata) from app state
+from ...models.app_state import app_state
+from ...models.song_metadata import SongMetadata
+
+if not app_state.current_song:
+    raise ValueError("No song is currently loaded")
+song: SongMetadata = app_state.current_song
+
+# Then access properties through the SongMetadata object
+print(f"Processing song: {song.title}")
+```
+**NOTE**: This pattern applies only to backend code. The song_analysis service does not use app_state.
 
 ### WebSocket Communication Protocol
 Frontend ↔ Backend real-time sync:
@@ -493,7 +526,23 @@ print(f"Valid: {validation['valid_actions']}/{validation['total_actions']}")
    - The global `app_state` singleton is strictly for backend DMX/light show state management.
    - Do not use or reference `app_state` in song analysis code or in the `song_analysis/` folder.
 
-6. **Action Rendering Performance**
+6. **Current Song Access Pattern (Backend Only)**
+   - When accessing the current song from app_state in backend code, strictly follow this pattern:
+   ```python
+   # Get the current song (SongMetadata) from app state
+   from ...models.app_state import app_state
+   from ...models.song_metadata import SongMetadata
+   
+   if not app_state.current_song:
+       raise ValueError("No song is currently loaded")
+   song: SongMetadata = app_state.current_song
+   ```
+   - This pattern applies only to backend code; it should not be used in the song_analysis service.
+   - Do not try to parse folder names or file paths directly to access song data.
+   - Always use the SongMetadata object's properties and methods to access song information.
+   - Check that app_state.current_song exists before attempting to use it.
+
+7. **Action Rendering Performance**
    - When adding or modifying multiple actions, render them to the canvas only ONCE after all changes are complete.
    - Do NOT render after each individual action is added or modified.
    - Example pattern for bulk operations:

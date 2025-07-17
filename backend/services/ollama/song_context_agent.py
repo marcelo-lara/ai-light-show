@@ -105,13 +105,14 @@ class SongContextAgent:
         Returns:
             List of lighting actions
         """
+        # Get the current song (SongMetadata) from app state
         from ...models.app_state import app_state
         from ...models.song_metadata import SongMetadata
         
         if not app_state.current_song:
             raise ValueError("No song is currently loaded")
-
         song: SongMetadata = app_state.current_song
+
         print(f"-> 🎬 Analyzing song: {song.title}")
         
         # Generate task_id if not provided
