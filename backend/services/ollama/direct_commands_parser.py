@@ -12,6 +12,7 @@ from ...models.app_state import app_state
 from ...models.actions_sheet import ActionsSheet, ActionModel
 from ..actions_service import ActionsService
 from ..utils.time_conversion import string_to_time, beats_to_seconds
+from .song_context_agent import SongContextAgent  # Import SongContextAgent
 
 
 class DirectCommandsParser:
@@ -50,9 +51,65 @@ class DirectCommandsParser:
                 "- #add <action> to <fixture> at <start_time> duration <duration_time> OR for <duration_time> - Add a new action. Duration is optional, default is 1 beat.\n"
                 "- #render - Render all actions to the DMX canvas\n"
                 "- #analyze - Analyze the current song using the analysis service\n"
+                "- #analyze context - Generate lighting context for the current song using AI\n"
                 "\nAccepted time formats: 1m23.45s, 2b (beats), 12.5 (seconds)\n"
             )
             return True, help_text, None
+
+        # #analyze context command
+        if command.lower() == "analyze context":
+            if websocket is not None:
+                try:
+                    # Check if a song is loaded
+                    from ...models.app_state import app_state
+                    current_song = getattr(app_state, 'current_song', None)
+                    if not current_song:
+                        await websocket.send_json({
+                            "type": "analyzeContextResult",
+                            "status": "error",
+                            "message": "No song loaded for context analysis"
+                        })
+                        return False, "No song loaded for context analysis.", None
+                    
+                    # Import and use the SongContextAgent
+                    agent = SongContextAgent()
+                    
+                    # Notify the client that analysis is starting
+                    await websocket.send_json({
+                        "type": "analyzeContextResult",
+                        "status": "processing",
+                        "message": "Generating lighting context, please wait..."
+                    })
+                    
+                    # Call the analyze_song_context method
+                    try:
+                        timeline = agent.analyze_song_context()
+                        await websocket.send_json({
+                            "type": "analyzeContextResult",
+                            "status": "ok",
+                            "message": f"Successfully generated lighting context with {len(timeline)} actions",
+                            "timeline": timeline
+                        })
+                        return True, f"Successfully generated lighting context with {len(timeline)} actions", {"timeline": timeline}
+                    except Exception as e:
+                        error_message = f"Error generating lighting context: {str(e)}"
+                        await websocket.send_json({
+                            "type": "analyzeContextResult",
+                            "status": "error",
+                            "message": error_message
+                        })
+                        return False, error_message, None
+                    
+                except Exception as e:
+                    error_message = f"Error in analyze context command: {str(e)}"
+                    if websocket:
+                        await websocket.send_json({
+                            "type": "analyzeContextResult",
+                            "status": "error",
+                            "message": error_message
+                        })
+                    return False, error_message, None
+            return False, "WebSocket connection required for analyze context command", None
 
         # #analyze command
         if command.lower() == "analyze":

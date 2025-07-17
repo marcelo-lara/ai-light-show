@@ -212,6 +212,11 @@ class SongMetadata:
         return os.path.join(self._songs_folder, "data", f"{self._song_name}.analysis.json")
 
     @property
+    def context_file(self) -> str:
+        """Get the path to the context file."""
+        return os.path.join(self._songs_folder, "data", f"{self._song_name}.context.json")
+
+    @property
     def key_moments(self) -> List[KeyMoment]:
         return self._key_moments
 

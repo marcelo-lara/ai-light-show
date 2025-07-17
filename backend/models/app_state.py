@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from fastapi import WebSocket
 
 from backend.services.dmx.dmx_canvas import DmxCanvas
+from shared.models.song_metadata import SongMetadata
 from ..config import SONGS_DIR, FIXTURES_FILE
 from ..models.fixtures import FixturesListModel
 
@@ -25,7 +26,7 @@ class AppState:
     
     # Song management
     current_song_file: Optional[str] = None
-    current_song: Optional[Any] = None  # SongMetadata object
+    current_song: Optional[SongMetadata] = None  # SongMetadata object
     song_metadata: Dict[str, Any] = field(default_factory=dict)
     
     # WebSocket connections
@@ -73,7 +74,7 @@ class AppState:
         """Invalidate cached services when fixtures or canvas change."""
         self._actions_parser_service = None
         self._actions_service = None
-    
+
     # List of available songs in the songs folder
     def get_songs_list(self) -> List[str]:
         """

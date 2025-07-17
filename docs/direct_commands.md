@@ -14,6 +14,8 @@ Type commands starting with `#` in the chat input, for example:
 #clear action 123
 #clear group chorus
 #render
+#analyze
+#analyze context
 #help
 ```
 
@@ -26,6 +28,8 @@ Type commands starting with `#` in the chat input, for example:
 - `#add <action> to <fixture> at <start_time> duration <duration_time>` - Add a new action. Duration is optional, default is 1 beat.
 - `#add <action> to <fixture> at <start_time> for <duration_time>` - Add a new action. Duration is optional, default is 1 beat.
 - `#render` - Render all actions to the DMX canvas
+- `#analyze` - Analyze the current song using the analysis service
+- `#analyze context` - Generate lighting context for the current song using AI
 
 ## Accepted Time Formats
 
