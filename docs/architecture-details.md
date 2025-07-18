@@ -137,3 +137,13 @@ Lighting logic lives entirely in software. Fixtures are merely endpoints; the sy
 - Timing
 - Value sequencing
 - Effect shaping (e.g., ramping, pulsing, panning)
+
+## AI Light show generation
+
+| Step                                    | Role                                                   | Component                                     |
+| --------------------------------------- | ------------------------------------------------------ | --------------------------------------------- |
+| 1. **Audio Analysis**                   | Extract structure, stems, beats, chords, key moments   | `song_analysis/` service                      |
+| 2. **Segment-Level Reasoning**          | Interpret musical intent, emotion, dynamics            | `Ollama` LLM via `/chat` or `/suggestions`    |
+| 3. **Lighting Intent Chain-of-Thought** | Sequence the intent over time                          | AI via `/chat` or internal logic              |
+| 4. **Generate DMX Actions**             | Convert lighting intents into fixture-specific actions | `actions_parser_service.py` and `ActionModel` |
+| 5. **Render to Canvas**                 | Paint actions to timeline for playback                 | `ActionsService → DmxCanvas`                  |
