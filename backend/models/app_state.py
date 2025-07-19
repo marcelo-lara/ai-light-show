@@ -82,7 +82,7 @@ class AppState:
     def get_actions_parser_service(self):
         """Get cached ActionsParserService or create new one if needed."""
         if self._actions_parser_service is None and self.fixtures is not None:
-            from ..services.actions_parser_service import ActionsParserService
+            from ..services.dmx.actions_parser_service import ActionsParserService
             self._actions_parser_service = ActionsParserService(self.fixtures, debug=True)
         return self._actions_parser_service
     

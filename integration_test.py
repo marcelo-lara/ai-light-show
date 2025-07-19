@@ -142,7 +142,7 @@ print(f"  🎯 At {test_timestamp}s: {render_result['active_actions_count']} act
 
 ## 8. Parse action commands from text using Actions Parser Service
 print("⛳️ Parse action commands from text using Actions Parser Service...")
-from backend.services.actions_parser_service import ActionsParserService
+from backend.services.dmx.actions_parser_service import ActionsParserService
 
 # Create the Actions Parser Service
 parser_service = ActionsParserService(fixtures, debug=True)

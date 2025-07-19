@@ -55,7 +55,7 @@ class SongAnalyzer:
 
         try:
             # Use the LangGraph pipeline for analysis
-            from song_analysis.simple_pipeline import run_pipeline
+            from simple_pipeline import run_pipeline
             
             logger.info("🧩 Running modular LangGraph analysis pipeline...")
             

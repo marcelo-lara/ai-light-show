@@ -1,7 +1,7 @@
 """Functions for handling AI action confirmations."""
 
 from typing import List, Dict, Any, Tuple
-from ..actions_parser_service import ActionsParserService
+from ..dmx.actions_parser_service import ActionsParserService
 
 def execute_confirmed_action(action_id: str, pending_actions: List[Dict[str, Any]]) -> Tuple[bool, str]:
     """

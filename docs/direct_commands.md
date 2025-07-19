@@ -39,6 +39,72 @@ Type commands starting with `#` in the chat input, for example:
 - `2b` (duration of 2 beats at the BPM of the current song)
 - `12.5` (seconds)
 
+## Channel Value Normalization
+
+- Channel values are interpreted as normalized values between `0.0` and `1.0`.
+- `0.0` corresponds to the minimum DMX value (`0`).
+- `1.0` corresponds to the maximum DMX value (`255`).
+- Intermediate values are scaled linearly (e.g., `0.5` corresponds to `128`).
+
+### Example:
+```
+#set parcan_l red channel to 0.5 at 12.23s
+```
+This sets the red channel of `parcan_l` to `128` at `12.23` seconds.
+
+## Additional Direct Commands for DMX Canvas Painting
+
+### Set Channel Value
+
+- `#set <fixture> <channel_name> to <value> at <time>`
+- Example:
+  ```
+  #set parcan_l red channel to 255 at 12.23s
+  ```
+- Purpose: Directly set a DMX channel value for a fixture at a specific time.
+
+### Set Fixture Preset
+
+- `#preset <fixture> <preset_name> at <time>`
+- Example:
+  ```
+  #preset moving_head Drop at 34.2s
+  ```
+- Purpose: Apply a predefined fixture preset (e.g., "Drop") at a specific time.
+
+### Fade Channel Value
+
+- `#fade <fixture> <channel_name> from <start_value> to <end_value> duration <time>`
+- Example:
+  ```
+  #fade parcan_l red channel from 0 to 255 duration 5s
+  ```
+- Purpose: Smoothly transition a channel value over a specified duration.
+
+### Strobe Effect
+
+- `#strobe <fixture> <channel_name> rate <frequency> duration <time>`
+- Example:
+  ```
+  #strobe parcan_l white channel rate 10 duration 2s
+  ```
+- Purpose: Create a strobe effect by rapidly toggling a channel value.
+
+### Clear Fixture State
+
+- `#clear <fixture> state at <time>`
+- Example:
+  ```
+  #clear parcan_l state at 15.0s
+  ```
+- Purpose: Reset a fixture's state at a specific time.
+
+## Benefits of These Commands
+
+- **Precision**: Users can directly control DMX channels and fixture states.
+- **Flexibility**: Allows for custom effects beyond automated lighting plans.
+- **Integration**: Complements automated pipelines by enabling manual overrides.
+
 ## Notes
 
 - All times are converted to seconds automatically

@@ -23,10 +23,10 @@ from langgraph.graph import StateGraph
 from langgraph.prebuilt import ToolNode
 
 # Service imports
-from song_analysis.services.audio.demucs_split import extract_stems
-from song_analysis.services.audio.essentia_analysis import extract_with_essentia
-from song_analysis.services.audio.pattern_finder import get_stem_clusters
-from song_analysis.models.song_metadata import SongMetadata, ensure_json_serializable
+from services.audio.demucs_split import extract_stems
+from services.audio.essentia_analysis import extract_with_essentia
+from services.audio.pattern_finder import get_stem_clusters
+from models.song_metadata import SongMetadata, ensure_json_serializable
 
 # Import Ollama client for LLM interactions
 from backend.services.ollama.ollama_api import query_ollama
