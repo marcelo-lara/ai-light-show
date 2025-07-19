@@ -22,7 +22,7 @@ def guess_arrangement_using_drum_patterns(song: SongMetadata) -> SongMetadata:
     return song
 
 
-def guess_arrangement(song: SongMetadata) -> SongMetadata:
+def guess_arrangement(song: SongMetadata, ignore_current_data: bool=False) -> SongMetadata:
     """
     Guess the arrangement of the song based on its beats and patterns.
     This function will analyze the song's beats and patterns to determine sections.
@@ -37,11 +37,16 @@ def guess_arrangement(song: SongMetadata) -> SongMetadata:
     # This could be based on beat patterns, volume changes, etc.
     # For now, we will just create a simple arrangement based on beats
     if not song.beats:
+        logger.warning("No beats found in the song, cannot guess arrangement")
+        return song
+
+    if len(song.arrangement)>0 or not ignore_current_data:
+        logger.info("Arrangement already exists, skipping guessing")
         return song
 
     # TODO: This is a placeholder logic and should be replaced with actual arrangement logic
     # -- placeholder start here --
-    section_length = 16
+    section_length = 32 #assuming a typical song of 4/4 time with 32 beats per section
     arrangement = []
     
     for i in range(0, len(song.beats), section_length):

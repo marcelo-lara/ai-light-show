@@ -90,29 +90,21 @@ async def analyze_song(request: AnalysisRequest):
         Analysis response with song metadata
     """
     try:
-        logger.info(f"Starting analysis for song: {request.song_name}")
+        logger.info(f"Requested analysis for song: {request.song_name}")
         
         # Build the full path using the internal volume mapping
         songs_folder = Path("/app/static/songs")
         song_name = request.song_name
         
-        # Remove .mp3 extension if provided
-        if song_name.endswith('.mp3'):
-            song_name = song_name[:-4]
-        
-        # Construct the song file path
-        song_path = songs_folder / f"{song_name}.mp3"
-        
-        # Validate input file exists
-        if not song_path.exists():
-            raise HTTPException(status_code=404, detail=f"Song file not found: {song_name}.mp3 (looked in {song_path})")
-        
         # Create SongMetadata object
-        song = SongMetadata(
-            song_name=song_name,
-            songs_folder=str(songs_folder),
-            ignore_existing=request.reset_file
-        )
+        try:
+            song = SongMetadata(
+                song_name=song_name,
+                songs_folder=str(songs_folder),
+                ignore_existing=request.reset_file
+            )
+        except Exception as e:
+            raise HTTPException(status_code=404, detail=f"Song file not found: {song_name} (looked in {songs_folder})")
         
         # Perform analysis
         analyzed_song = analyzer.analyze(
@@ -277,6 +269,18 @@ async def list_songs():
     except Exception as e:
         logger.error(f"Failed to list songs: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to list songs: {str(e)}")
+
+@app.get("/status")
+async def health_status():
+    """
+    Get the current status of the service.
+    This endpoint can be used get the langchain current running nodes and their status.
+
+    Returns:
+        {"status": str, "message": str}
+    """
+    # TODO: Implement actual status check logic
+    return {"status": "ok", "message": "Idle and ready for requests"}
 
 if __name__ == "__main__":
     import uvicorn

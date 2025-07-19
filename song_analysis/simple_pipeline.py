@@ -232,7 +232,7 @@ def run_pipeline(mp3_path: str) -> Dict[str, Any]:
     log_dir = Path("logs")
     log_dir.mkdir(exist_ok=True)
     
-    print(f"Running pipeline on {mp3_path}")
+    print(f"--Running pipeline on {mp3_path}")
     
     # Try to use LangGraph if available
     pipeline = create_pipeline()
@@ -253,14 +253,15 @@ def run_pipeline(mp3_path: str) -> Dict[str, Any]:
             print(f"Error running LangGraph pipeline: {str(e)}")
     else:
         # Fall back to sequential execution
-        print("Falling back to sequential execution")
-        state = {"mp3_path": mp3_path}
-        state = stem_split_node(state)
-        state = beat_detect_node(state)
-        state = pattern_analysis_node(state)
-        state = segment_labeler_node(state)
-        state = lighting_hint_generator_node(state)
-        result = state
+        print("❌ pipeline is None")
+        raise ValueError("Pipeline is not available, cannot run analysis")
+        # state = {"mp3_path": mp3_path}
+        # state = stem_split_node(state)
+        # state = beat_detect_node(state)
+        # state = pattern_analysis_node(state)
+        # state = segment_labeler_node(state)
+        # state = lighting_hint_generator_node(state)
+        # result = state
     
     # Extract the final output
     log_path = log_dir / "final_output.json"

@@ -10,15 +10,6 @@ from models.song_metadata import SongMetadata
 from .load_metadata_hints import (load_arrangement_from_hints, load_key_moments_from_hints, load_chords_from_hints)
 from .legacy_analyzer import legacy_analyze
 
-from .audio import (
-    extract_with_essentia,
-    extract_stems,
-    get_stem_clusters,
-    noise_gate,
-    guess_arrangement,
-    extract_song_features    
-)
-
 logger = logging.getLogger(__name__)
 
 
@@ -64,8 +55,8 @@ class SongAnalyzer:
             
             # Check if we have results
             if not pipeline_results:
-                logger.warning("⚠️ LangGraph pipeline returned no results, falling back to traditional analysis")
-                return legacy_analyze(song, debug, self.noise_gate_stems)
+                logger.error("❌ LangGraph pipeline returned no results, returning empty song metadata")
+                return song # legacy_analyze(song, debug, self.noise_gate_stems)
             
             # Extract section data from the pipeline results
             sections = pipeline_results.get('sections', [])
