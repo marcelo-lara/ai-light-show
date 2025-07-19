@@ -30,7 +30,7 @@ class ActionsService:
         self.fixtures = fixtures
         self.dmx_canvas = dmx_canvas
         self.debug = debug
-        
+
     def render_actions_to_canvas(self, actions_sheet: ActionsSheet, clear_first: bool = True) -> bool:
         """
         Render all actions from an ActionsSheet to the DMX canvas.
@@ -69,8 +69,10 @@ class ActionsService:
                     continue
             
             if self.debug:
-                
-                print(self.dmx_canvas.export_as_txt())
+                from shared.file_utils import save_file
+                from backend.models.app_state import app_state
+                save_file(f"{app_state.current_song.data_folder}/dmx_canvas.txt", self.dmx_canvas.export_as_txt())
+
                 print(f"🎯 Successfully rendered {success_count}/{len(actions_sheet)} actions")
                 
             return success_count > 0

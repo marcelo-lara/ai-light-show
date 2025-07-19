@@ -131,6 +131,11 @@ class SongMetadata:
             self.initialize_song_metadata()
 
     @property
+    def data_folder(self) -> str:
+        """Get the path to the data folder."""
+        return os.path.join(self._songs_folder, "data")
+
+    @property
     def song_name(self) -> str:
         return self._song_name
 
@@ -319,10 +324,6 @@ class SongMetadata:
         self.beats = []
         self.arrangement = []
         self.key_moments = []
-
-        ## TODO: try to load arrangement from hints folder
-
-        ## TODO: try to load key_moments from hints folder
 
     def add_beat(self, time: float, volume: float = 0.0, energy: float = 1.0) -> None:
         """Add a beat to the song metadata."""
