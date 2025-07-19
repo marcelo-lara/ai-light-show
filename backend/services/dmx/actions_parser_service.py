@@ -8,6 +8,7 @@ import re
 from typing import List, Dict, Any, Optional, Tuple
 from backend.models.actions_sheet import ActionModel
 from backend.models.fixtures.fixtures_list_model import FixturesListModel
+from .parsers import FlashCommandParser, FadeCommandParser, StrobeCommandParser
 
 
 class ActionsParserService:
@@ -52,6 +53,11 @@ class ActionsParserService:
             'all_heads': [fid for fid, f in self.fixtures.fixtures.items() if 'head' in f.fixture_type or 'moving' in f.fixture_type],
             'rgb_lights': [fid for fid, f in self.fixtures.fixtures.items() if f.fixture_type in ['parcan', 'rgb']],
         }
+        
+        # Initialize command parsers
+        self.flash_parser = FlashCommandParser(self._resolve_fixtures, self._parse_colors)
+        self.fade_parser = FadeCommandParser(self._resolve_fixtures, self._parse_colors)
+        self.strobe_parser = StrobeCommandParser(self._resolve_fixtures)
     
     def parse_command(self, command: str) -> List[ActionModel]:
         """
@@ -81,7 +87,7 @@ class ActionsParserService:
             command
         )
         if flash_match:
-            actions.extend(self._parse_flash_command(flash_match))
+            actions.extend(self.flash_parser.parse(flash_match))
         
         # Pattern 2: Fade command
         # "fade head_el150 from red to blue at 10s for 3s"
@@ -90,7 +96,7 @@ class ActionsParserService:
             command
         )
         if fade_match:
-            actions.extend(self._parse_fade_command(fade_match))
+            actions.extend(self.fade_parser.parse(fade_match))
         
         # Pattern 3: Strobe command
         # "strobe all_parcans at 15s for 2s"
@@ -99,7 +105,7 @@ class ActionsParserService:
             command
         )
         if strobe_match:
-            actions.extend(self._parse_strobe_command(strobe_match))
+            actions.extend(self.strobe_parser.parse(strobe_match))
         
         # Pattern 4: Generic action with parameters
         # "action_name fixture_id param1=value1 param2=value2 at 5s for 2s"
@@ -132,92 +138,6 @@ class ActionsParserService:
             actions = self.parse_command(command)
             all_actions.extend(actions)
         return all_actions
-    
-    def _parse_flash_command(self, match) -> List[ActionModel]:
-        """Parse flash command regex match."""
-        fixture_spec, colors_str, start_time, duration, intensity = match.groups()
-        
-        # Resolve fixtures
-        fixture_ids = self._resolve_fixtures(fixture_spec)
-        
-        # Parse colors
-        colors = self._parse_colors(colors_str) if colors_str else ['white']
-        
-        # Parse timing and intensity
-        start_time = float(start_time)
-        duration = float(duration) if duration else 1.0
-        intensity = float(intensity) if intensity else 1.0
-        
-        actions = []
-        for fixture_id in fixture_ids:
-            action = ActionModel(
-                action='flash',
-                fixture_id=fixture_id,
-                parameters={
-                    'colors': colors,
-                    'intensity': intensity
-                },
-                start_time=start_time,
-                duration=duration
-            )
-            actions.append(action)
-        
-        return actions
-    
-    def _parse_fade_command(self, match) -> List[ActionModel]:
-        """Parse fade command regex match."""
-        fixture_spec, from_colors_str, to_colors_str, start_time, duration = match.groups()
-        
-        # Resolve fixtures
-        fixture_ids = self._resolve_fixtures(fixture_spec)
-        
-        # Parse colors
-        from_colors = self._parse_colors(from_colors_str) if from_colors_str else ['white']
-        to_colors = self._parse_colors(to_colors_str) if to_colors_str else ['white']
-        
-        # Parse timing
-        start_time = float(start_time)
-        duration = float(duration) if duration else 2.0
-        
-        actions = []
-        for fixture_id in fixture_ids:
-            action = ActionModel(
-                action='fade',
-                fixture_id=fixture_id,
-                parameters={
-                    'from_colors': from_colors,
-                    'to_colors': to_colors
-                },
-                start_time=start_time,
-                duration=duration
-            )
-            actions.append(action)
-        
-        return actions
-    
-    def _parse_strobe_command(self, match) -> List[ActionModel]:
-        """Parse strobe command regex match."""
-        fixture_spec, start_time, duration = match.groups()
-        
-        # Resolve fixtures
-        fixture_ids = self._resolve_fixtures(fixture_spec)
-        
-        # Parse timing
-        start_time = float(start_time)
-        duration = float(duration) if duration else 1.0
-        
-        actions = []
-        for fixture_id in fixture_ids:
-            action = ActionModel(
-                action='strobe',
-                fixture_id=fixture_id,
-                parameters={},
-                start_time=start_time,
-                duration=duration
-            )
-            actions.append(action)
-        
-        return actions
     
     def _parse_generic_command(self, match) -> List[ActionModel]:
         """Parse generic action command."""
