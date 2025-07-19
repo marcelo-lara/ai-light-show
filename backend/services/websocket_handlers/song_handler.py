@@ -9,6 +9,7 @@ from ...models.song_metadata import SongMetadata, Section
 from ...config import SONGS_DIR
 from ..dmx.dmx_canvas import DmxCanvas
 from ..utils.broadcast import broadcast_to_all
+from ...services.actions_service import ActionsService
 
 async def handle_load_song(websocket: WebSocket, message: Dict[str, Any]) -> None:
     """Handle song loading."""
@@ -48,6 +49,11 @@ async def handle_load_song(websocket: WebSocket, message: Dict[str, Any]) -> Non
         print(f"📋 Loaded {len(actions)} actions for {song_name}")
 
         # render actions to DMX canvas
+        dmx_canvas = DmxCanvas.get_instance()
+        if app_state.fixtures is None:
+            raise ValueError("Fixtures are not initialized in app_state")
+        actions_service = ActionsService(app_state.fixtures, dmx_canvas)
+        actions_service.render_actions_to_canvas(actions_sheet)
 
 
     except Exception as e:
@@ -70,7 +76,10 @@ async def handle_save_arrangement(websocket: WebSocket, message: Dict[str, Any])
     """Handle saving song arrangement."""
     arrangement = message["arrangement"]
     if app_state.current_song is not None:
-        app_state.current_song.arrangement = {k: Section(**v) for k, v in arrangement.items()}
+        # Convert arrangement dictionary to list of Section objects
+        app_state.current_song.arrangement = [
+            Section(**v) for k, v in arrangement.items()
+        ]
         app_state.current_song.save()
     else:
         print("No song object loaded; cannot save arrangement.")
