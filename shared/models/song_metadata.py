@@ -99,7 +99,11 @@ class Cluster:
 class SongMetadata:
     """Main class for managing song metadata including beats, chords, and arrangement."""
 
-    def __init__(self, song_name: str, songs_folder: Optional[str] = None, ignore_existing: bool = False):
+    def __init__(self, song_name: Optional[str] = None, songs_folder: Optional[str] = None, ignore_existing: bool = False):
+
+        if song_name is None:
+            self._song_name = '_not_loaded_'
+            return  # Placeholder for uninitialized song
 
         # Determine songs folder from different sources
         if not songs_folder:

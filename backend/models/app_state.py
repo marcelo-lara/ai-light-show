@@ -46,7 +46,7 @@ class AppState:
     
     # Song management
     current_song_file: Optional[str] = None
-    current_song: Optional[SongMetadata] = None  # SongMetadata object
+    current_song: SongMetadata = SongMetadata()  # SongMetadata object
     song_metadata: Dict[str, Any] = field(default_factory=dict)
     
     # WebSocket connections
