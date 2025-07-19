@@ -60,6 +60,13 @@ song: SongMetadata = app_state.current_song
 Song Analysis → AI Assistant → Actions Sheet → Actions Service → DMX Canvas → DMX Player → Art-Net
 ```
 
+With the LangGraph pipeline, the Song Analysis step now follows this modular flow:
+```
+MP3 File → [Stem Split → Beat Detect → Pattern Analysis → Segment Labeler (LLM) → Lighting Hint Generator (LLM)] → Song Metadata → Backend
+```
+
+Each node in the LangGraph pipeline logs its input/output to JSON files in the `logs/` directory, enabling easier debugging and tracing of the analysis process.
+
 ## 🔧 Development Workflows
 
 ### Backend Development
@@ -84,6 +91,36 @@ uvicorn app:app --host 0.0.0.0 --port 8001 --reload
 # Integration with backend
 backend/services/song_analysis_client.py # Client for communicating with service
 ```
+
+### LangGraph Pipeline in Song Analysis
+The song_analysis service uses a LangGraph-based pipeline for modular, traceable audio analysis:
+
+```python
+# Using the LangGraph pipeline
+from song_analysis.simple_pipeline import run_pipeline
+
+# Run the pipeline on a song file
+pipeline_results = run_pipeline('/path/to/song.mp3')
+
+# Pipeline output format
+{
+  "sections": [
+    { "name": "Intro", "start": 0.0, "end": 12.0 },
+    { "name": "Drop", "start": 34.2, "end": 36.7 }
+  ],
+  "lighting_hints": [
+    { "section_name": "Drop", "suggestion": "Flash red with strobe" }
+  ]
+}
+```
+
+Key components in the LangGraph pipeline:
+1. `song_analysis/langgraph_pipeline.py`: Main LangGraph pipeline definition
+2. `song_analysis/simple_pipeline.py`: Fallback pipeline when LangGraph isn't available
+3. `song_analysis/test_pipeline_run.py`: Test runner for the pipeline
+4. `song_analysis/services/legacy_analyzer.py`: Legacy procedural analysis for fallback
+
+The pipeline creates JSON output logs in the `logs/` directory for each node, enabling easier debugging and tracing.
 
 ### Frontend Development
 ```bash
@@ -430,10 +467,55 @@ analyzed = song_analyze(song, reset_file=True)
 # Creates: beats, chords, patterns, arrangement sections
 ```
 
+### LangGraph Pipeline Integration
+The song_analysis service now uses a modular LangGraph-based pipeline with these nodes:
+
+1. **stem_split**: Separates audio into stems using Demucs
+2. **beat_detect**: Identifies beats and tempo using Essentia
+3. **pattern_analysis**: Finds recurring patterns in the audio
+4. **segment_labeler**: Uses LLM to label segments (Intro, Verse, etc.)
+5. **lighting_hint_generator**: Uses LLM to suggest lighting effects
+
+```python
+# In the song_analysis service
+# The SongAnalyzer will automatically use LangGraph with fallback to legacy
+from song_analysis.services.audio_analyzer import SongAnalyzer
+
+analyzer = SongAnalyzer()
+result = analyzer.analyze(song_metadata, reset_file=True)
+
+# Direct pipeline usage
+from song_analysis.simple_pipeline import run_pipeline
+
+pipeline_results = run_pipeline(song_path)
+print(f"Found {len(pipeline_results['sections'])} sections")
+print(f"Generated {len(pipeline_results['lighting_hints'])} lighting hints")
+
+# The output follows this structure:
+{
+  "sections": [
+    {"name": "Intro", "start": 0.0, "end": 12.0},
+    {"name": "Verse", "start": 12.0, "end": 34.2},
+    {"name": "Drop", "start": 34.2, "end": 36.7}
+  ],
+  "lighting_hints": [
+    {"section_name": "Drop", "start": 34.2, "end": 36.7, "suggestion": "Flash red with strobe"}
+  ]
+}
+```
+
+All development for the LangGraph pipeline should happen in the `song_analysis/` folder, maintaining the service separation principle.
+
 ## 🎵 Project-Specific Conventions
 
 ### File Organization
 - `song_analysis/` - Standalone audio analysis service
+  - `langgraph_pipeline.py` - LangGraph-based modular analysis pipeline
+  - `simple_pipeline.py` - Simplified pipeline with fallback mechanism
+  - `test_pipeline_run.py` - Pipeline test runner
+  - `services/` - Audio analysis components and LLM integration
+  - `services/legacy_analyzer.py` - Traditional procedural analysis (fallback)
+  - `services/audio/` - Core audio analysis modules (essentia, demucs, pattern detection)
 - `backend/` - Main application and DMX control
   - `models/` - Data models (app_state, actions_sheet, song_metadata, fixtures)
   - `services/` - Business logic (actions_service, dmx/, ollama/)
@@ -491,6 +573,27 @@ print(f"Fixtures: {list(app_state.fixtures.fixtures.keys())}")
 # Validate actions
 validation = actions_service.validate_actions(actions_sheet)
 print(f"Valid: {validation['valid_actions']}/{validation['total_actions']}")
+```
+
+### LangGraph Pipeline Debugging
+```python
+# Test the pipeline directly
+python -m song_analysis.test_pipeline_run --song born_slippy.mp3
+
+# Examine node outputs
+import json
+from pathlib import Path
+
+# Load and inspect any node's output
+with open(Path("logs") / "beat_detect.json", "r") as f:
+    beat_output = json.load(f)
+    print(f"Detected {len(beat_output.get('beats', []))} beats")
+
+# Inspect the final output
+with open(Path("logs") / "final_output.json", "r") as f:
+    final_output = json.load(f)
+    print(f"Found {len(final_output.get('sections', []))} sections")
+    print(f"Generated {len(final_output.get('lighting_hints', []))} lighting hints")
 ```
 
 ## 🛡️ Additional Enforcement Directives
@@ -554,6 +657,43 @@ print(f"Valid: {validation['valid_actions']}/{validation['total_actions']}")
      
      # Render only ONCE at the end
      actions_service.render_actions_to_canvas(actions_sheet)
+     ```
+
+8. **LangGraph Pipeline Development**
+   - Always follow the modular LangGraph design when adding new audio analysis features.
+   - Create new nodes that take a single input dictionary and return a single output dictionary.
+   - Log node inputs/outputs using the `log_node_output` utility function.
+   - Ensure each node can function independently for better debugging and testing.
+   - Always include a fallback mechanism for when LangGraph is not available.
+   - Example node implementation:
+     ```python
+     def new_analysis_node(inputs: Dict[str, Any]) -> Dict[str, Any]:
+         """
+         Node that performs a specific analysis task.
+         
+         Args:
+             inputs: Dictionary with input data from previous nodes
+             
+         Returns:
+             Dictionary with analysis results to pass to next nodes
+         """
+         # Extract inputs
+         mp3_path = inputs["mp3_path"]
+         beats = inputs.get("beats", [])
+         
+         # Perform analysis
+         results = my_analysis_function(mp3_path, beats)
+         
+         # Prepare outputs (include inputs for next nodes)
+         output = {
+             "mp3_path": mp3_path,
+             "beats": beats,
+             "analysis_results": results
+         }
+         
+         # Log outputs for debugging
+         log_node_output("my_analysis_node", output)
+         return output
      ```
 
 This system prioritizes modular services, clear separation of concerns, real-time performance, and AI-driven lighting generation while maintaining strict boundaries between analysis, action planning, and DMX rendering phases.

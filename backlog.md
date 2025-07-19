@@ -9,8 +9,8 @@
   | Layer                 | Role                                                                              | Recommended Model                         |
   | --------------------- | --------------------------------------------------------------------------------- | ----------------------------------------- |
   | **Context Builder**   | Extracts or interprets song context (e.g. `"this section is intense and rising"`) | `Mistral`, `Phi-3`, `Mixtral`             |
-  | **Lighting Planner**  | Proposes creative, mood-aligned lighting effects                                  | `GPT-4`, `Claude Sonnet`, `Yi-34B`        |
-  | **Effect Translator** | Converts symbolic actions into JSON/DMX format                                    | `Mistral`, `Code LLM`, or hardcoded logic |
+  | **Lighting Planner**  | Proposes creative, mood-aligned lighting effects                                  | `GPT-4`, `Qwen-1.5-32B-Chat`, `Yi-34B`        |
+  | **Effect Translator** | Converts symbolic actions into JSON/DMX format                                    | `Mistral`, `Code LLM`    |
 
 - try these local models
 
@@ -71,101 +71,159 @@ Use Essentia to extract time series → feed compact summaries into LLM to label
 5. Collect answers into draft key_moments json
 
 
+-------------
 
-### ⬜ Refactor `song_analysis` pipeline using LangGraph for modular LLM-driven analysis
 
-**Goal**: Enable a step-by-step, modular audio analysis pipeline that supports LLM-based segment labeling and lighting cue suggestions.
+### ⬜ Implement 3-Agent LangGraph Pipeline: Context → Lighting Plan → DMX Translation
 
-**Why**: Current pipeline is procedural. Using LangGraph allows easier debugging, customization, and reasoning over each step.
-
----
-
-#### 🧠 Implementation Plan
-
-**Create a LangGraph-based pipeline** inside `song_analysis/langgraph_pipeline.py` with these steps:
-
-1. **Node: stem_split**
-   - Input: `mp3_path`
-   - Uses: existing `demucs_split.py`
-   - Output: dict of stem paths `{ vocals, drums, bass, other }`
-
-2. **Node: beat_detect**
-   - Input: full track path (or drums stem)
-   - Uses: `essentia_analysis.py`
-   - Output: list of beat timestamps
-
-3. **Node: pattern_analysis**
-   - Input: stems + beat list
-   - Uses: `pattern_finder.py`
-   - Output: sections, repeating parts
-
-4. **Node: segment_labeler (LLM)**
-   - Input: raw segment info
-   - Model: local Ollama client or remote Claude/GPT
-   - Output: list of sections with names, e.g. `"Intro"`, `"Chorus"`  
-     Use existing prompt patterns from `born_slippy.meta.json`
-
-5. **Node: lighting_hint_generator (LLM)**
-   - Input: labeled segments
-   - Output: per-section lighting notes, to be consumed later by backend AI
+**Goal**: Use LangGraph to chain 3 AI-based lighting planning agents:
+1. **Context Builder** (Mixtral): interprets the song segment
+2. **Lighting Planner** (Mixtral): proposes symbolic lighting actions
+3. **Effect Translator** (Command-R): outputs final DMX-ready data
 
 ---
 
-🔧 In song_analysis/langgraph_pipeline.py
-Add this utility function:
+#### 🧠 Tasks
+
+**Create file**: `song_analysis/langgraph_lighting_pipeline.py`  
+Implement a LangGraph pipeline with these 3 nodes:
+
+---
+
+### 🔷 1. Node: `context_builder` (Mixtral)
 
 ```python
-import json, os
-from pathlib import Path
+def run_context_builder(state: Dict) -> Dict:
+Input:
 
-def log_node_output(node_name: str, data: dict):
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
-    with open(log_dir / f"{node_name}.json", "w") as f:
-        json.dump(data, f, indent=2)
 ```
-
-Then inside each LangGraph node function, log like this:
-
-```python
-def beat_detect_node(inputs):
-    # Your existing beat detection logic here
-    beats = detect_beats(inputs["audio"])
-    
-    log_node_output("beat_detect", {"beats": beats})
-    return {"beats": beats}
-```
-
-Do the same for all nodes: stem_split, pattern_analysis, segment_labeler, lighting_hint_generator.
-
-#### 📦 File layout
-
-- `song_analysis/langgraph_pipeline.py`: LangGraph flow + nodes
-- `song_analysis/test_pipeline_run.py`: Run pipeline against test song
-- Reuse existing logic from `services/` as subfunctions if needed
-
----
-
-#### 💡 Tips
-
-- Use `langgraph.Graph()` with named steps
-- Each node gets a single input/output; make it LLM-friendly JSON
-- Test using `songs/born_slippy.mp3`
-
----
-
-#### ✅ Success Criteria
-
-- Given a song file, LangGraph produces a traceable output JSON:
-  ```json
-  {
-    "sections": [
-      { "name": "Intro", "start": 0.0, "end": 12.0 },
-      { "name": "Drop", "start": 34.2, "end": 36.7 }
-    ],
-    "lighting_hints": [
-      { "section": "Drop", "suggestion": "Flash red with strobe" }
-    ]
+{
+  "segment": {
+    "name": "Drop",
+    "start": 34.2,
+    "end": 36.7,
+    "features": {
+      "bpm": 128,
+      "energy": 0.92,
+      "instrumentation": ["kick", "bass", "synth"]
+    }
   }
+}
+```
 
-All steps run end-to-end with one run_pipeline(song_path) function
+Prompt:
+```python
+
+```
+You are a music context interpreter.
+Describe the emotional and sonic feel of this section:
+
+Segment: Drop
+Start: 34.2s
+End: 36.7s
+Features: {"bpm": 128, "energy": 0.92, "instrumentation": ["kick", "bass", "synth"]}
+
+Respond with a short natural language summary like:
+"High energy climax with heavy bass and bright synth"
+Model: Mixtral (use Ollama or openrouter call to Mixtral model)
+
+Output:
+
+```json
+{ "context_summary": "..." }
+🔷 2. Node: lighting_planner (Qwen-1.5-32B-Chat)
+```python
+def run_lighting_planner(state: Dict) -> Dict:
+Input:
+
+```json
+{ "context_summary": "...", "segment": {...} }
+```
+
+Prompt:
+
+```text
+You are a stage lighting designer.
+
+Based on this musical context:
+"High energy climax with heavy bass and bright synth"
+
+Suggest lighting actions. Use "flash", "strobe", "fade", etc.
+Return JSON array with:
+- type
+- color
+- start (seconds)
+- duration (seconds)
+
+This section starts at: 34.2s and ends at 36.7s
+Model: Mixtral
+
+Output example:
+
+```json
+{
+  "actions": [
+    { "type": "strobe", "color": "white", "start": 34.2, "duration": 2.5 },
+    { "type": "flash", "color": "blue", "start": 35.0, "duration": 1.0 }
+  ]
+}
+🔷 3. Node: effect_translator (Command-R)
+```python
+def run_effect_translator(state: Dict) -> Dict:
+Input:
+
+```json
+{ "actions": [ ... ] }
+Prompt:
+```text
+You are a lighting control expert.
+
+Given a list of symbolic lighting actions like:
+[
+  { "type": "strobe", "color": "white", "start": 34.2, "duration": 2.5 },
+  { "type": "flash", "color": "blue", "start": 35.0, "duration": 1.0 }
+]
+
+Convert these into low-level DMX fixture instructions for:
+- Fixture: "parcan_l" uses channel 10 for color/strobe
+- Fixture: "head_el150" uses presets like "Drop"
+
+Output JSON with a "dmx" array:
+[
+  { "fixture": "parcan_l", "channel": 10, "value": 255, "time": 34.2 },
+  { "fixture": "head_el150", "preset": "Drop", "time": 35.0 }
+]
+Model: Command-R (via Hugging Face inference or OpenRouter)
+
+Output:
+
+```json
+{
+  "dmx": [
+    { "fixture": "parcan_l", "channel": 10, "value": 255, "time": 34.2 },
+    { "fixture": "head_el150", "preset": "Drop", "time": 35.0 }
+  ]
+}
+🔁 LangGraph Setup
+Use StateGraph() from langgraph.graph
+
+Add all 3 nodes
+
+Set entry: context_builder
+
+Set finish: effect_translator
+
+Chain edges between nodes
+
+Function to call:
+
+```python
+result = pipeline.invoke(test_segment_input)
+✅ Success Criteria
+The pipeline runs end-to-end from raw segment input → final DMX plan
+
+Each node output is saved to logs/{node_name}.json
+
+All inputs/outputs are dictionaries with string/float/list values
+
+Use Mixtral for Node 1 & 2, Command-R for Node 3

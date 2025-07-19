@@ -9,6 +9,19 @@ A standalone microservice for audio analysis in the AI Light Show system.
 - **Pattern Analysis**: Advanced clustering to identify recurring patterns in drum and bass stems
 - **Chord Analysis**: Harmonic analysis and chord progression detection
 - **Song Structure**: Automatic arrangement guessing based on patterns and beats
+- **LangGraph Pipeline**: Modular, traceable analysis pipeline with LLM-based segment labeling and lighting hint generation
+
+## LangGraph Pipeline
+
+The service now features a modular LangGraph-based pipeline for more traceable and maintainable audio analysis:
+
+1. **Stem Split**: Separates audio into drums, bass, vocals, and other stems
+2. **Beat Detection**: Identifies beats and tempo using Essentia
+3. **Pattern Analysis**: Finds recurring patterns and segments in the audio
+4. **Segment Labeler**: Uses LLM to label segments as Intro, Verse, Chorus, etc.
+5. **Lighting Hint Generator**: Uses LLM to suggest creative lighting effects for each segment
+
+The pipeline logs each node's input/output to JSON files for easier debugging and comes with a robust fallback to traditional analysis if needed.
 
 ## API Endpoints
 
@@ -43,6 +56,20 @@ debug: false
 ### Batch Analysis
 ```
 GET /analyze/batch/{songs_folder}?reset_file=true
+```
+
+## Pipeline Testing
+
+To test the LangGraph pipeline directly:
+
+```bash
+python -m song_analysis.test_pipeline_run --song <song_name.mp3>
+```
+
+For a simplified version that works even without LangGraph installed:
+
+```bash
+python -m song_analysis.test_simple_pipeline --song <song_name.mp3>
 ```
 
 ## Docker Usage
