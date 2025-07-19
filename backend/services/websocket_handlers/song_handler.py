@@ -35,6 +35,7 @@ async def handle_load_song(websocket: WebSocket, message: Dict[str, Any]) -> Non
             song_duration = 300.0  # 5 minute default
         
         app_state.dmx_canvas = DmxCanvas(fps=44, duration=song_duration)
+        
 
     # Load actions for the song
     actions = []
@@ -45,6 +46,10 @@ async def handle_load_song(websocket: WebSocket, message: Dict[str, Any]) -> Non
         actions_sheet.load_actions()
         actions = [action.to_dict() for action in actions_sheet.actions]
         print(f"📋 Loaded {len(actions)} actions for {song_name}")
+
+        # render actions to DMX canvas
+
+
     except Exception as e:
         print(f"❌ Error loading actions: {e}")
 

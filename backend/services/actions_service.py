@@ -68,6 +68,16 @@ class ActionsService:
                         print(f"  ❌ Action {i+1}/{len(actions_sheet)}: Failed to render {action.action} - {e}")
                     continue
             
+            # Render ARM state for all fixtures
+            for fixture in self.fixtures.fixtures.values():
+                if 'arm' in fixture.actions:
+                    fixture.render_action('arm')
+                    if self.debug:
+                        print(f"  🔧 Arm state set for fixture {fixture.name}")
+                else:
+                    if self.debug:
+                        print(f"  ⚠️ No 'arm' action available for fixture {fixture.name}")
+
             if self.debug:
                 from shared.file_utils import save_file
                 from backend.models.app_state import app_state

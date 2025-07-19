@@ -59,8 +59,9 @@ class DmxPlayer:
     
     This service handles:
     - Playback timing synchronization
-    - DMX universe dispatch from canvas
+    - DMX universe dispatch from singleton DmxCanvas
     - Real-time Art-Net output
+    - Conditional blackout transmission
     """
     
     def __init__(self, fps: int = 60):
@@ -70,7 +71,7 @@ class DmxPlayer:
         self.is_running = False
         self._render_task: Optional[asyncio.Task] = None
         self._on_frame_callback: Optional[Callable[[float, bytes], None]] = None
-        self.blackout_when_not_playing: bool = False  # Send blackout frames when not playing
+        self.blackout_when_not_playing: bool = False  # Whether to send blackout frames when not playing
 
     def set_frame_callback(self, callback: Callable[[float, bytes], None]) -> None:
         """Set a callback to be called for each rendered frame."""
@@ -107,25 +108,19 @@ class DmxPlayer:
                 
                 # Render frame based on song time and playback state
                 if self.playback_state.is_playing:
-                    # Render DMX universe from canvas at current song time
+                    # Render DMX universe from singleton canvas at current song time
                     dmx_universe = self._retrieve_dmx_frame(current_time)
                     
                     # Send Art-Net packet with rendered lighting data
                     send_artnet(dmx_universe, current_time=current_time, debug=False)
-
-                    # Call frame callback with rendered data
-                    if self._on_frame_callback:
-                        self._on_frame_callback(current_time, bytes(dmx_universe))
                         
-                else:
-                    # (only if set) Send blackout frame when not playing
-                    if self.blackout_when_not_playing:
-                        blackout_universe = [0] * 512
-                        send_artnet(blackout_universe, current_time=current_time, debug=False)
-                    
-                # Call frame callback with blackout data
-                if self._on_frame_callback:
-                    self._on_frame_callback(current_time, bytes(blackout_universe))
+                elif self.blackout_when_not_playing:
+                    # Only send blackout frame when explicitly enabled
+                    blackout_universe = [0] * 512
+                    send_artnet(blackout_universe, current_time=current_time, debug=False)
+                
+                # If not playing and blackout_when_not_playing is False, 
+                # don't send any frames to the Art-Net node
                 
                 # Calculate sleep time to maintain FPS
                 await asyncio.sleep(0.01)
@@ -139,28 +134,30 @@ class DmxPlayer:
     
     def _retrieve_dmx_frame(self, current_time: float) -> list:
         """
-        Retrieve a single DMX frame from the canvas at the given song time.
+        Retrieve a single DMX frame from the singleton canvas at the given song time.
         
-        This method extracts the DMX universe state from the canvas at the
-        precise song time position, ensuring lighting follows the song timeline.
+        This method extracts the DMX universe state from the singleton DMX canvas
+        at the precise song time position, ensuring lighting follows the song timeline.
         
         Args:
-            current_time: Current song playback time in seconds
+            current_time: Current song playbook time in seconds
             
         Returns:
             List of 512 DMX channel values (0-255) for the given time
         """
         try:
             # Import here to avoid circular imports
-            from ...models.app_state import app_state
+            from .dmx_canvas import DmxCanvas
             
-            # Ensure we have a valid canvas and song loaded
-            if not app_state.dmx_canvas:
-                print("⚠️ No DMX canvas available for rendering")
+            # Get the singleton DMX canvas instance
+            if not DmxCanvas.is_initialized():
+                print("⚠️ No DMX canvas singleton initialized")
                 return [0] * 512
             
+            canvas = DmxCanvas.get_instance()
+            
             # Get frame data from canvas at the exact song time
-            frame_bytes = app_state.dmx_canvas.get_frame(current_time)
+            frame_bytes = canvas.get_frame(current_time)
             if frame_bytes and len(frame_bytes) >= 512:
                 # Return the full 512-channel universe
                 return list(frame_bytes[:512])
@@ -174,7 +171,7 @@ class DmxPlayer:
             return [0] * 512
             
         except Exception as e:
-            print(f"❌ Error rendering DMX frame at time {current_time:.3f}s: {e}")
+            print(f"❌ Error retrieving DMX frame at time {current_time:.3f}s: {e}")
             # Safe fallback on any error
             return [0] * 512
     
