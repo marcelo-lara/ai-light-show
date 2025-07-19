@@ -59,9 +59,8 @@ class DmxPlayer:
     
     This service handles:
     - Playback timing synchronization
-    - DMX universe rendering from canvas
+    - DMX universe dispatch from canvas
     - Real-time Art-Net output
-    - Frame rate limiting (60 FPS)
     """
     
     def __init__(self, fps: int = 60):
@@ -71,7 +70,8 @@ class DmxPlayer:
         self.is_running = False
         self._render_task: Optional[asyncio.Task] = None
         self._on_frame_callback: Optional[Callable[[float, bytes], None]] = None
-        
+        self.blackout_when_not_playing: bool = False  # Send blackout frames when not playing
+
     def set_frame_callback(self, callback: Callable[[float, bytes], None]) -> None:
         """Set a callback to be called for each rendered frame."""
         self._on_frame_callback = callback
@@ -82,7 +82,7 @@ class DmxPlayer:
             return
             
         self.is_running = True
-        self._render_task = asyncio.create_task(self._render_loop())
+        self._render_task = asyncio.create_task(self._dispatcher_loop())
         print(f"🎬 DMX Player started at {self.fps} FPS")
     
     async def stop_playback_engine(self) -> None:
@@ -97,7 +97,7 @@ class DmxPlayer:
             self._render_task = None
         print("🛑 DMX Player stopped")
     
-    async def _render_loop(self) -> None:
+    async def _dispatcher_loop(self) -> None:
         """Main rendering loop - runs at specified FPS."""
         last_frame_time = time.perf_counter()
         
@@ -108,15 +108,27 @@ class DmxPlayer:
                 # Get current playback time
                 current_time = self.playback_state.get_current_time()
                 
-                # Render DMX universe from canvas
-                dmx_universe = self._render_dmx_frame(current_time)
-                
-                # Send Art-Net packet
-                send_artnet(dmx_universe, debug=False)
-                
-                # Call frame callback if set
+                # Render frame based on song time and playback state
+                if self.playback_state.is_playing:
+                    # Render DMX universe from canvas at current song time
+                    dmx_universe = self._retrieve_dmx_frame(current_time)
+                    
+                    # Send Art-Net packet with rendered lighting data
+                    send_artnet(dmx_universe, current_time=current_time, debug=False)
+
+                    # Call frame callback with rendered data
+                    if self._on_frame_callback:
+                        self._on_frame_callback(current_time, bytes(dmx_universe))
+                        
+                else:
+                    # (only if set) Send blackout frame when not playing
+                    if self.blackout_when_not_playing:
+                        blackout_universe = [0] * 512
+                        send_artnet(blackout_universe, current_time=current_time, debug=False)
+                    
+                # Call frame callback with blackout data
                 if self._on_frame_callback:
-                    self._on_frame_callback(current_time, bytes(dmx_universe))
+                    self._on_frame_callback(current_time, bytes(blackout_universe))
                 
                 # Calculate sleep time to maintain FPS
                 frame_duration = time.perf_counter() - frame_start
@@ -134,32 +146,45 @@ class DmxPlayer:
         except Exception as e:
             print(f"❌ Error in DMX render loop: {e}")
     
-    def _render_dmx_frame(self, current_time: float) -> list:
+    def _retrieve_dmx_frame(self, current_time: float) -> list:
         """
-        Render a single DMX frame from the canvas at the given time.
+        Retrieve a single DMX frame from the canvas at the given song time.
+        
+        This method extracts the DMX universe state from the canvas at the
+        precise song time position, ensuring lighting follows the song timeline.
         
         Args:
-            current_time: Current playback time in seconds
+            current_time: Current song playback time in seconds
             
         Returns:
-            List of 512 DMX channel values (0-255)
+            List of 512 DMX channel values (0-255) for the given time
         """
         try:
             # Import here to avoid circular imports
             from ...models.app_state import app_state
             
-            # Get DMX universe from canvas
-            if app_state.dmx_canvas:
-                # Get frame at current time
-                frame_bytes = app_state.dmx_canvas.get_frame(current_time)
-                if frame_bytes:
-                    return list(frame_bytes)
+            # Ensure we have a valid canvas and song loaded
+            if not app_state.dmx_canvas:
+                print("⚠️ No DMX canvas available for rendering")
+                return [0] * 512
             
-            # Fallback: return blackout
+            # Get frame data from canvas at the exact song time
+            frame_bytes = app_state.dmx_canvas.get_frame(current_time)
+            if frame_bytes and len(frame_bytes) >= 512:
+                # Return the full 512-channel universe
+                return list(frame_bytes[:512])
+            elif frame_bytes:
+                # Pad shorter frames to 512 channels
+                frame_list = list(frame_bytes)
+                frame_list.extend([0] * (512 - len(frame_list)))
+                return frame_list
+            
+            # No frame data at this time - return blackout
             return [0] * 512
             
         except Exception as e:
-            print(f"❌ Error rendering DMX frame: {e}")
+            print(f"❌ Error rendering DMX frame at time {current_time:.3f}s: {e}")
+            # Safe fallback on any error
             return [0] * 512
     
     # Playback control methods
@@ -196,9 +221,12 @@ class DmxPlayer:
         """Synchronize playback state from external source (WebSocket)."""
         if is_playing != self.playback_state.is_playing:
             if is_playing:
+                # Starting playback - set time and play
                 self.playback_state.playback_time = current_time
                 self.play()
             else:
+                # Pausing playback - set time first, then pause
+                self.playback_state.playback_time = current_time
                 self.pause()
         else:
             # Just update time if playing state hasn't changed

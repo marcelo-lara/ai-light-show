@@ -18,7 +18,7 @@ class ActionsService:
     and FixturesListModel (which can render actions to the DMX canvas).
     """
     
-    def __init__(self, fixtures: FixturesListModel, dmx_canvas: DmxCanvas, debug: bool = False):
+    def __init__(self, fixtures: FixturesListModel, dmx_canvas: DmxCanvas, debug: bool = True):
         """
         Initialize the Actions Service.
         
@@ -69,6 +69,8 @@ class ActionsService:
                     continue
             
             if self.debug:
+                
+                print(self.dmx_canvas.export_as_txt())
                 print(f"🎯 Successfully rendered {success_count}/{len(actions_sheet)} actions")
                 
             return success_count > 0

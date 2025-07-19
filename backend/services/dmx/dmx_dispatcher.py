@@ -35,7 +35,7 @@ def set_channel(ch: int, val: int) -> bool:
 last_artnet_send = 0
 last_packet = [0] * DMX_CHANNELS
 
-def send_artnet(_dmx_universe=None, debug=False):
+def send_artnet(_dmx_universe=None, current_time=None, debug=False):
     """
     Send ArtNet packet with DMX data.
     
@@ -86,10 +86,12 @@ def send_artnet(_dmx_universe=None, debug=False):
     last_packet = full_data.copy()
 
     # Debug output
+    debug =True  # Always debug for testing
     if debug:
+        _time = now if current_time is None else current_time
         dmx_slice = full_data[15:40]  # Use full_data instead of dmx_universe
         dmx_str = '.'.join(f"{v:03d}" for v in dmx_slice)
-        print(f"[{now:.3f}] {dmx_str}")
+        print(f"[{_time:.3f}] {dmx_str}")
 
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

@@ -195,8 +195,8 @@ class DmxCanvas:
         
         if self.debug:
             print(f"DMX Canvas cleared: {self._num_frames} frames, {self.universe_size} channels reset to 0")
-    
-    def export_as_txt(self, start_time: float = 0, end_time: float = 10, start_channel: int = 1, end_channel: int = 512) -> str:
+
+    def export_as_txt(self, start_time: float = 0, end_time: float = 0.5, start_channel: int = 16, end_channel: int = 39) -> str:
         """
         Export the DMX canvas as a log string.
         This method formats the timeline into a human-readable string,
@@ -219,7 +219,11 @@ class DmxCanvas:
 
         # Calculate frame indices for time range
         start_frame = self._time_to_frame_index(start_time)
-        end_frame = self._time_to_frame_index(end_time)
+        if end_time == 0:
+            end_frame = self._num_frames - 1
+        else:
+            end_frame = self._time_to_frame_index(end_time)
+    
         if end_frame < start_frame:
             end_frame = start_frame
 
