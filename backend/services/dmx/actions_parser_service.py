@@ -8,7 +8,16 @@ import re
 from typing import List, Dict, Any, Optional, Tuple
 from backend.models.actions_sheet import ActionModel
 from backend.models.fixtures.fixtures_list_model import FixturesListModel
-from .parsers import FlashCommandParser, FadeCommandParser, StrobeCommandParser
+from .parsers import (
+    FlashCommandParser, 
+    FadeCommandParser, 
+    StrobeCommandParser,
+    SetChannelCommandParser,
+    PresetCommandParser,
+    FadeChannelCommandParser,
+    StrobeChannelCommandParser,
+    ClearFixtureCommandParser
+)
 
 
 class ActionsParserService:
@@ -58,6 +67,11 @@ class ActionsParserService:
         self.flash_parser = FlashCommandParser(self._resolve_fixtures, self._parse_colors)
         self.fade_parser = FadeCommandParser(self._resolve_fixtures, self._parse_colors)
         self.strobe_parser = StrobeCommandParser(self._resolve_fixtures)
+        self.set_channel_parser = SetChannelCommandParser(self._resolve_fixtures)
+        self.preset_parser = PresetCommandParser(self._resolve_fixtures)
+        self.fade_channel_parser = FadeChannelCommandParser(self._resolve_fixtures)
+        self.strobe_channel_parser = StrobeChannelCommandParser(self._resolve_fixtures)
+        self.clear_fixture_parser = ClearFixtureCommandParser(self._resolve_fixtures)
     
     def parse_command(self, command: str) -> List[ActionModel]:
         """
@@ -107,7 +121,52 @@ class ActionsParserService:
         if strobe_match:
             actions.extend(self.strobe_parser.parse(strobe_match))
         
-        # Pattern 4: Generic action with parameters
+        # Pattern 4: Set channel command
+        # "#set parcan_l red channel to 0.5 at 12.23s"
+        set_channel_match = re.match(
+            r'set\s+(\w+)\s+(\w+)\s+channel\s+to\s+([\d.]+)\s+at\s+([\d.]+)s?',
+            command
+        )
+        if set_channel_match:
+            actions.extend(self.set_channel_parser.parse(set_channel_match))
+        
+        # Pattern 5: Preset command
+        # "#preset moving_head Drop at 34.2s"
+        preset_match = re.match(
+            r'preset\s+(\w+)\s+(\w+)\s+at\s+([\d.]+)s?',
+            command
+        )
+        if preset_match:
+            actions.extend(self.preset_parser.parse(preset_match))
+        
+        # Pattern 6: Fade channel command
+        # "#fade parcan_l red channel from 0.0 to 1.0 duration 5s"
+        fade_channel_match = re.match(
+            r'fade\s+(\w+)\s+(\w+)\s+channel\s+from\s+([\d.]+)\s+to\s+([\d.]+)\s+duration\s+([\d.]+)s?',
+            command
+        )
+        if fade_channel_match:
+            actions.extend(self.fade_channel_parser.parse(fade_channel_match))
+        
+        # Pattern 7: Strobe channel command
+        # "#strobe parcan_l white channel rate 10 duration 2s"
+        strobe_channel_match = re.match(
+            r'strobe\s+(\w+)\s+(\w+)\s+channel\s+rate\s+([\d.]+)\s+duration\s+([\d.]+)s?',
+            command
+        )
+        if strobe_channel_match:
+            actions.extend(self.strobe_channel_parser.parse(strobe_channel_match))
+        
+        # Pattern 8: Clear fixture state command
+        # "#clear parcan_l state at 15.0s"
+        clear_fixture_match = re.match(
+            r'clear\s+(\w+)\s+state\s+at\s+([\d.]+)s?',
+            command
+        )
+        if clear_fixture_match:
+            actions.extend(self.clear_fixture_parser.parse(clear_fixture_match))
+        
+        # Pattern 9: Generic action with parameters
         # "action_name fixture_id param1=value1 param2=value2 at 5s for 2s"
         generic_match = re.match(
             r'(\w+)\s+(\w+)\s*(.*?)\s*at\s+([\d.]+)s?\s*(?:for\s+([\d.]+)s?)?',
@@ -310,8 +369,38 @@ Supported Action Command Formats:
    Examples:
    - strobe all_parcans at 15s for 2s
    - strobe parcan_pl at 8s
+
+4. Set Channel Commands:
+   set <fixture> <channel> channel to <value> at <time>s
+   Examples:
+   - set parcan_l red channel to 0.5 at 12.23s
+   - set moving_head dimmer channel to 1.0 at 5s
+
+5. Preset Commands:
+   preset <fixture> <preset_name> at <time>s
+   Examples:
+   - preset moving_head Drop at 34.2s
+   - preset all_heads Home at 0s
+
+6. Fade Channel Commands:
+   fade <fixture> <channel> channel from <start_value> to <end_value> duration <time>s
+   Examples:
+   - fade parcan_l red channel from 0.0 to 1.0 duration 5s
+   - fade moving_head dimmer channel from 1.0 to 0.0 duration 3s
+
+7. Strobe Channel Commands:
+   strobe <fixture> <channel> channel rate <frequency> duration <time>s
+   Examples:
+   - strobe parcan_l white channel rate 10 duration 2s
+   - strobe all_parcans dimmer channel rate 5 duration 4s
+
+8. Clear Fixture State Commands:
+   clear <fixture> state at <time>s
+   Examples:
+   - clear parcan_l state at 15.0s
+   - clear all state at 0s
    
-4. Generic Commands:
+9. Generic Commands:
    <action> <fixture> [param=value ...] at <time>s [for <duration>s]
    Examples:
    - full parcan_pl intensity=0.5 at 3s for 2s
@@ -323,6 +412,8 @@ Fixture Groups:
 - rgb_lights: All RGB capable fixtures
 
 Colors: red, green, blue, white, yellow, cyan, magenta, purple, orange, pink
+
+Channel Values: Normalized between 0.0 (DMX 0) and 1.0 (DMX 255)
 """
         return help_text
 
