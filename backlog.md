@@ -71,7 +71,7 @@ Use Essentia to extract time series → feed compact summaries into LLM to label
 5. Collect answers into draft key_moments json
 
 
--------------
+-----------------------------------------------------------------------------------------------------------------------------------------------
 
 
 ### ⬜ Implement 3-Agent LangGraph Pipeline: Context → Lighting Plan → DMX Translation
@@ -85,7 +85,7 @@ Use Essentia to extract time series → feed compact summaries into LLM to label
 
 #### 🧠 Tasks
 
-**Create file**: `song_analysis/langgraph_lighting_pipeline.py`  
+**Create file**: `backend/services/langgraph/lighting_pipeline.py`  
 Implement a LangGraph pipeline with these 3 nodes:
 
 ---
@@ -125,13 +125,13 @@ Features: {"bpm": 128, "energy": 0.92, "instrumentation": ["kick", "bass", "synt
 
 Respond with a short natural language summary like:
 "High energy climax with heavy bass and bright synth"
-Model: Mixtral (use Ollama or openrouter call to Mixtral model)
+Model: Mixtral (use Ollama to call Mixtral model)
 
 Output:
 
 ```json
 { "context_summary": "..." }
-🔷 2. Node: lighting_planner (Qwen-1.5-32B-Chat)
+🔷 2. Node: lighting_planner (Mixtral)
 ```python
 def run_lighting_planner(state: Dict) -> Dict:
 Input:
@@ -156,6 +156,8 @@ Return JSON array with:
 - duration (seconds)
 
 This section starts at: 34.2s and ends at 36.7s
+```
+
 Model: Mixtral
 
 Output example:
@@ -167,6 +169,7 @@ Output example:
     { "type": "flash", "color": "blue", "start": 35.0, "duration": 1.0 }
   ]
 }
+
 🔷 3. Node: effect_translator (Command-R)
 ```python
 def run_effect_translator(state: Dict) -> Dict:
@@ -193,7 +196,7 @@ Output JSON with a "dmx" array:
   { "fixture": "parcan_l", "channel": 10, "value": 255, "time": 34.2 },
   { "fixture": "head_el150", "preset": "Drop", "time": 35.0 }
 ]
-Model: Command-R (via Hugging Face inference or OpenRouter)
+Model: Command-R (use Ollama to call Command-R model)
 
 Output:
 
@@ -204,6 +207,7 @@ Output:
     { "fixture": "head_el150", "preset": "Drop", "time": 35.0 }
   ]
 }
+```
 🔁 LangGraph Setup
 Use StateGraph() from langgraph.graph
 

@@ -467,8 +467,12 @@ analyzed = song_analyze(song, reset_file=True)
 # Creates: beats, chords, patterns, arrangement sections
 ```
 
-### LangGraph Pipeline Integration
-The song_analysis service now uses a modular LangGraph-based pipeline with these nodes:
+### LangGraph Pipelines - Two Separate Implementations
+
+The project has TWO distinct LangGraph pipelines in different services:
+
+#### 1. Song Analysis Pipeline (song_analysis/)
+Used for audio analysis and musical feature extraction with these nodes:
 
 1. **stem_split**: Separates audio into stems using Demucs
 2. **beat_detect**: Identifies beats and tempo using Essentia
@@ -504,7 +508,90 @@ print(f"Generated {len(pipeline_results['lighting_hints'])} lighting hints")
 }
 ```
 
-All development for the LangGraph pipeline should happen in the `song_analysis/` folder, maintaining the service separation principle.
+#### 2. Lighting Design Pipeline (backend/)
+Used for AI-driven lighting design generation from musical segments with these agents:
+
+1. **Context Builder**: Interprets musical segments into natural language summaries (Mixtral)
+2. **Lighting Planner**: Creates high-level lighting actions from context (Mixtral)
+3. **Effect Translator**: Translates actions into specific DMX commands (Command-R)
+
+```python
+# Using the lighting design LangGraph pipeline
+from backend.services.langgraph.lighting_pipeline import run_lighting_pipeline
+
+# Run the 3-agent pipeline on a musical segment
+segment_input = {
+    "segment": {
+        "name": "Drop",
+        "start": 34.2,
+        "end": 36.7,
+        "features": {"energy": 0.9, "tempo": 128}
+    }
+}
+
+result = run_lighting_pipeline(segment_input)
+
+# Pipeline output format
+{
+  "segment": {...},
+  "context_summary": "High energy climax with heavy bass",
+  "actions": [
+    {"type": "strobe", "color": "white", "start": 34.2, "duration": 2.5}
+  ],
+  "dmx": [
+    {"fixture": "parcan_l", "channel": 10, "value": 255, "time": 34.2}
+  ]
+}
+
+# Individual agent usage
+from backend.services.langgraph.agents import ContextBuilderAgent, LightingPlannerAgent, EffectTranslatorAgent
+
+context_agent = ContextBuilderAgent(model="mixtral")
+planner_agent = LightingPlannerAgent(model="mixtral")
+translator_agent = EffectTranslatorAgent(model="command-r", fallback_model="mixtral")
+
+# Use agents individually for testing or partial execution
+result = context_agent.run(pipeline_state)
+
+# Partial pipeline execution (skip context building)
+state_with_context = {
+    "segment": segment_data,
+    "context_summary": "Pre-generated context",
+    "actions": [],
+    "dmx": []
+}
+planner_result = planner_agent.run(state_with_context)
+final_result = translator_agent.run(planner_result)
+
+# Custom error handling per agent
+def robust_agent_execution(agent, state):
+    try:
+        return agent.run(state)
+    except Exception as e:
+        print(f"Agent {agent.__class__.__name__} failed: {e}")
+        error_state = state.copy()
+        error_state["error"] = str(e)
+        return error_state
+```
+
+**Benefits of Modular Agent Design**:
+- **Independent Testing**: Each agent can be tested individually
+- **Flexible Configuration**: Different models per agent
+- **Better Error Isolation**: Issues in one agent don't affect others
+- **Easy Extension**: New agents can be added without modifying existing code
+- **Partial Execution**: Can start pipeline from any agent
+- **Reusability**: Agents can be used in different contexts
+```
+
+**CRITICAL SEPARATION**: These are completely separate pipelines with different purposes:
+- **Song Analysis Pipeline** (`song_analysis/`): Analyzes MP3 files → Musical features and sections
+- **Lighting Design Pipeline** (`backend/`): Takes musical segments → Generates lighting commands
+
+Key file locations:
+- Song Analysis: `song_analysis/langgraph_pipeline.py`, `song_analysis/simple_pipeline.py`
+- Lighting Design: `backend/services/langgraph/lighting_pipeline.py`, `backend/services/langgraph/agents/`
+
+Both pipelines create JSON output logs in the `logs/` directory for each node, enabling easier debugging and tracing.
 
 ## 🎵 Project-Specific Conventions
 
@@ -520,6 +607,12 @@ All development for the LangGraph pipeline should happen in the `song_analysis/`
   - `models/` - Data models (app_state, actions_sheet, song_metadata, fixtures)
   - `services/` - Business logic (actions_service, dmx/, ollama/)
   - `services/utils/` - Utility functions (broadcast.py)
+  - `services/langgraph/` - AI lighting design pipeline
+    - `lighting_pipeline.py` - Main pipeline orchestration
+    - `agents/` - Modular agent implementations
+      - `context_builder.py` - Musical context interpretation agent
+      - `lighting_planner.py` - Lighting action planning agent
+      - `effect_translator.py` - DMX command translation agent
   - `services/websocket_handlers/` - WebSocket message handlers
 - `frontend/` - User interface
   - `src/components/` - UI components
@@ -660,41 +753,42 @@ with open(Path("logs") / "final_output.json", "r") as f:
      ```
 
 8. **LangGraph Pipeline Development**
+   **CRITICAL**: Two separate LangGraph implementations exist - do not mix them:
+   
+   **Song Analysis Pipeline** (`song_analysis/`):
    - Always follow the modular LangGraph design when adding new audio analysis features.
    - Create new nodes that take a single input dictionary and return a single output dictionary.
    - Log node inputs/outputs using the `log_node_output` utility function.
    - Ensure each node can function independently for better debugging and testing.
    - Always include a fallback mechanism for when LangGraph is not available.
-   - Example node implementation:
-     ```python
-     def new_analysis_node(inputs: Dict[str, Any]) -> Dict[str, Any]:
-         """
-         Node that performs a specific analysis task.
-         
-         Args:
-             inputs: Dictionary with input data from previous nodes
-             
-         Returns:
-             Dictionary with analysis results to pass to next nodes
-         """
-         # Extract inputs
-         mp3_path = inputs["mp3_path"]
-         beats = inputs.get("beats", [])
-         
-         # Perform analysis
-         results = my_analysis_function(mp3_path, beats)
-         
-         # Prepare outputs (include inputs for next nodes)
-         output = {
-             "mp3_path": mp3_path,
-             "beats": beats,
-             "analysis_results": results
-         }
-         
-         # Log outputs for debugging
-         log_node_output("my_analysis_node", output)
-         return output
-     ```
+   
+   **Lighting Design Pipeline** (`backend/services/langgraph/`):
+   - Use modular agent classes in separate files: `agents/context_builder.py`, `agents/lighting_planner.py`, `agents/effect_translator.py`
+   - Each agent should be self-contained and independently testable
+   - Use TypedDict for PipelineState schema consistency
+   - Maintain LangGraph compatibility through wrapper functions (`run_context_builder`, etc.)
+   - Always provide fallback sequential execution when LangGraph is unavailable
+   
+   Example lighting agent implementation:
+   ```python
+   # In backend/services/langgraph/agents/my_agent.py
+   class MyLightingAgent:
+       def __init__(self, model: str = "mixtral"):
+           self.model = model
+       
+       def run(self, state: PipelineState) -> PipelineState:
+           # Agent logic here
+           result_state = state.copy()
+           result_state["my_output"] = my_processing(state)
+           return result_state
+   
+   # LangGraph wrapper function
+   def run_my_agent(state: PipelineState) -> PipelineState:
+       agent = MyLightingAgent()
+       return agent.run(state)
+   ```
+   
+   **Never mix the two pipelines**: Song analysis creates musical features; lighting design consumes them.
 
 This system prioritizes modular services, clear separation of concerns, real-time performance, and AI-driven lighting generation while maintaining strict boundaries between analysis, action planning, and DMX rendering phases.
 
