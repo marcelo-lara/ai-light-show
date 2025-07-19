@@ -1,6 +1,6 @@
 """
 Effect Translator Agent - Node 3 of the Lighting Pipeline
-Converts symbolic lighting actions into DMX fixture instructions
+Converts symbolic lighting actions into standardized direct commands
 """
 import json
 import re
@@ -36,7 +36,7 @@ def save_node_output(node_name: str, data: Dict[str, Any]) -> None:
 class EffectTranslatorAgent:
     """
     Agent 3: Effect Translator (Command-R)
-    Converts symbolic lighting actions into DMX fixture instructions
+    Converts symbolic lighting actions into standardized direct commands
     """
     
     def __init__(self, model: str = "command-r", fallback_model: str = "mixtral"):
@@ -62,21 +62,21 @@ class EffectTranslatorAgent:
             # Call Command-R model via Ollama (fallback to mixtral if command-r not available)
             response = self._query_model(prompt)
             
-            # Extract and parse DMX commands from response
-            dmx_commands = self._parse_dmx_commands(response, actions)
+            # Extract and parse direct commands from response
+            direct_commands = self._parse_dmx_commands(response, actions)
             
             # Update state
             result_state = state.copy()
-            result_state["dmx"] = dmx_commands
+            result_state["dmx"] = direct_commands
             
             # Save output for debugging
             save_node_output("effect_translator", {
                 "input": actions,
-                "dmx": dmx_commands,
+                "direct_commands": direct_commands,
                 "model_response": response
             })
             
-            print(f"✅ Generated {len(dmx_commands)} DMX commands")
+            print(f"✅ Generated {len(direct_commands)} direct commands")
             return result_state
             
         except Exception as e:
@@ -86,33 +86,44 @@ class EffectTranslatorAgent:
             return result_state
     
     def _build_prompt(self, actions: List[Dict[str, Any]]) -> str:
-        """Build the prompt for DMX translation"""
+        """Build the prompt for direct command translation"""
         actions_json = json.dumps(actions, indent=2)
         
-        return f"""You are a lighting control expert.
+        return f"""You are a lighting control expert tasked with converting symbolic lighting actions into standardized direct commands.
 
-Given a list of symbolic lighting actions like:
+Given these symbolic lighting actions:
 {actions_json}
 
-Convert these into low-level DMX fixture instructions for:
-- Fixture: "parcan_l" uses channel 10 for color/strobe (255=on, 0=off)
-- Fixture: "parcan_r" uses channel 11 for color/strobe (255=on, 0=off)  
-- Fixture: "head_el150" uses presets like "Drop", "Flash", "Strobe"
+Convert them into ONLY the following standardized direct commands (do NOT create custom DMX instructions):
 
-For each action, create appropriate DMX commands:
-- "flash" → set channel to 255 for duration then 0
-- "strobe" → set channel to 255 with strobe preset
-- "fade" → gradual transition from 0 to 255
-- "pulse" → quick on/off pattern
+AVAILABLE DIRECT COMMANDS:
+1. Set Channel: #set <fixture> <channel_name> to <value> at <time>
+2. Preset: #preset <fixture> <preset_name> at <time>
+3. Fade Channel: #fade <fixture> <channel_name> from <start_value> to <end_value> duration <time>
+4. Strobe Channel: #strobe <fixture> <channel_name> rate <frequency> duration <time>
+5. Clear State: #clear <fixture> state at <time>
 
-Output JSON with a "dmx" array:
+RULES:
+- Channel values must be normalized between 0.0 and 1.0 (0.0 = DMX 0, 1.0 = DMX 255)
+- Use only fixtures: parcan_l, parcan_r, head_el150
+- Use only channels: red, green, blue, white, dimmer
+- Use only presets: Drop, Flash, Strobe, Home
+- Times are in seconds (decimal allowed)
+
+MAPPING GUIDELINES:
+- "flash" action → #set fixture dimmer to 1.0 at start_time, then #set fixture dimmer to 0.0 at end_time
+- "strobe" action → #strobe fixture dimmer rate 10 duration <duration>
+- "fade" action → #fade fixture dimmer from 0.0 to 1.0 duration <duration>
+- "pulse" action → #set fixture dimmer to 1.0 at start_time, then #set fixture dimmer to 0.0 at start_time+0.1
+
+Output as JSON array of command strings:
 [
-  {{"fixture": "parcan_l", "channel": 10, "value": 255, "time": 34.2}},
-  {{"fixture": "parcan_l", "channel": 10, "value": 0, "time": 36.7}},
-  {{"fixture": "head_el150", "preset": "Drop", "time": 35.0}}
+  "#set parcan_l dimmer to 1.0 at 34.2",
+  "#set parcan_l dimmer to 0.0 at 36.7",
+  "#preset head_el150 Drop at 35.0"
 ]
 
-Return ONLY valid JSON."""
+Return ONLY valid JSON array of command strings."""
     
     def _query_model(self, prompt: str) -> str:
         """Query the model with fallback support"""
@@ -122,50 +133,61 @@ Return ONLY valid JSON."""
             print(f"⚠️ {self.model} not available, using {self.fallback_model}")
             return query_ollama(prompt, model=self.fallback_model)
     
-    def _parse_dmx_commands(self, response: str, actions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Parse DMX commands from LLM response"""
-        dmx_commands = []
+    def _parse_dmx_commands(self, response: str, actions: List[Dict[str, Any]]) -> List[str]:
+        """Parse direct command strings from LLM response"""
+        commands = []
         
         try:
             # Try to parse JSON directly
             if response.strip().startswith('['):
-                dmx_commands = json.loads(response.strip())
+                commands = json.loads(response.strip())
             else:
                 # Look for JSON in response
                 json_match = re.search(r'\[[\s\S]*?\]', response)
                 if json_match:
-                    dmx_commands = json.loads(json_match.group(0))
+                    commands = json.loads(json_match.group(0))
                 else:
-                    # Fallback: create basic DMX commands
-                    dmx_commands = self._create_fallback_dmx(actions)
+                    # Fallback: create basic direct commands
+                    commands = self._create_fallback_commands(actions)
+                    
+            # Ensure all commands are strings and start with #
+            validated_commands = []
+            for cmd in commands:
+                if isinstance(cmd, str) and cmd.strip().startswith('#'):
+                    validated_commands.append(cmd.strip())
+                elif isinstance(cmd, str):
+                    validated_commands.append(f"#{cmd.strip()}")
+                    
+            return validated_commands
+            
         except json.JSONDecodeError:
             print(f"⚠️ Failed to parse JSON from effect translator: {response}")
-            # Fallback DMX commands
-            dmx_commands = self._create_fallback_dmx(actions)
-        
-        return dmx_commands
+            # Fallback direct commands
+            return self._create_fallback_commands(actions)
     
-    def _create_fallback_dmx(self, actions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Create fallback DMX commands when parsing fails"""
-        dmx_commands = []
+    def _create_fallback_commands(self, actions: List[Dict[str, Any]]) -> List[str]:
+        """Create fallback direct commands when parsing fails"""
+        commands = []
         
         for action in actions:
-            # Basic on command
-            dmx_commands.append({
-                "fixture": "parcan_l",
-                "channel": 10,
-                "value": 255,
-                "time": action.get("start", 0)
-            })
-            # Basic off command
-            dmx_commands.append({
-                "fixture": "parcan_l", 
-                "channel": 10,
-                "value": 0,
-                "time": action.get("start", 0) + action.get("duration", 1)
-            })
+            start_time = action.get("start", 0)
+            duration = action.get("duration", 1)
+            action_type = action.get("action", "flash")
+            
+            # Create basic direct commands based on action type
+            if action_type == "flash":
+                commands.append(f"#set parcan_l dimmer to 1.0 at {start_time}")
+                commands.append(f"#set parcan_l dimmer to 0.0 at {start_time + duration}")
+            elif action_type == "strobe":
+                commands.append(f"#strobe parcan_l dimmer rate 10 duration {duration}")
+            elif action_type == "fade":
+                commands.append(f"#fade parcan_l dimmer from 0.0 to 1.0 duration {duration}")
+            else:
+                # Default to flash
+                commands.append(f"#set parcan_l dimmer to 1.0 at {start_time}")
+                commands.append(f"#set parcan_l dimmer to 0.0 at {start_time + duration}")
         
-        return dmx_commands
+        return commands
 
 
 # Node function for LangGraph compatibility
