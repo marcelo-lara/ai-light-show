@@ -2,7 +2,7 @@
 Agent for interacting with the 'lighting_planner' LLM model.
 """
 
-from ..ollama.ollama_api import query_ollama
+from .ollama_api import query_ollama
 
 class LightingPlannerAgent:
     def __init__(self):

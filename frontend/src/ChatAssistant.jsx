@@ -191,41 +191,6 @@ export default function ChatAssistant({ wsSend, lastResponse, contextProgress })
           Send ➤
         </button>
       </div>
-
-      <div className="mt-4">
-        <button
-          className="mt-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded mr-2"
-          onClick={() => {
-            if (wsSend) {
-              wsSend('runLightingPipeline', {
-                // You can pass additional context here if needed
-                // For now, just trigger the pipeline
-                trigger: true
-              });
-            }
-          }}
-        >
-          Run Lighting Pipeline
-        </button>
-        <button
-          className="mt-2 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded mr-2"
-          onClick={() => wsSend && wsSend('runAgent', { stage: 'context_builder' })}
-        >
-          Run Context Builder
-        </button>
-        <button
-          className="mt-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded mr-2"
-          onClick={() => wsSend && wsSend('runAgent', { stage: 'lighting_planner' })}
-        >
-          Run Lighting Planner
-        </button>
-        <button
-          className="mt-2 bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded"
-          onClick={() => wsSend && wsSend('runAgent', { stage: 'effect_translator' })}
-        >
-          Run Effect Translator
-        </button>
-      </div>
     </div>
   );
 }

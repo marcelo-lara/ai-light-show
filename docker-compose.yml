@@ -48,12 +48,8 @@ services:
       - ./.ollama_data:/root/.ollama
     restart: unless-stopped
     command: serve
-    ports:
-      - "11434:11434"
     cpus: 4.0
     mem_limit: 16g
-    memswap_limit: 16g
-    cpu_shares: 512    
     deploy:
       resources:
         limits:

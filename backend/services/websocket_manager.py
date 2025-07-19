@@ -12,8 +12,6 @@ from .websocket_handlers import (
     handle_analyze_song,
     handle_set_dmx,
     handle_user_prompt,
-    handle_run_lighting_pipeline,
-    handle_run_agent,
 )
 from .utils.broadcast import broadcast_to_all
 from pathlib import Path
@@ -31,8 +29,6 @@ class WebSocketManager:
             "setDmx": handle_set_dmx,
             "userPrompt": handle_user_prompt,
             "blackout": handle_blackout,
-            "runLightingPipeline": handle_run_lighting_pipeline,
-            "runAgent": handle_run_agent,
         }
 
     async def connect(self, websocket: WebSocket) -> None:
