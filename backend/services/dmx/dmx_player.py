@@ -1,8 +1,8 @@
 """
-DMX Player Service - Handles playback timing and DMX universe rendering.
+DMX Player Service - Handles playback timing and DMX universe dispatching.
 
 This service manages the real-time playback of lighting shows, synchronizing
-audio timing with DMX output and canvas rendering.
+audio timing with DMX canvas dispatching.
 """
 
 import asyncio
@@ -99,12 +99,9 @@ class DmxPlayer:
     
     async def _dispatcher_loop(self) -> None:
         """Main rendering loop - runs at specified FPS."""
-        last_frame_time = time.perf_counter()
         
         try:
             while self.is_running:
-                frame_start = time.perf_counter()
-                
                 # Get current playback time
                 current_time = self.playback_state.get_current_time()
                 
@@ -131,14 +128,8 @@ class DmxPlayer:
                     self._on_frame_callback(current_time, bytes(blackout_universe))
                 
                 # Calculate sleep time to maintain FPS
-                frame_duration = time.perf_counter() - frame_start
-                sleep_time = max(0, self.frame_interval - frame_duration)
-                
-                if sleep_time > 0:
-                    await asyncio.sleep(sleep_time)
-                
-                # Update timing
-                last_frame_time = frame_start
+                await asyncio.sleep(0.01)
+
                 
         except asyncio.CancelledError:
             print("🎬 DMX render loop cancelled")

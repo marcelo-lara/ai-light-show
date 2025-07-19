@@ -13,6 +13,13 @@ import math
 
 class DmxCanvas:
     """
+    Singleton DMX Canvas for storing and manipulating DMX state over time.
+    
+    This ensures only one DMX canvas instance exists throughout the application,
+    maintaining consistency across all services and preventing conflicts.
+    """
+    _instance = None
+    """
     A canvas for storing and manipulating DMX state over time.
     
     The DmxCanvas represents a sequence of DMX universe states (512 channels),
@@ -29,14 +36,38 @@ class DmxCanvas:
         _canvas (np.ndarray): NumPy array for efficient frame manipulation.
     """
     
-    def __init__(self, fps: int = 44, duration: float = 300.0, debug: Optional[bool] = False):
+    def __new__(cls, fps: int = 44, duration: float = 300.0, debug: Optional[bool] = False):
         """
-        Initialize a new DMX canvas.
+        Singleton implementation - ensures only one DMX canvas exists.
         
         Args:
             fps (int): Frames per second for the timeline. Defaults to 44.
             duration (float): Total duration of the timeline in seconds. Defaults to 300.0.
+            debug (bool): Enable debug logging. Defaults to False.
+            
+        Returns:
+            DmxCanvas: The singleton instance.
         """
+        if cls._instance is None:
+            cls._instance = super(DmxCanvas, cls).__new__(cls)
+        return cls._instance
+    
+    def __init__(self, fps: int = 44, duration: float = 300.0, debug: Optional[bool] = False):
+        """
+        Initialize the DMX canvas (only runs once for singleton).
+        
+        Args:
+            fps (int): Frames per second for the timeline. Defaults to 44.
+            duration (float): Total duration of the timeline in seconds. Defaults to 300.0.
+            debug (bool): Enable debug logging. Defaults to False.
+        """
+        # Only initialize once - subsequent calls will reuse existing instance
+        if hasattr(self, '_initialized') and self._initialized:
+            if debug:
+                print(f"⚠️ DMX Canvas already initialized. Using existing instance.")
+                print(f"   Current: {self._num_frames} frames ({self.duration}s at {self.fps} FPS)")
+            return
+            
         self.fps = fps
         self.duration = duration
         self.frame_duration = 1.0 / fps
@@ -49,13 +80,62 @@ class DmxCanvas:
         # The canvas is initialized to zero (all channels off)
         
         if self.debug:
-            print(f"Initializing DMX Canvas: {self._num_frames} frames, {self.universe_size} channels")
+            print(f"🎨 Initializing DMX Canvas Singleton: {self._num_frames} frames, {self.universe_size} channels")
         
         # Internal storage as NumPy array for performance
         self._canvas = np.zeros((self._num_frames, self.universe_size), dtype=np.uint8)
         
         # Timeline dictionary for final storage and export
         self._timeline = {}
+        
+        # Mark as initialized
+        self._initialized = True
+    
+    @classmethod
+    def get_instance(cls) -> 'DmxCanvas':
+        """
+        Get the singleton instance of the DMX canvas.
+        
+        Returns:
+            DmxCanvas: The singleton instance.
+        """
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+    
+    @classmethod
+    def reset_instance(cls, fps: int = 44, duration: float = 300.0, debug: Optional[bool] = False) -> 'DmxCanvas':
+        """
+        Reset the singleton instance with new parameters.
+        
+        This destroys the existing instance and creates a new one with the specified parameters.
+        Use this when you need to change the canvas dimensions or settings.
+        
+        Args:
+            fps (int): Frames per second for the timeline. Defaults to 44.
+            duration (float): Total duration of the timeline in seconds. Defaults to 300.0.
+            debug (bool): Enable debug logging. Defaults to False.
+            
+        Returns:
+            DmxCanvas: The new singleton instance.
+        """
+        if cls._instance is not None and debug:
+            print(f"🔄 Resetting DMX Canvas Singleton")
+            print(f"   Old: {cls._instance._num_frames} frames ({cls._instance.duration}s at {cls._instance.fps} FPS)")
+            print(f"   New: {math.ceil(duration * fps)} frames ({duration}s at {fps} FPS)")
+        
+        cls._instance = None
+        return cls(fps=fps, duration=duration, debug=debug)
+    
+    @classmethod
+    def is_initialized(cls) -> bool:
+        """
+        Check if the singleton instance has been initialized.
+        
+        Returns:
+            bool: True if initialized, False otherwise.
+        """
+        return cls._instance is not None and hasattr(cls._instance, '_initialized') and cls._instance._initialized
     
     @property
     def num_frames(self) -> int:
@@ -186,6 +266,7 @@ class DmxCanvas:
     def clear_canvas(self) -> None:
         """
         Clear the entire DMX canvas, resetting all channels to zero.
+        This preserves the singleton instance while clearing all data.
         """
         # Reset the entire canvas to zeros
         self._canvas.fill(0)
@@ -194,7 +275,7 @@ class DmxCanvas:
         self._timeline.clear()
         
         if self.debug:
-            print(f"DMX Canvas cleared: {self._num_frames} frames, {self.universe_size} channels reset to 0")
+            print(f"🧹 DMX Canvas Singleton cleared: {self._num_frames} frames, {self.universe_size} channels reset to 0")
 
     def export_as_txt(self, start_time: float = 0, end_time: float = 0.5, start_channel: int = 16, end_channel: int = 39) -> str:
         """
@@ -248,11 +329,30 @@ class DmxCanvas:
 
 
 if __name__ == "__main__":
-    # Example usage
-    canvas = DmxCanvas(fps=30, duration=10.0)
+    # Example usage demonstrating singleton behavior
+    print("🧪 Testing DMX Canvas Singleton")
+    
+    # Create first instance
+    canvas1 = DmxCanvas(fps=30, duration=10.0, debug=True)
+    print(f"Canvas 1 ID: {id(canvas1)}")
+    
+    # Create second instance - should be the same object
+    canvas2 = DmxCanvas(fps=60, duration=20.0, debug=True)  # Parameters ignored
+    print(f"Canvas 2 ID: {id(canvas2)}")
+    print(f"Same instance: {canvas1 is canvas2}")
+    
+    # Use get_instance method
+    canvas3 = DmxCanvas.get_instance()
+    print(f"Canvas 3 ID: {id(canvas3)}")
+    print(f"Same instance: {canvas1 is canvas3}")
+    
+    # Reset to create new instance with different parameters
+    canvas4 = DmxCanvas.reset_instance(fps=60, duration=20.0, debug=True)
+    print(f"Canvas 4 ID: {id(canvas4)}")
+    print(f"Different instance after reset: {canvas1 is not canvas4}")
     
     # Paint a single frame
-    canvas.paint_frame(1.0, {10: 255, 11: 128, 12: 64})
+    canvas4.paint_frame(1.0, {10: 255, 11: 128, 12: 64})
     
     # Paint a range with a function
     def fade_in(t: float) -> Dict[int, int]:
@@ -261,9 +361,9 @@ if __name__ == "__main__":
         value = int(255 * progress)
         return {20: value, 21: value, 22: value}
     
-    canvas.paint_range(2.0, 5.0, fade_in)
+    canvas4.paint_range(2.0, 5.0, fade_in)
     
     # Export as text
-    log_output = canvas.export_as_txt(start_channel=10, end_channel=22)
-    print("Exported log:")
-    print(log_output)  # Print first 500 characters of the log
+    log_output = canvas4.export_as_txt(start_channel=10, end_channel=22)
+    print("\nExported log:")
+    print(log_output[:500])  # Print first 500 characters of the log
