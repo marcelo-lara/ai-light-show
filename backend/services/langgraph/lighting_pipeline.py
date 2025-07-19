@@ -27,9 +27,22 @@ except ImportError:
     END = "__end__"
 
 # Import agents
-from .agents.context_builder import ContextBuilderAgent, run_context_builder
-from .agents.lighting_planner import LightingPlannerAgent, run_lighting_planner  
-from .agents.effect_translator import EffectTranslatorAgent, run_effect_translator
+from ..agents.context_builder import ContextBuilderAgent
+from ..agents.lighting_planner import LightingPlannerAgent
+from ..agents.effect_translator import EffectTranslatorAgent
+
+# Create wrapper functions for LangGraph compatibility
+def run_context_builder(state):
+    agent = ContextBuilderAgent()
+    return agent.run(state)
+
+def run_lighting_planner(state):
+    agent = LightingPlannerAgent()
+    return agent.run(state)
+
+def run_effect_translator(state):
+    agent = EffectTranslatorAgent()
+    return agent.run(state)
 
 
 def save_node_output(node_name: str, data: Union[Dict[str, Any], PipelineState]) -> None:
