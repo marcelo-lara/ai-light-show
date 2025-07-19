@@ -13,7 +13,7 @@ from ...models.app_state import app_state
 from ...models.actions_sheet import ActionsSheet, ActionModel
 from ..actions_service import ActionsService
 from ..utils.time_conversion import string_to_time, beats_to_seconds
-from .song_context_agent import SongContextAgent  # Import SongContextAgent
+from ..agents import SongContextAgent  # Import from unified agents
 
 
 class DirectCommandsParser:

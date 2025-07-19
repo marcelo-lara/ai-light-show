@@ -7,7 +7,7 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'backend'))
 
-from backend.services.langgraph.agents import ContextBuilderAgent, LightingPlannerAgent, EffectTranslatorAgent
+from backend.services.agents import ContextBuilderAgent, LightingPlannerAgent, EffectTranslatorAgent
 from backend.services.langgraph.lighting_pipeline import PipelineState
 
 

@@ -1,10 +1,41 @@
 """
-Agent for interacting with the 'song_context' LLM model.
+Context Builder Agent - Unified Implementation
+Combines functionality from both LangGraph and Ollama implementations
 """
-from typing import Optional
-from .ollama_api import query_ollama
+import json
+import re
+from typing import Dict, Any, Optional, List
+from typing_extensions import TypedDict
+from pathlib import Path
+
+from ..ollama.ollama_api import query_ollama
+
+
+class PipelineState(TypedDict):
+    segment: Dict[str, Any]
+    context_summary: str
+    actions: list
+    dmx: list
+
+
+def save_node_output(node_name: str, data: Dict[str, Any]) -> None:
+    """Save node output to logs for debugging"""
+    logs_dir = Path("logs")
+    logs_dir.mkdir(exist_ok=True)
+    
+    output_file = logs_dir / f"{node_name}.json"
+    try:
+        data_dict = dict(data) if hasattr(data, 'keys') else data
+        with open(output_file, 'w') as f:
+            json.dump(data_dict, f, indent=2)
+        print(f"💾 Saved {node_name} output to {output_file}")
+    except Exception as e:
+        print(f"⚠️ Failed to save {node_name} output: {e}")
+
 
 class SongContextAssembler:
+    """Helper class for assembling lighting context from multiple chunks"""
+    
     def __init__(self):
         self.timeline = []
 
@@ -17,25 +48,89 @@ class SongContextAssembler:
         # Save the response to file
         self.response = response
         print(f"Response for chunk {chunk_start:.2f}s - {chunk_end:.2f}s saved.")
-        print(response)  # Print first 200 chars for brevity
+        print(response[:200] + "..." if len(response) > 200 else response)
 
     def finalize(self) -> list:
         # Sort and optionally deduplicate or smooth
         self.timeline.sort(key=lambda x: x.get("start", 0.0))
         return self.timeline
 
-class SongContextAgent:
-    def __init__(self):
-        # Initialize with model name or config if needed
-        self.model = 'mistral'  # Using mistral as it's available on the server
 
+class ContextBuilderAgent:
+    """
+    Unified Context Builder Agent
+    - For LangGraph Pipeline: Interprets musical segments and generates context summaries
+    - For Direct Commands: Analyzes full songs and extracts lighting actions
+    """
+    
+    def __init__(self, model: str = "mixtral"):
+        self.model = model
+    
+    def run(self, state: PipelineState) -> PipelineState:
+        """Execute the context building process for LangGraph pipeline"""
+        print("🎵 Running Context Builder...")
+        
+        segment = state.get("segment", {})
+        
+        # Extract segment information
+        name = segment.get("name", "Unknown")
+        start_time = segment.get("start", 0.0)
+        end_time = segment.get("end", 0.0)
+        features = segment.get("features", {})
+        
+        # Build prompt for context interpretation
+        prompt = self._build_prompt(name, start_time, end_time, features)
+        
+        try:
+            # Call model via Ollama
+            response = query_ollama(prompt, model=self.model)
+            
+            # Extract context summary from response
+            context_summary = response.strip().strip('"')
+            
+            # Update state
+            result_state = state.copy()
+            result_state["context_summary"] = context_summary
+            
+            # Save output for debugging
+            save_node_output("context_builder", {
+                "input": segment,
+                "context_summary": context_summary,
+                "model_response": response
+            })
+            
+            print(f"✅ Context: {context_summary}")
+            return result_state
+            
+        except Exception as e:
+            print(f"❌ Context Builder failed: {e}")
+            result_state = state.copy()
+            result_state["context_summary"] = f"Error processing segment: {str(e)}"
+            return result_state
+    
+    def _build_prompt(self, name: str, start_time: float, end_time: float, features: Dict[str, Any]) -> str:
+        """Build the prompt for context interpretation"""
+        return f"""You are a music context interpreter.
+Describe the emotional and sonic feel of this section:
+
+Segment: {name}
+Start: {start_time}s
+End: {end_time}s
+Features: {json.dumps(features)}
+
+Respond with a short natural language summary like:
+"High energy climax with heavy bass and bright synth"
+
+Focus on the mood, energy level, and key instruments. Keep it concise and descriptive."""
+
+    # Legacy methods for backward compatibility with SongContextAgent
     def get_context(self, prompt: str, **kwargs):
-        # Call the LLM server for song context
+        """Legacy method for simple context extraction"""
         response = query_ollama(prompt, model=self.model, **kwargs)
         return self.parse_response(response)
 
     def parse_response(self, response):
-        # Implement model-specific parsing logic here
+        """Simple response parsing"""
         return response
         
     def extract_lighting_actions(self, response: str, start_time: float, end_time: float) -> list:
@@ -51,9 +146,6 @@ class SongContextAgent:
         Returns:
             List of lighting action dictionaries
         """
-        import json
-        import re
-        
         # Initialize empty list for actions
         actions = []
         
@@ -96,7 +188,7 @@ class SongContextAgent:
     async def analyze_song_context(self, websocket=None, task_id: Optional[str] = None):
         """
         Generate lighting context by analyzing song data with AI.
-        Now supports persistent background execution with task tracking and checkpoint resume.
+        Supports persistent background execution with task tracking and checkpoint resume.
         
         Args:
             websocket: WebSocket connection for progress updates (optional)
@@ -121,8 +213,6 @@ class SongContextAgent:
             task_id = f"analyze_context_{song.song_name}_{uuid.uuid4().hex[:8]}"
         
         # read the song.analysis file
-        import json
-        from pathlib import Path
         from datetime import datetime
         
         song_name = song.song_name
@@ -284,9 +374,6 @@ class SongContextAgent:
                     # query the LLM
                     response = self.get_context(full_prompt)
                     
-                    # save the response to the context
-                    
-                    
                     # extract lighting actions from the response
                     lighting_actions = self.extract_lighting_actions(response, chunk['start'], chunk['end'])
                     
@@ -353,7 +440,9 @@ class SongContextAgent:
             # Mark task as failed
             app_state.complete_task(task_id, error=str(e))
             raise
+
     def build_prompt_from_stem_chunk(self, chunk) -> str:
+        """Build a prompt from stem analysis chunk data"""
         start = chunk["start"]
         end = chunk["end"]
         stems = chunk["stems"]
@@ -380,3 +469,14 @@ class SongContextAgent:
         prompt_lines.append("- 'description': a summary of the segment's musical mood or structure")
 
         return "\n".join(prompt_lines)
+
+
+# Node function for LangGraph compatibility
+def run_context_builder(state: PipelineState) -> PipelineState:
+    """LangGraph-compatible node function"""
+    agent = ContextBuilderAgent()
+    return agent.run(state)
+
+
+# Backward compatibility alias
+SongContextAgent = ContextBuilderAgent

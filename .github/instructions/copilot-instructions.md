@@ -543,8 +543,8 @@ result = run_lighting_pipeline(segment_input)
   ]
 }
 
-# Individual agent usage
-from backend.services.langgraph.agents import ContextBuilderAgent, LightingPlannerAgent, EffectTranslatorAgent
+# Individual agent usage - NEW UNIFIED LOCATION
+from backend.services.agents import ContextBuilderAgent, LightingPlannerAgent, EffectTranslatorAgent
 
 context_agent = ContextBuilderAgent(model="mixtral")
 planner_agent = LightingPlannerAgent(model="mixtral")
@@ -572,16 +572,26 @@ def robust_agent_execution(agent, state):
         error_state = state.copy()
         error_state["error"] = str(e)
         return error_state
+
+# Backward compatibility - SongContextAgent is now an alias
+from backend.services.agents import SongContextAgent  # Same as ContextBuilderAgent
+
+# Legacy methods still work for direct command parsing
+song_agent = SongContextAgent()
+response = song_agent.get_context(prompt)
+actions = song_agent.extract_lighting_actions(response, start_time, end_time)
 ```
 
-**Benefits of Modular Agent Design**:
+**Benefits of Unified Agent Design**:
+- **Single Source of Truth**: No duplicate agent implementations
+- **Enhanced Functionality**: Combined best features from LangGraph and Ollama implementations
+- **Backward Compatibility**: All legacy methods preserved with aliases
 - **Independent Testing**: Each agent can be tested individually
 - **Flexible Configuration**: Different models per agent
 - **Better Error Isolation**: Issues in one agent don't affect others
 - **Easy Extension**: New agents can be added without modifying existing code
 - **Partial Execution**: Can start pipeline from any agent
-- **Reusability**: Agents can be used in different contexts
-```
+- **Dual Interface**: Supports both LangGraph pipeline and direct API calls
 
 **CRITICAL SEPARATION**: These are completely separate pipelines with different purposes:
 - **Song Analysis Pipeline** (`song_analysis/`): Analyzes MP3 files → Musical features and sections
@@ -589,7 +599,7 @@ def robust_agent_execution(agent, state):
 
 Key file locations:
 - Song Analysis: `song_analysis/langgraph_pipeline.py`, `song_analysis/simple_pipeline.py`
-- Lighting Design: `backend/services/langgraph/lighting_pipeline.py`, `backend/services/langgraph/agents/`
+- Lighting Design: `backend/services/langgraph/lighting_pipeline.py`, `backend/services/agents/`
 
 Both pipelines create JSON output logs in the `logs/` directory for each node, enabling easier debugging and tracing.
 
@@ -606,13 +616,14 @@ Both pipelines create JSON output logs in the `logs/` directory for each node, e
 - `backend/` - Main application and DMX control
   - `models/` - Data models (app_state, actions_sheet, song_metadata, fixtures)
   - `services/` - Business logic (actions_service, dmx/, ollama/)
+  - `services/agents/` - **🆕 UNIFIED AI AGENTS** (moved from langgraph/agents and ollama/)
+    - `context_builder.py` - Unified Context Builder Agent (was SongContextAgent + ContextBuilderAgent)
+    - `lighting_planner.py` - Unified Lighting Planner Agent
+    - `effect_translator.py` - Unified Effect Translator Agent
+    - `__init__.py` - Exports all agents with backward compatibility aliases
   - `services/utils/` - Utility functions (broadcast.py)
-  - `services/langgraph/` - AI lighting design pipeline
-    - `lighting_pipeline.py` - Main pipeline orchestration
-    - `agents/` - Modular agent implementations
-      - `context_builder.py` - Musical context interpretation agent
-      - `lighting_planner.py` - Lighting action planning agent
-      - `effect_translator.py` - DMX command translation agent
+  - `services/langgraph/` - AI lighting design pipeline orchestration
+    - `lighting_pipeline.py` - Main pipeline orchestration (imports from ../agents/)
   - `services/websocket_handlers/` - WebSocket message handlers
 - `frontend/` - User interface
   - `src/components/` - UI components
@@ -763,32 +774,114 @@ with open(Path("logs") / "final_output.json", "r") as f:
    - Always include a fallback mechanism for when LangGraph is not available.
    
    **Lighting Design Pipeline** (`backend/services/langgraph/`):
-   - Use modular agent classes in separate files: `agents/context_builder.py`, `agents/lighting_planner.py`, `agents/effect_translator.py`
-   - Each agent should be self-contained and independently testable
+   - **🆕 UNIFIED AGENTS**: All agents are now in `backend/services/agents/` directory
+   - Use unified agent classes that support both LangGraph pipeline and direct API calls
+   - Each agent combines functionality from previous LangGraph and Ollama implementations
+   - Import agents from the unified location: `from backend.services.agents import ContextBuilderAgent, LightingPlannerAgent, EffectTranslatorAgent`
+   - Backward compatibility maintained through aliases: `SongContextAgent = ContextBuilderAgent`
    - Use TypedDict for PipelineState schema consistency
    - Maintain LangGraph compatibility through wrapper functions (`run_context_builder`, etc.)
    - Always provide fallback sequential execution when LangGraph is unavailable
    
-   Example lighting agent implementation:
+   Example unified agent usage:
    ```python
-   # In backend/services/langgraph/agents/my_agent.py
-   class MyLightingAgent:
-       def __init__(self, model: str = "mixtral"):
-           self.model = model
-       
-       def run(self, state: PipelineState) -> PipelineState:
-           # Agent logic here
-           result_state = state.copy()
-           result_state["my_output"] = my_processing(state)
-           return result_state
+   # NEW: Import from unified agents directory
+   from backend.services.agents import ContextBuilderAgent, LightingPlannerAgent, EffectTranslatorAgent
    
-   # LangGraph wrapper function
-   def run_my_agent(state: PipelineState) -> PipelineState:
-       agent = MyLightingAgent()
-       return agent.run(state)
+   # Supports both LangGraph pipeline and direct API calls
+   agent = ContextBuilderAgent(model="mixtral")
+   
+   # For LangGraph pipeline
+   result_state = agent.run(pipeline_state)
+   
+   # For direct API calls (legacy compatibility)
+   response = agent.get_context(prompt)
+   actions = agent.extract_lighting_actions(response, start_time, end_time)
+   
+   # Backward compatibility alias
+   from backend.services.agents import SongContextAgent  # Same as ContextBuilderAgent
+   
+   # Legacy usage still works
+   song_agent = SongContextAgent()
+   result = song_agent.analyze_song_context(websocket, task_id)
    ```
    
+   **Agent Consolidation Benefits**:
+   - Single source of truth - no duplicate implementations
+   - Enhanced functionality - combined best features from both approaches
+   - Better maintenance - update logic in one place
+   - Preserved compatibility - all legacy methods still work
+   - Dual interface - supports both pipeline and direct usage
+   
    **Never mix the two pipelines**: Song analysis creates musical features; lighting design consumes them.
+
+9. **Unified Agent Architecture** ⭐
+   **MANDATORY**: All AI agents are now consolidated in the `/backend/services/agents/` directory. This unified approach eliminates duplication and provides enhanced functionality:
+   
+   **Core Principles**:
+   - **Single Source of Truth**: Each agent type has exactly one implementation
+   - **Dual Interface**: Every agent supports both LangGraph pipeline integration and direct API calls
+   - **Backward Compatibility**: All legacy methods and import patterns are preserved
+   - **Enhanced Features**: Combined best capabilities from previous LangGraph and Ollama implementations
+   
+   **Unified Agent Directory Structure**:
+   ```
+   backend/services/agents/
+   ├── __init__.py              # Exports all agents + backward compatibility aliases
+   ├── context_builder.py       # ContextBuilderAgent (was SongContextAgent + ContextBuilderAgent)
+   ├── lighting_planner.py      # LightingPlannerAgent (unified from both implementations)
+   └── effect_translator.py     # EffectTranslatorAgent (unified from both implementations)
+   ```
+   
+   **Import Patterns**:
+   ```python
+   # NEW: Recommended unified import
+   from backend.services.agents import (
+       ContextBuilderAgent,
+       LightingPlannerAgent, 
+       EffectTranslatorAgent,
+       SongContextAgent  # Alias for ContextBuilderAgent
+   )
+   
+   # OLD: These still work for backward compatibility
+   from backend.services.agents import SongContextAgent
+   ```
+   
+   **Usage Patterns**:
+   ```python
+   # LangGraph Pipeline Integration
+   agent = ContextBuilderAgent(model="mixtral")
+   result_state = agent.run(pipeline_state)  # TypedDict input/output
+   
+   # Direct API Calls (Legacy Compatibility)
+   agent = ContextBuilderAgent()
+   response = agent.get_context(prompt)
+   actions = agent.extract_lighting_actions(response, start_time, end_time)
+   
+   # Background Task Processing
+   timeline = await agent.analyze_song_context(websocket, task_id)
+   ```
+   
+   **Agent Capabilities**:
+   - **Context Builder** (`ContextBuilderAgent`):
+     - LangGraph: Interprets musical segments → Natural language context
+     - Direct: Full song analysis with chunk processing and progress tracking
+     - Legacy alias: `SongContextAgent`
+   
+   - **Lighting Planner** (`LightingPlannerAgent`):
+     - LangGraph: Context summaries → High-level lighting actions
+     - Direct: Simple lighting planning API
+   
+   - **Effect Translator** (`EffectTranslatorAgent`):
+     - LangGraph: Lighting actions → DMX command strings
+     - Direct: Simple effect translation API
+     - Dynamic fixture integration with app_state
+   
+   **Migration Guidelines**:
+   - Replace any imports from `backend.services.langgraph.agents` with `backend.services.agents`
+   - Replace any imports from `backend.services.ollama.*_agent` with `backend.services.agents`
+   - All existing method calls continue to work unchanged
+   - Consider using the enhanced LangGraph pipeline capabilities for new features
 
 This system prioritizes modular services, clear separation of concerns, real-time performance, and AI-driven lighting generation while maintaining strict boundaries between analysis, action planning, and DMX rendering phases.
 

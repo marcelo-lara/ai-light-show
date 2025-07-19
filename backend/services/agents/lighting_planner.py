@@ -1,6 +1,6 @@
 """
-Lighting Planner Agent - Node 2 of the Lighting Pipeline
-Proposes symbolic lighting actions based on context summaries
+Lighting Planner Agent - Unified Implementation
+Combines functionality from both LangGraph and Ollama implementations
 """
 import json
 import re
@@ -8,7 +8,7 @@ from typing import Dict, Any, List
 from typing_extensions import TypedDict
 from pathlib import Path
 
-from ...ollama.ollama_api import query_ollama
+from ..ollama.ollama_api import query_ollama
 
 
 class PipelineState(TypedDict):
@@ -35,15 +35,16 @@ def save_node_output(node_name: str, data: Dict[str, Any]) -> None:
 
 class LightingPlannerAgent:
     """
-    Agent 2: Lighting Planner (Mixtral)
-    Proposes symbolic lighting actions based on the context summary
+    Unified Lighting Planner Agent
+    - For LangGraph Pipeline: Proposes symbolic lighting actions based on context summaries
+    - For Direct Commands: Simple lighting planning interface
     """
     
     def __init__(self, model: str = "mixtral"):
         self.model = model
     
     def run(self, state: PipelineState) -> PipelineState:
-        """Execute the lighting planning process"""
+        """Execute the lighting planning process for LangGraph pipeline"""
         print("💡 Running Lighting Planner...")
         
         context_summary = state.get("context_summary", "")
@@ -57,7 +58,7 @@ class LightingPlannerAgent:
         prompt = self._build_prompt(context_summary, start_time, end_time, duration)
         
         try:
-            # Call Mixtral model via Ollama
+            # Call model via Ollama
             response = query_ollama(prompt, model=self.model)
             
             # Extract and parse actions from response
@@ -144,6 +145,16 @@ Return ONLY valid JSON in this format:
             ]
         
         return actions
+
+    # Legacy methods for backward compatibility
+    def plan_lighting(self, prompt: str, **kwargs):
+        """Legacy method for simple lighting planning"""
+        response = query_ollama(prompt, model=self.model, **kwargs)
+        return self.parse_response(response)
+
+    def parse_response(self, response):
+        """Simple response parsing for backward compatibility"""
+        return response
 
 
 # Node function for LangGraph compatibility

@@ -26,10 +26,10 @@ except ImportError:
     StateGraph = None
     END = "__end__"
 
-# Import agents
-from .agents.context_builder import ContextBuilderAgent, run_context_builder
-from .agents.lighting_planner import LightingPlannerAgent, run_lighting_planner  
-from .agents.effect_translator import EffectTranslatorAgent, run_effect_translator
+# Import agents from unified location
+from ..agents.context_builder import ContextBuilderAgent, run_context_builder
+from ..agents.lighting_planner import LightingPlannerAgent, run_lighting_planner  
+from ..agents.effect_translator import EffectTranslatorAgent, run_effect_translator
 
 
 def save_node_output(node_name: str, data: Union[Dict[str, Any], PipelineState]) -> None:
