@@ -113,5 +113,4 @@ class SongAnalyzer:
             
         except Exception as e:
             logger.error(f"⚠️ Error in LangGraph pipeline: {str(e)}")
-            logger.info("⚙️ Falling back to legacy analysis method")
-            return legacy_analyze(song, debug, self.noise_gate_stems)
+            return song #legacy_analyze(song, debug, self.noise_gate_stems)
