@@ -10,18 +10,21 @@ async def query_ollama_streaming(
     session_id: str = "default", 
     model: str = "mixtral",
     base_url: str = "http://llm-service:11434", 
-    callback: Optional[Callable[[str], Any]] = None
+    callback: Optional[Callable[[str], Any]] = None,
+    context: Optional[str] = None
 ):
     """Send a prompt to Ollama and call callback for each chunk."""
     
     try:
         print(f"🤖 Starting Ollama/{model} streaming request for session {session_id}")
 
+        # Include context in the request data if provided
         request_data = {
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "stream": True
+            "model": model, 
+            "messages": [{"role": "system", "content": context}] if context else []
         }
+        request_data["messages"].append({"role": "user", "content": prompt})
+        request_data["stream"] = True
         
         async with aiohttp.ClientSession() as session:
             print(f"🤖 Connecting to Ollama at {base_url}")

@@ -23,7 +23,10 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
     if not prompt:
         await websocket.send_json({"type": "chatResponse", "response": "No prompt provided."})
         return
-    
+
+    # Define context separately from the prompt
+    context = "Please respond in English and keep your responses concise."
+
     try:
         session_id = str(id(websocket))
         
@@ -102,7 +105,8 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
         
         # Stream the AI response
         try:
-            await query_ollama_streaming(prompt, session_id, model=UI_CHAT_MODEL, callback=send_chunk)
+            # Pass context and prompt separately to the AI request
+            await query_ollama_streaming(prompt, session_id, context=context, model=UI_CHAT_MODEL, callback=send_chunk)
         except (ConnectionError, TimeoutError, ValueError, RuntimeError) as ai_error:
             # Handle AI service errors gracefully
             print(f"🤖 AI Service Error: {ai_error}")

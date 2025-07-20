@@ -46,5 +46,9 @@
 - See `docs/direct_commands.md` for supported chat commands
 - See `fixtures/fixtures.json` for fixture config pattern
 
+## 🛡️ Additional Enforcement Directives
+- **Don't leave hardcoded placeholder**: when move code to a differnt file, ensure no hardcoded placeholders remain.
+- **Don't use deprecated imports**: always use the latest import paths, e.g., `from .ollama_api import query_ollama` instead of deprecated ones.
+
 ---
 **Edit this file to update agent instructions. For questions, see README and docs/.**
