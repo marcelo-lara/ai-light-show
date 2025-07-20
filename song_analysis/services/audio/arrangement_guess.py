@@ -2,7 +2,7 @@
 Song arrangement guessing based on patterns and beats.
 """
 
-from models.song_metadata import SongMetadata, Section
+from shared.models.song_metadata import SongMetadata, Section
 import logging
 
 logger = logging.getLogger(__name__)

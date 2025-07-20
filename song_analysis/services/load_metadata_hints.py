@@ -2,7 +2,7 @@
 # This module is responsible for loading metadata hints for songs, such as arrangement and key moments.
 import json
 import logging
-from models.song_metadata import SongMetadata, Section
+from shared.models.song_metadata import SongMetadata, Section
 logger = logging.getLogger(__name__)
 
 def load_arrangement_from_hints(song: SongMetadata) -> SongMetadata:

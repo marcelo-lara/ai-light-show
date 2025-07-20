@@ -2,8 +2,10 @@ import os
 import json
 import essentia.standard as es
 import essentia
+import logging
 import numpy as np
 essentia.log.infoActive = False
+logger = logging.getLogger(__name__)
 
 
 def extract_section_features(
@@ -94,7 +96,7 @@ def extract_song_features(stems_dir, chunk_size=4.0, hop=2.0, sample_rate=44100,
     if output_json_path is not None:
         with open(output_json_path, "w") as f:
             json.dump(chunks, f, indent=2)
-        print(f"\n✅ All chunks saved to: {output_json_path}")
+        logger.info(f"✅ All chunks saved to: {output_json_path}")
 
     return chunks
 

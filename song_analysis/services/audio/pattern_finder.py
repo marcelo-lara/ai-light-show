@@ -10,7 +10,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_score
 from collections import Counter
 import scipy.signal
-from models.song_metadata import ensure_json_serializable
+from shared.models.song_metadata import ensure_json_serializable
 import logging
 
 logger = logging.getLogger(__name__)

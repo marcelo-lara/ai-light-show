@@ -10,6 +10,9 @@ from sklearn.cluster import KMeans
 import numpy as np
 import math
 from collections import Counter
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 CHORD_TEMPLATES = {
     "C":     [1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0],
@@ -91,7 +94,7 @@ def extract_with_essentia(audio_path: str, bars_1=4, bars_2=2):
     Returns:
         Dictionary containing analysis results
     """
-    print(f"🎧 Extracting beats, volume and basic metadata...")
+    logger.info(f"🎧 Extracting beats, volume and basic metadata...")
 
     # Load audio (mono)
     loader = es.MonoLoader(filename=audio_path)

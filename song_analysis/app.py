@@ -23,7 +23,7 @@ import logging
 
 # Import audio analysis modules
 from services.audio_analyzer import SongAnalyzer
-from models.song_metadata import SongMetadata
+from shared.models.song_metadata import SongMetadata
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -37,7 +37,7 @@ app = FastAPI(
 
 # Add CORS middleware
 app.add_middleware(
-    CORSMiddleware,
+    CORSMiddleware, 
     allow_origins=["*"],  # Configure this properly for production
     allow_credentials=True,
     allow_methods=["*"],
