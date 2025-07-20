@@ -8,7 +8,7 @@ from typing import Optional, Callable, Any
 async def query_ollama_mistral_streaming(
     prompt: str, 
     session_id: str = "default", 
-    base_url: str = "http://llm-server:11434", 
+    base_url: str = "http://llm-service:11434", 
     callback: Optional[Callable[[str], Any]] = None
 ):
     """Send a prompt to ollama/mistral and call callback for each chunk."""
@@ -17,7 +17,7 @@ async def query_ollama_mistral_streaming(
         print(f"🤖 Starting Ollama streaming request for session {session_id}")
         
         request_data = {
-            "model": "mistral", 
+            "model": "mixtral", 
             "messages": [{"role": "user", "content": prompt}],
             "stream": True
         }

@@ -40,7 +40,7 @@ services:
           memory: 16g
 
 
-  llm-server:
+  llm-service:
     image: ollama/ollama
     networks:
       - ailightshow
@@ -48,13 +48,10 @@ services:
       - ./.ollama_data:/root/.ollama
     restart: unless-stopped
     command: serve
-    cpus: 4.0
+    cpus: 8.0
     mem_limit: 16g
     deploy:
       resources:
-        limits:
-          cpus: '4.0'
-          memory: 16g
         reservations:
           devices:
             - capabilities: [gpu]

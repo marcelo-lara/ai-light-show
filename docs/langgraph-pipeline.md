@@ -123,7 +123,7 @@ class PipelineState(TypedDict):
 - **Effect Translator**: Command-R (precise technical output)
 
 ### Ollama Connection
-- Default endpoint: `http://llm-server:11434`
+- Default endpoint: `http://llm-service:11434`
 - Configurable via environment variables
 - Automatic fallback on connection errors
 

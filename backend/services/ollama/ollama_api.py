@@ -4,8 +4,8 @@ import requests
 import json
 
 
-def query_ollama(prompt: str, model: str = "mistral", base_url: str = "http://llm-server:11434") -> str:
-    """Send a prompt to the llm-server and return the response text. Model can be specified."""
+def query_ollama(prompt: str, model: str = "mistral", base_url: str = "http://llm-service:11434") -> str:
+    """Send a prompt to the llm-service and return the response text. Model can be specified."""
     request_data = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}]
