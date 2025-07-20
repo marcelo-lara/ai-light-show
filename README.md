@@ -24,7 +24,7 @@ The system consists of several microservices:
 - **Ollama** service for AI language model capabilities
 - GPU acceleration support
 - Model management and inference
-- load models
+- load models (more at https://ollama.com/library)
    ```bash
 nohup /root/.ollama/pull_models.sh > /tmp/ollama-download.log 2>&1 &
 tail -f /tmp/ollama-download.log
