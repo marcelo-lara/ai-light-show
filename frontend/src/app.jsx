@@ -1,3 +1,4 @@
+import './app.css';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import FixtureCard from './components/fixtures/FixtureCard';
 import AudioPlayer from './AudioPlayer'; 
@@ -247,7 +248,7 @@ export function App() {
   return (
     <div className="flex flex-row gap-2">
       {/* Main Panel */}
-      <div className="w-2/3">
+      <div className="flex-1" id="app-main-panel">
         <div className="p-6 bg-black text-white min-h-screen">
           <h1 className="text-3xl font-bold mb-4">🎛️ AI Light Show Designer</h1>
 
@@ -285,7 +286,7 @@ export function App() {
       </div>
 
       {/* Right Panel */}
-      <div className="w-1/3 text-white p-6 space-y-6">
+      <div className="min-w-[300px] max-w-[450px] w-full text-white p-6 space-y-6  max-h-50 overflow-y-auto" id="app-right-panel">
 
         {/* Song Selection */}
         <div>
