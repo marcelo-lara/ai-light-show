@@ -7,11 +7,11 @@ from typing import Dict, Any
 import logging
 from pathlib import Path
 from shared.models.song_metadata import SongMetadata
-from song_analysis.services.audio.arrangement_guess import guess_arrangement
-from song_analysis.services.audio.audio_process import noise_gate
-from song_analysis.services.audio.demucs_split import extract_stems
-from song_analysis.services.audio.essentia_analysis import extract_with_essentia
-from song_analysis.services.audio.section_features import extract_song_features
+from .audio.arrangement_guess import guess_arrangement
+from .audio.audio_process import noise_gate
+from .audio.demucs_split import extract_stems
+from .audio.essentia_analysis import extract_with_essentia
+from .audio.section_features import extract_song_features
 from .load_metadata_hints import (load_arrangement_from_hints, load_key_moments_from_hints, load_chords_from_hints)
 
 logger = logging.getLogger(__name__)
