@@ -5,19 +5,20 @@ import asyncio
 import json
 from typing import Optional, Callable, Any
 
-async def query_ollama_mistral_streaming(
+async def query_ollama_streaming(
     prompt: str, 
     session_id: str = "default", 
+    model: str = "mixtral",
     base_url: str = "http://llm-service:11434", 
     callback: Optional[Callable[[str], Any]] = None
 ):
-    """Send a prompt to ollama/mistral and call callback for each chunk."""
+    """Send a prompt to Ollama and call callback for each chunk."""
     
     try:
-        print(f"🤖 Starting Ollama streaming request for session {session_id}")
-        
+        print(f"🤖 Starting Ollama/{model} streaming request for session {session_id}")
+
         request_data = {
-            "model": "mixtral", 
+            "model": model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": True
         }

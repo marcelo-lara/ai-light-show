@@ -15,6 +15,5 @@ from .ollama_client import *
 
 # Define what gets exported from the package
 __all__ = [
-    'query_ollama_mistral',
-    'query_ollama_mistral_streaming'
+    'query_ollama_streaming',
 ]

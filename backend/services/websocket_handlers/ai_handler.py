@@ -7,6 +7,8 @@ from ..utils.broadcast import broadcast_to_all
 from ..ollama.direct_commands_parser import DirectCommandsParser
 from .action_executor import execute_confirmed_action
 
+UI_CHAT_MODEL = "deepseek-r1:8b"  # Default model for AI chat
+
 # Store pending actions for each WebSocket session
 _pending_actions_store = {}
 
@@ -15,7 +17,7 @@ _direct_commands_parser = DirectCommandsParser()
 
 async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> None:
     """Handle userPrompt with streaming and action proposals/confirmation flow."""
-    from ...services.ollama import query_ollama_mistral_streaming
+    from ...services.ollama import query_ollama_streaming
     
     prompt = message.get("text", "") or message.get("prompt", "")
     if not prompt:
@@ -100,7 +102,7 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
         
         # Stream the AI response
         try:
-            await query_ollama_mistral_streaming(prompt, session_id, callback=send_chunk)
+            await query_ollama_streaming(prompt, session_id, model=UI_CHAT_MODEL, callback=send_chunk)
         except (ConnectionError, TimeoutError, ValueError, RuntimeError) as ai_error:
             # Handle AI service errors gracefully
             print(f"🤖 AI Service Error: {ai_error}")
@@ -208,7 +210,7 @@ async def _handle_direct_command(websocket: WebSocket, command: str) -> None:
 async def check_ai_service_health() -> tuple[bool, str]:
     """Check if the AI service (Ollama) is available and return status."""
     try:
-        from ...services.ollama import query_ollama_mistral_streaming
+        from ...services.ollama import query_ollama_streaming
         
         # Try a simple test prompt
         test_response = ""
@@ -216,7 +218,7 @@ async def check_ai_service_health() -> tuple[bool, str]:
             nonlocal test_response
             test_response += chunk
         
-        await query_ollama_mistral_streaming("Hi", "health_check", callback=test_callback)
+        await query_ollama_streaming("Hi", "health_check", callback=test_callback)
         return True, "AI service is ready"
     except ConnectionError:
         return False, "Cannot connect to Ollama service. Please ensure Ollama is running on http://llm-service:11434"
