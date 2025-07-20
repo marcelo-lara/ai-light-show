@@ -12,6 +12,9 @@ UI_CHAT_MODEL = "deepseek-r1:8b"  # Default model for AI chat
 # Store pending actions for each WebSocket session
 _pending_actions_store = {}
 
+# Store conversation history for each WebSocket session
+_conversation_history = {}
+
 # Create direct commands parser
 _direct_commands_parser = DirectCommandsParser()
 
@@ -25,10 +28,14 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
         return
 
     # Define context separately from the prompt
-    context = "Please respond in English and keep your responses concise."
+    context = build_ui_context()
 
     try:
         session_id = str(id(websocket))
+        
+        # Initialize conversation history for this session if not exists
+        if session_id not in _conversation_history:
+            _conversation_history[session_id] = []
         
         # Check if this is a direct command (starts with #)
         if prompt.strip().startswith("#"):
@@ -92,12 +99,10 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
         await websocket.send_json({"type": "chatResponseStart"})
         
         # Collect full response for action processing
-        full_ai_response = ""
+        current_response = ""
         
         # Send chunk callback for streaming
         async def send_chunk(chunk):
-            nonlocal full_ai_response
-            full_ai_response += chunk
             await websocket.send_json({
                 "type": "chatResponseChunk", 
                 "chunk": chunk
@@ -105,8 +110,15 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
         
         # Stream the AI response
         try:
-            # Pass context and prompt separately to the AI request
-            await query_ollama_streaming(prompt, session_id, context=context, model=UI_CHAT_MODEL, callback=send_chunk)
+            # Pass context and conversation history to the AI request
+            current_response = await query_ollama_streaming(
+                prompt, 
+                session_id, 
+                context=context, 
+                conversation_history=_conversation_history[session_id],
+                model=UI_CHAT_MODEL, 
+                callback=send_chunk
+            )
         except (ConnectionError, TimeoutError, ValueError, RuntimeError) as ai_error:
             # Handle AI service errors gracefully
             print(f"🤖 AI Service Error: {ai_error}")
@@ -118,11 +130,17 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
         # End streaming
         await websocket.send_json({"type": "chatResponseEnd"})
         
-        # Send final response for any clients that didn't process the streaming chunks
-        await websocket.send_json({
-            "type": "chatResponse",
-            "response": full_ai_response
-        })
+        # Store the conversation in history
+        _conversation_history[session_id].append({"role": "user", "content": prompt})
+        _conversation_history[session_id].append({"role": "assistant", "content": current_response})
+        
+        # Limit conversation history to last 20 messages (10 exchanges)
+        if len(_conversation_history[session_id]) > 20:
+            _conversation_history[session_id] = _conversation_history[session_id][-20:]
+        
+        # Don't send final response - streaming chunks are sufficient
+        # The frontend should handle the streaming chunks properly
+        
         # Update status to complete
         await broadcast_to_all({
             "type": "chatStatus",
@@ -230,3 +248,31 @@ async def check_ai_service_health() -> tuple[bool, str]:
         return False, "Mistral model not found. Please install it with: ollama pull mistral"
     except Exception as e:
         return False, f"AI service error: {str(e)}"
+
+
+    
+def build_ui_context() -> str:
+    """Build the context for the lighting interpretation"""
+    return f"""You are a Lighting Effects Assistant for DMX-controlled light shows synced to music.
+IMPORTANT: 
+- Don't send reasoning or thinking messages, only final responses.
+    
+Capabilities:
+- Understand prompts like "fade from left to right for two beats"
+- Translate into actions for DMX lighting
+- Use supported effects: fade, strobe, flash, seek
+- Use only this fixtures: 
+   - RGB PAR cans: parcan_l, parcan_pl, parcan_pr, parcan_r.
+   - Moving head: head_el150
+
+Rules:
+- If a user asks about non-light/music topics, reply with something silly and redirect to lighting.
+    Example non-domain response:
+    User: "What's the capital of Mars?"
+    Assistant: "Probably Disco-topia! Anyway, shall we strobe the red heads to the beat?"
+
+- Use ONLY the supported effects and fixtures.
+- Please respond in English and keep your responses short.
+- If you need to think or reason, use the 🤔 emoji to indicate reasoning.
+
+"""
