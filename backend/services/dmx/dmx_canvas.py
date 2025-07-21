@@ -332,21 +332,22 @@ if __name__ == "__main__":
     # Example usage demonstrating singleton behavior
     print("🧪 Testing DMX Canvas Singleton")
     
-    # Create first instance
+    # Create first instance - this initializes the singleton
     canvas1 = DmxCanvas(fps=30, duration=10.0, debug=True)
     print(f"Canvas 1 ID: {id(canvas1)}")
     
-    # Create second instance - should be the same object
+    # Create second instance - should be the same object (parameters ignored)
     canvas2 = DmxCanvas(fps=60, duration=20.0, debug=True)  # Parameters ignored
     print(f"Canvas 2 ID: {id(canvas2)}")
     print(f"Same instance: {canvas1 is canvas2}")
     
-    # Use get_instance method
+    # Use get_instance method - recommended way to access singleton
     canvas3 = DmxCanvas.get_instance()
     print(f"Canvas 3 ID: {id(canvas3)}")
     print(f"Same instance: {canvas1 is canvas3}")
     
     # Reset to create new instance with different parameters
+    # This is the only way to change canvas parameters after initialization
     canvas4 = DmxCanvas.reset_instance(fps=60, duration=20.0, debug=True)
     print(f"Canvas 4 ID: {id(canvas4)}")
     print(f"Different instance after reset: {canvas1 is not canvas4}")
@@ -367,3 +368,7 @@ if __name__ == "__main__":
     log_output = canvas4.export_as_txt(start_channel=10, end_channel=22)
     print("\nExported log:")
     print(log_output[:500])  # Print first 500 characters of the log
+    
+    print("\n✅ DMX Canvas Singleton pattern verified!")
+    print("🔒 Use DmxCanvas.get_instance() or app_state.dmx_canvas for access")
+    print("🔄 Use app_state.reset_dmx_canvas() for parameter changes")

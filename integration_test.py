@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Test script to verify the end-to-end flow
+Test script to verify the end-to-end flow using DmxCanvas singleton
 """
 
 RENDER_DMX = False  # Disable rendering to DMX for this test
 
-## 1 Initialize the DMX Canvas with a song duration
-print("⛳️ Initializing DMX Canvas with song duration...")
+## 1 Initialize the DMX Canvas singleton with a song duration
+print("⛳️ Initializing DMX Canvas singleton with song duration...")
 from backend.config import SONGS_DIR
 from backend.models.song_metadata import SongMetadata
 song_metadata = SongMetadata(
@@ -15,10 +15,13 @@ song_metadata = SongMetadata(
 )
 
 from backend.services.dmx.dmx_canvas import DmxCanvas
-dmx_canvas = DmxCanvas(
-    duration=song_metadata.duration,
+# Reset the singleton with the song duration plus 2 seconds for final effects
+canvas_duration = song_metadata.duration + 2.0
+dmx_canvas = DmxCanvas.reset_instance(
+    duration=canvas_duration,
     debug=True
 )
+print(f"  🎛️ Canvas initialized: {canvas_duration:.2f}s (song: {song_metadata.duration:.2f}s + 2s for effects)")
 
 ## 2 Initialize the fixtures
 print("⛳️ Initialize the fixtures...")

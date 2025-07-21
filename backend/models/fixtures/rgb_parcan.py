@@ -40,18 +40,17 @@ class RgbParcan(FixtureModel):
     def _handle_flash(self, colors: list[str] = ['red', 'green', 'blue'], start_time: float = 0.0, duration: float = 1.0, intensity: float = 1.0, **kwargs) -> None:
         """
         Handle the flash action for the RGB Parcan fixture.
-        Set the 'dim' channel to max intensity, then fade to 0 for a flash effect.
+        Set the specified channels to max intensity, then fade to 0 for a flash effect.
         Args:
             start_time (float): Start time for the flash effect in seconds (default: 0.0).
             duration (float): Duration of the flash fade in seconds (default: 1.0).
             intensity (float): Peak intensity of the flash as a percentage (0.0-1.0, default: 1.0).
             **kwargs: Additional parameters (ignored).
         """
-        # Check if we have a 'dim' channel
-        if 'dim' not in self.channel_names:
-            print(f"⚠️ {self.name}: No 'dim' channel found for flash effect")
-            return
-        
+        # If 'white' is specified, set all RGB channels to peak intensity
+        if colors == ['white']:
+            colors = ['red', 'green', 'blue']
+           
         # Convert intensity percentage to DMX value (0-255)
         dmx_intensity = int(intensity * 255)
 

@@ -34,8 +34,8 @@ class TaskState:
 class AppState:
     """Central application state management."""
 
-    # DMX Canvas (must be created first)
-    dmx_canvas: DmxCanvas = field(default_factory=DmxCanvas)
+    # DMX Canvas - Using singleton instance
+    dmx_canvas: DmxCanvas = field(init=False)
     
     # Fixture management (depends on dmx_canvas)
     fixtures: Optional[FixturesListModel] = field(default=None)
@@ -60,7 +60,10 @@ class AppState:
     _actions_service: Optional[Any] = None
     
     def __post_init__(self):
-        """Initialize fixtures after dmx_canvas is created."""
+        """Initialize DMX Canvas singleton and fixtures."""
+        # Initialize the DMX Canvas singleton instance
+        self.dmx_canvas = DmxCanvas.get_instance()
+        
         if self.fixtures is None:
             self.fixtures = FixturesListModel(
                 fixtures_config_file=FIXTURES_FILE, 
@@ -97,6 +100,34 @@ class AppState:
         """Invalidate cached services when fixtures or canvas change."""
         self._actions_parser_service = None
         self._actions_service = None
+    
+    def reset_dmx_canvas(self, fps: int = 44, duration: float = 300.0, debug: bool = False) -> DmxCanvas:
+        """
+        Reset the DMX Canvas singleton with new parameters.
+        
+        This method should be used when loading a new song with different duration
+        or when canvas parameters need to be changed.
+        
+        Args:
+            fps (int): Frames per second for the timeline. Defaults to 44.
+            duration (float): Total duration of the timeline in seconds. Defaults to 300.0.
+            debug (bool): Enable debug logging. Defaults to False.
+            
+        Returns:
+            DmxCanvas: The reset singleton instance.
+        """
+        # Reset the singleton with new parameters
+        self.dmx_canvas = DmxCanvas.reset_instance(fps=fps, duration=duration, debug=debug)
+        
+        # Update fixtures with new canvas
+        if self.fixtures is not None:
+            self.fixtures.dmx_canvas = self.dmx_canvas
+        
+        # Invalidate cached services since canvas has changed
+        self.invalidate_service_cache()
+        
+        print(f"🔄 DMX Canvas reset: {duration}s duration at {fps} FPS")
+        return self.dmx_canvas
     
     def create_background_task(self, task_id: str, song_name: str, operation: str, total: int = 0) -> TaskState:
         """Create a new background task state."""

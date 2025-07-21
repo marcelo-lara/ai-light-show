@@ -81,7 +81,9 @@ class ActionsService:
             if self.debug:
                 from shared.file_utils import save_file
                 from backend.models.app_state import app_state
-                save_file(f"{app_state.current_song.data_folder}/dmx_canvas.txt", self.dmx_canvas.export_as_txt())
+                # Export full canvas duration (song duration + 2 seconds for final effects)
+                canvas_export = self.dmx_canvas.export_as_txt(start_time=0, end_time=self.dmx_canvas.duration)
+                save_file(f"{app_state.current_song.data_folder}/{app_state.current_song.song_name}.canvas.txt", canvas_export)
 
                 print(f"🎯 Successfully rendered {success_count}/{len(actions_sheet)} actions")
                 

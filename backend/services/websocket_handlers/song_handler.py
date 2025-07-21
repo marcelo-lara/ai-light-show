@@ -19,23 +19,26 @@ async def handle_load_song(websocket: WebSocket, message: Dict[str, Any]) -> Non
     app_state.current_song_file = song_file
     app_state.current_song = SongMetadata(song_file, songs_folder=str(SONGS_DIR))
 
-    # Re-initialize the DmxCanvas with the new song duration
+    # Re-initialize the DmxCanvas with the new song duration plus 2 seconds for final effects
     song_duration = app_state.current_song.duration
+    canvas_duration = song_duration + 2.0  # Add 2 seconds for final effects
     if song_duration > 0:
-        print(f"🎛️ Re-initializing DMX Canvas with duration: {song_duration:.2f}s")
-        app_state.dmx_canvas = DmxCanvas(fps=44, duration=song_duration)
+        print(f"🎛️ Re-initializing DMX Canvas with duration: {canvas_duration:.2f}s (song: {song_duration:.2f}s + 2s for effects)")
+        app_state.reset_dmx_canvas(fps=44, duration=canvas_duration)
     else:
         # Fallback to audio file length or default duration
         from mutagen.mp3 import MP3
         try:
             audio = MP3(song_file)
             song_duration = audio.info.length
-            print(f"⏱️ Using audio file duration: {song_duration:.2f}s")
+            canvas_duration = song_duration + 2.0  # Add 2 seconds for final effects
+            print(f"⏱️ Using audio file duration: {canvas_duration:.2f}s (song: {song_duration:.2f}s + 2s for effects)")
         except Exception as e:
             print(f"⚠️ Failed to get audio duration: {e}, using default")
             song_duration = 300.0  # 5 minute default
+            canvas_duration = song_duration + 2.0  # Add 2 seconds for final effects
         
-        app_state.dmx_canvas = DmxCanvas(fps=44, duration=song_duration)
+        app_state.reset_dmx_canvas(fps=44, duration=canvas_duration)
         
 
     # Load actions for the song
@@ -49,7 +52,7 @@ async def handle_load_song(websocket: WebSocket, message: Dict[str, Any]) -> Non
         print(f"📋 Loaded {len(actions)} actions for {song_name}")
 
         # render actions to DMX canvas
-        dmx_canvas = DmxCanvas.get_instance()
+        dmx_canvas = app_state.dmx_canvas  # Use the singleton instance from app_state
         if app_state.fixtures is None:
             raise ValueError("Fixtures are not initialized in app_state")
         actions_service = ActionsService(app_state.fixtures, dmx_canvas)
