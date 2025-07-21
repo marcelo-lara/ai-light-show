@@ -273,3 +273,10 @@ python backend/health_check_service.py
 - **FastAPI** - Modern web framework
 - **React/Preact** - User interface framework
 - **Ollama** - Local LLM hosting
+
+
+## Test prompts
+
+```text
+use the parcans to fade blue from left to right, and then right to left during the intro
+```

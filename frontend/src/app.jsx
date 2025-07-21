@@ -183,6 +183,20 @@ export function App() {
             }
             break;
           }
+          case "actionCommandExecuted": {
+            // Handle automatic action command execution from AI response
+            console.log("Action command executed:", msg);
+            if (msg.success) {
+              setToast(`🎭 Executed: ${msg.command}`);
+              // Refresh actions if needed
+              if (msg.data && msg.data.universe) {
+                onDmxUpdate(msg.data.universe);
+              }
+            } else {
+              setToast(`❌ Failed: ${msg.command} - ${msg.message}`);
+            }
+            break;
+          }
           default:
             console.warn("Unhandled message type:", msg.type);
         }

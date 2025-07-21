@@ -371,6 +371,22 @@ class SongMetadata:
             self._patterns = []
         self._patterns.append({"stem": stem_name, "clusters": patterns})
 
+    def get_prompt(self) -> str:
+        """Generate a prompt for the song metadata."""
+        song = self
+        _song_sections_line = [f"  - {s.name} ({s.start:.2f}-{s.end:.2f})" for s in song.arrangement] if song.arrangement else [    ]
+
+        return f"""
+Song: {song.title}
+Genre: {song.genre}
+- duration: {song.duration} seconds
+- bpm: {song.bpm}
+- beats time: {', '.join(f'{b["time"]:.2f}' for b in song.beats) if song.beats else 'None'}
+- key moments: {', '.join(f"{km.name} ({km.start:.2f}-{km.end:.2f})" for km in song.key_moments) if song.key_moments else 'None'}
+- song sections: 
+{_song_sections_line}
+"""
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert metadata to dictionary format."""
         data: Dict[str, Any] = {

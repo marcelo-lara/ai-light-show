@@ -3,19 +3,38 @@
 import aiohttp
 import asyncio
 import json
+import re
 from typing import Optional, Callable, Any
 
 async def query_ollama_streaming(
     prompt: str, 
     session_id: str = "default", 
-    model: str = "mixtral",
+    model: str = "mistral",
     base_url: str = "http://llm-service:11434", 
     callback: Optional[Callable[[str], Any]] = None,
     context: Optional[str] = None,
     conversation_history: Optional[list] = None,
-    temperature: float = 0.7
+    temperature: float = 0.7,
+    websocket = None,  # WebSocket for executing direct commands
+    auto_execute_commands: bool = True  # Whether to auto-execute #action commands
 ) -> str:
-    """Send a prompt to Ollama and call callback for each chunk."""
+    """Send a prompt to Ollama and call callback for each chunk.
+    
+    Args:
+        prompt: The user prompt to send
+        session_id: Session identifier
+        model: Ollama model to use
+        base_url: Ollama service URL
+        callback: Function to call for each chunk
+        context: System context for the conversation
+        conversation_history: Previous messages in the conversation
+        temperature: Model temperature setting
+        websocket: WebSocket connection for executing direct commands
+        auto_execute_commands: Whether to automatically execute #action commands found in the response
+    
+    Returns:
+        The complete response from the model
+    """
     
     try:
         print(f"🤖 Starting Ollama/{model} streaming request for session {session_id}")
@@ -63,6 +82,21 @@ async def query_ollama_streaming(
                 chunk_count = 0
                 thinking_sent = False
                 
+                # For action command detection and execution
+                accumulated_text = ""  # Accumulate text to detect action commands
+                executed_commands = set()  # Track executed commands to avoid duplicates
+                action_command_parser = None
+                
+                # Initialize action command parser if auto_execute_commands is enabled
+                if auto_execute_commands and websocket:
+                    try:
+                        from .direct_commands_parser import DirectCommandsParser
+                        action_command_parser = DirectCommandsParser()
+                        print(f"🎭 Action command parser initialized for session {session_id}")
+                    except Exception as e:
+                        print(f"⚠️ Failed to initialize action command parser: {e}")
+                        auto_execute_commands = False
+                
                 async for line in response.content:
                     if line:
                         try:
@@ -70,7 +104,8 @@ async def query_ollama_streaming(
 
                             # Model thinking flag
                             model_is_thinking = (data.get("thinking", False))
-                            
+                            if model_is_thinking:
+                                print(data.get("thinking", "Model is thinking..."))
                             # Handle thinking state
                             if model_is_thinking and not thinking_sent and callback:
                                 # await callback("🤔 Thinking...")
@@ -84,6 +119,18 @@ async def query_ollama_streaming(
                                 full_response += chunk  # Keep for logging
                                 chunk_count += 1
                                 current_response += chunk  # Current response content
+                                
+                                # Accumulate text for action command detection
+                                if auto_execute_commands and action_command_parser:
+                                    accumulated_text += chunk
+                                    
+                                    # Look for action commands in accumulated text
+                                    await _detect_and_execute_action_commands(
+                                        accumulated_text, 
+                                        executed_commands, 
+                                        action_command_parser, 
+                                        websocket
+                                    )
                                 
                                 # Debug: Print chunks to see what we're receiving
                                 if chunk_count <= 5:  # Only log first few chunks
@@ -118,4 +165,129 @@ async def query_ollama_streaming(
     except Exception as e:
         print(f"❌ Unexpected error in Ollama streaming: {e}")
         raise RuntimeError(f"Unexpected error communicating with AI service: {str(e)}")
+
+
+async def _detect_and_execute_action_commands(
+    accumulated_text: str, 
+    executed_commands: set, 
+    action_command_parser, 
+    websocket
+) -> None:
+    """
+    Detect and execute #action commands in the accumulated response text.
+    
+    Args:
+        accumulated_text: The text accumulated so far from the stream
+        executed_commands: Set of already executed commands to avoid duplicates
+        action_command_parser: DirectCommandsParser instance
+        websocket: WebSocket connection for command execution
+    """
+    try:
+        # Look for action commands in the text
+        # This pattern captures complete action commands by looking for:
+        # 1. Commands starting with # (optionally followed by "action ")
+        # 2. Specific command patterns with their parameters
+        # 3. Commands ending at natural boundaries
+        
+        # Find simple commands first (help, render, tasks, etc.)
+        simple_commands = re.findall(r'#(?:action\s+)?(help|render|tasks|analyze(?:\s+context(?:\s+reset)?)?|clear\s+(?:all|id\s+\w+|group\s+\w+))', 
+                                   accumulated_text, re.IGNORECASE)
+        
+        # Find complex commands with timing (add, flash, fade, etc.)
+        complex_pattern = r'#(?:action\s+)?((?:add|flash|fade|strobe|set|preset)\s+[^#\n]*?(?:at|to)\s+[\d.]+[sb]?[^#\n]*?)(?=\s*(?:\n|$|\.|\!|\?|,|\s+#|\s+[A-Z][a-z]))'
+        complex_commands = re.findall(complex_pattern, accumulated_text, re.IGNORECASE | re.DOTALL)
+        
+        # Combine all found commands
+        all_command_texts = [f"#{cmd.strip()}" for cmd in simple_commands + complex_commands]
+        
+        for command_text in all_command_texts:
+            # Avoid executing the same command multiple times
+            if command_text in executed_commands:
+                continue
+                
+            # Validate that this looks like a real action command
+            if _is_valid_action_command(command_text):
+                executed_commands.add(command_text)
+                
+                print(f"🎭 Detected action command in AI response: {command_text}")
+                
+                # Execute the command asynchronously
+                try:
+                    success, message, additional_data = await action_command_parser.parse_command(
+                        command_text, websocket
+                    )
+                    
+                    if success:
+                        print(f"✅ Executed action command: {command_text} -> {message}")
+                        
+                        # Send notification to client
+                        if websocket:
+                            await websocket.send_json({
+                                "type": "actionCommandExecuted",
+                                "command": command_text,
+                                "success": True,
+                                "message": message,
+                                "data": additional_data
+                            })
+                    else:
+                        print(f"❌ Failed to execute action command: {command_text} -> {message}")
+                        
+                        # Send error notification to client
+                        if websocket:
+                            await websocket.send_json({
+                                "type": "actionCommandExecuted",
+                                "command": command_text,
+                                "success": False,
+                                "message": message
+                            })
+                            
+                except Exception as e:
+                    print(f"❌ Error executing action command {command_text}: {e}")
+                    
+                    if websocket:
+                        await websocket.send_json({
+                            "type": "actionCommandExecuted",
+                            "command": command_text,
+                            "success": False,
+                            "message": f"Error executing command: {str(e)}"
+                        })
+                        
+    except Exception as e:
+        print(f"❌ Error in action command detection: {e}")
+
+
+def _is_valid_action_command(command_text: str) -> bool:
+    """
+    Check if a detected command text is likely a valid action command.
+    
+    Args:
+        command_text: The command text to validate
+        
+    Returns:
+        True if it looks like a valid action command, False otherwise
+    """
+    command_text = command_text.lower().strip()
+    
+    # Remove the # prefix for checking
+    if command_text.startswith('#'):
+        command_text = command_text[1:].strip()
+    
+    # Check for known command patterns
+    valid_patterns = [
+        r'^help$',
+        r'^render$',
+        r'^tasks$',
+        r'^analyze\s*(context\s*(reset)?)?$',
+        r'^clear\s+(all|id\s+\w+|group\s+\w+)',
+        r'^add\s+\w+\s+to\s+\w+\s+at\s+[\d.]+[sb]?(\s+(for|duration)\s+[\d.]+[sb]?)?',
+        r'^(flash|fade|strobe|set|preset)\s+\w+.*?at\s+[\d.]+[sb]?',
+        r'^(flash|fade|strobe)\s+\w+.*?(for|duration)\s+[\d.]+[sb]?',
+        r'^(flash|fade|strobe)\s+\w+.*?with\s+intensity\s+[\d.]+',
+    ]
+    
+    for pattern in valid_patterns:
+        if re.match(pattern, command_text, re.IGNORECASE):
+            return True
+    
+    return False
 

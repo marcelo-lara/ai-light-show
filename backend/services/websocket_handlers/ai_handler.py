@@ -7,7 +7,7 @@ from ..utils.broadcast import broadcast_to_all
 from ..ollama.direct_commands_parser import DirectCommandsParser
 from .action_executor import execute_confirmed_action
 
-UI_CHAT_MODEL = "deepseek-r1:8b"  # Default model for AI chat
+UI_CHAT_MODEL = "qwen3:8b"  # Default model for AI chat
 
 # Store pending actions for each WebSocket session
 _pending_actions_store = {}
@@ -29,6 +29,7 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
 
     # Define context separately from the prompt
     context = build_ui_context()
+    print(f"ℹ️ Context: {context}")
 
     try:
         session_id = str(id(websocket))
@@ -117,7 +118,9 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
                 context=context, 
                 conversation_history=_conversation_history[session_id],
                 model=UI_CHAT_MODEL, 
-                callback=send_chunk
+                callback=send_chunk,
+                websocket=websocket,  # Pass websocket for action command execution
+                auto_execute_commands=True  # Enable automatic action command execution
             )
         except (ConnectionError, TimeoutError, ValueError, RuntimeError) as ai_error:
             # Handle AI service errors gracefully
@@ -249,21 +252,37 @@ async def check_ai_service_health() -> tuple[bool, str]:
     except Exception as e:
         return False, f"AI service error: {str(e)}"
 
-
+def _build_fixtures_context() -> str:
+    """Build the context for the lighting interpretation"""
+    fixture_descriptions = []
+    if app_state.fixtures and hasattr(app_state.fixtures, 'fixtures'):
+        fixtures_dict = app_state.fixtures.fixtures
+        for fixture_id, fixture in fixtures_dict.items():
+            fixture_type = "RGB PAR Light" if fixture.fixture_type == "parcan" else fixture.fixture_type
+            fixture_type = "Moving Head" if fixture.fixture_type == "moving_head" else fixture_type
+            fixture_descriptions.append(f"  - {fixture_type} (id: {fixture.id}) -> available actions: {', '.join(fixture.actions)}")
+    else:
+        raise ValueError("Fixtures not available in app_state")
     
+    # Create the fixture list from the descriptions
+    return "\n".join(fixture_descriptions)
+
 def build_ui_context() -> str:
     """Build the context for the lighting interpretation"""
+    song = app_state.current_song
     return f"""You are a Lighting Effects Assistant for DMX-controlled light shows synced to music.
-IMPORTANT: 
-- Don't send reasoning or thinking messages, only final responses.
-    
+You will receive user prompts describing lighting effects, and you will interpret these into actions using the available fixtures.
+
+Song Interpretation Details:
+{song.get_prompt()}
+
 Capabilities:
 - Understand prompts like "fade from left to right for two beats"
 - Translate into actions for DMX lighting
-- Use supported effects: fade, strobe, flash, seek
+- Effects are single or sequential actions like fade, strobe, flash, seek.
+- perform many actions as needed to create the desired effect.
 - Use only this fixtures: 
-   - RGB PAR cans: parcan_l, parcan_pl, parcan_pr, parcan_r.
-   - Moving head: head_el150
+{_build_fixtures_context()}
 
 Rules:
 - If a user asks about non-light/music topics, reply with something silly and redirect to lighting.
@@ -271,8 +290,16 @@ Rules:
     User: "What's the capital of Mars?"
     Assistant: "Probably Disco-topia! Anyway, shall we strobe the red heads to the beat?"
 
-- Use ONLY the supported effects and fixtures.
+- Use ONLY the supported actions and fixtures.
+- Assume all fixtures are available and ready to use.
+- Lights are located in a venue with a stage and audience (not in a car or other setting)
+- Combine multiple actions to create complex effects when needed.
 - Please respond in English and keep your responses short.
-- If you need to think or reason, use the 🤔 emoji to indicate reasoning.
-
+- If you don't understand a prompt, ask for clarification.
+- When no exact start time is provided, use the current song's closest beat time.
+- actions should be in the EXACTLY format:
+   - "#action <action> <fixture_id> at <start_time> for <duration>" -> example: "#action fade moving_head_1 at 1.21s for 2s"
+   - each action should be a single line starting with #action and not contain any other text.
+- Complex effects may require multiple actions, so you can perform many actions as needed to create the desired effect.
+- DMX Fixtures doesn't have logic for complex effects, so you must perform each action separately.
 """
