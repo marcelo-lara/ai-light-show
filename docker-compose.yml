@@ -48,8 +48,6 @@ services:
       - ./.ollama_data:/root/.ollama
     restart: unless-stopped
     command: serve
-    cpus: 8.0
-    mem_limit: 16g
     deploy:
       resources:
         reservations:

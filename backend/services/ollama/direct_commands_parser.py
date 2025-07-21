@@ -41,25 +41,6 @@ class DirectCommandsParser:
         command = command_text.lstrip("#").strip()
         command = command.replace("action", "", 1).strip() if command.lower().startswith("action") else command
 
-        # #help command
-        if command.lower() == "help":
-            help_text = (
-                "Direct Commands:\n"
-                "- #help - Show this help message\n"
-                "- #clear all actions - Clear all actions from the current song\n"
-                "- #clear action <action_id> - Clear a specific action by ID\n"
-                "- #clear group <group_id> - Clear all actions with a specific group ID\n"
-                "- #add <action> to <fixture> at <start_time> duration <duration_time> OR for <duration_time> - Add a new action. Duration is optional, default is 1 beat.\n"
-                "- #render - Render all actions to the DMX canvas\n"
-                "- #analyze - Analyze the current song using the analysis service\n"
-                "- #analyze context - Generate lighting context for the current song using AI (runs in background)\n"
-                "- #analyze context reset - Clear existing context analysis and start fresh\n"
-                "- #tasks - Show status of background tasks\n"
-                "\nAccepted time formats: 1m23.45s, 2b (beats), 12.5 (seconds)\n"
-                "\nNote: Background tasks continue running even if you close the browser.\n"
-            )
-            return True, help_text, None
-
         # #tasks command
         if command.lower() == "tasks":
             from ...models.app_state import app_state
@@ -304,7 +285,8 @@ class DirectCommandsParser:
         elif command.startswith("add"):
             return self._handle_add_command(command, actions_sheet)
         else:
-            return False, f"Unknown command: {command}. Supported commands: clear all, clear id, clear group, add, render, analyze", None
+            # Try to parse as direct action command (flash, strobe, fade, etc.)
+            return self._handle_direct_action_command(command, actions_sheet, actions_service)
     
     def _handle_render_command(self, actions_sheet: ActionsSheet, actions_service: ActionsService) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """Handle the 'render' command to render all actions to DMX canvas."""
@@ -446,3 +428,52 @@ class DirectCommandsParser:
             return True, f"Added {action_name} to {fixture_id} at {start_time:.2f}s for {duration:.2f}s.", None
         except Exception as e:
             return False, f"Error adding action: {e}", None
+
+    def _handle_direct_action_command(self, command: str, actions_sheet: ActionsSheet, actions_service: ActionsService) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+        """Handle direct action commands like 'flash parcan_l at 135.78s'."""
+        try:
+            # Import here to avoid circular imports
+            from ..dmx.actions_parser_service import ActionsParserService
+            
+            # Create actions parser
+            if app_state.fixtures is None:
+                return False, "Fixtures not initialized.", None
+                
+            parser = ActionsParserService(app_state.fixtures, debug=False)
+            
+            # Try to parse the command
+            actions = parser.parse_command(command)
+            
+            if not actions:
+                return False, f"Could not parse action command: {command}. Try using #add format instead.", None
+            
+            # Add all parsed actions to the actions sheet
+            added_count = 0
+            for action in actions:
+                actions_sheet.add_action(action)
+                added_count += 1
+            
+            # Save actions
+            actions_sheet.save_actions()
+            
+            # Optionally render immediately
+            render_success = actions_service.render_actions_to_canvas(actions_sheet, clear_first=False)
+            
+            # Create response message
+            action_descriptions = [f"{action.action} on {action.fixture_id} at {action.start_time:.2f}s" for action in actions]
+            action_list = ", ".join(action_descriptions)
+            
+            if render_success:
+                # Get universe for broadcast
+                from backend.dmx_controller import get_universe
+                universe = get_universe()
+                
+                return True, f"Added and rendered {added_count} action(s): {action_list}", {
+                    "universe": list(universe),
+                    "message": "DMX Canvas updated by direct action command"
+                }
+            else:
+                return True, f"Added {added_count} action(s): {action_list} (render to see effect)", None
+                
+        except Exception as e:
+            return False, f"Error processing direct action command: {e}", None
