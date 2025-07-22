@@ -159,7 +159,7 @@ export default function ChatAssistant({ wsSend, lastResponse, contextProgress, l
         <div className="mb-3 p-2 flex items-center gap-2">
           <div className="flex items-center gap-2">
             {llmStatus === "loading..." && (
-              <div className="animate-spin w-4 h-4 border-2 border-yellow-500 border-t-transparent rounded-full"></div>
+              <div className="animate-spin w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full"></div>
             )}
             {llmStatus === "connected..." && (
               <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
