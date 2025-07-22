@@ -178,7 +178,7 @@ export default function ChatAssistant({ wsSend, lastResponse, contextProgress, l
                 </svg>
               </div>
             )}
-            <span className="text-xs font-medium text-gray-700">
+            <span className="text-xs font-medium text-gray-300">
               {llmStatus === "error" && "Connection error"}
               {!["error"].includes(llmStatus) && llmStatus}
             </span>
