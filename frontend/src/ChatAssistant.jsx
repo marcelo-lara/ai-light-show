@@ -92,7 +92,7 @@ export default function ChatAssistant({ wsSend, lastResponse, contextProgress, l
       
       {/* LLM Status Indicator */}
       {llmStatus && llmStatus.length > 0 && (
-        <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-2">
+        <div className="mb-3 p-2 flex items-center gap-2">
           <div className="flex items-center gap-2">
             {llmStatus === "loading..." && (
               <div className="animate-spin w-4 h-4 border-2 border-yellow-500 border-t-transparent rounded-full"></div>
@@ -114,7 +114,7 @@ export default function ChatAssistant({ wsSend, lastResponse, contextProgress, l
                 </svg>
               </div>
             )}
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-xs font-medium text-gray-700">
               {llmStatus === "loading..." && "Connecting to AI..."}
               {llmStatus === "connected..." && "Connected"}
               {llmStatus === "thinking..." && "AI is thinking..."}
