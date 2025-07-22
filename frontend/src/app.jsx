@@ -57,6 +57,9 @@ export function App() {
   // UI toast notification state
   const [toastMessage, setToast] = useState(null);
 
+  // LLM status state
+  const [llmStatus, setLlmStatus] = useState("");
+
   // Reference to fixtures to avoid stale closure issues
   const fixturesRef = useRef(fixtures);  
   useEffect(() => {
@@ -91,6 +94,8 @@ export function App() {
             setSongsList(msg.songs || []);
             setFixtures(msg.fixtures || []);
             setFixturesPresets(msg.presets || []);
+            setLightingActions(msg.actions || []);
+            setLlmStatus(msg.llm_status || "");
 
             // load default song if not set
             setCurrentSongFile("born_slippy.mp3");
@@ -159,6 +164,12 @@ export function App() {
             // Handle lighting actions updates from backend
             console.log("Received actions update:", msg);
             setLightingActions(msg.actions || []);
+            break;
+          }
+          case "llmStatus": {
+            // Handle LLM status updates from backend
+            console.log("Received LLM status update:", msg.status);
+            setLlmStatus(msg.status || "");
             break;
           }
           case "chatResponse": {
@@ -290,6 +301,7 @@ export function App() {
               wsSend={wsSend} 
               lastResponse={lastResponse}
               contextProgress={contextProgress}
+              llmStatus={llmStatus}
             />
           </div>
 

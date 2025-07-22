@@ -6,6 +6,26 @@ import json
 import re
 from typing import Optional, Callable, Any
 
+llm_status = "" # status of the LLM service, used for UI updates: "loading...", "thinking...", "" (nothing)
+
+async def _broadcast_llm_status(status: str):
+    """Broadcast LLM status to all connected WebSocket clients."""
+    try:
+        from ..utils.broadcast import broadcast_to_all
+        await broadcast_to_all({
+            "type": "llmStatus",
+            "status": status
+        })
+    except Exception as e:
+        print(f"⚠️ Failed to broadcast LLM status: {e}")
+
+async def _update_llm_status(status: str):
+    """Update LLM status and broadcast to clients."""
+    global llm_status
+    llm_status = status
+    await _broadcast_llm_status(status)
+
+
 async def query_ollama_streaming(
     prompt: str, 
     session_id: str = "default", 
@@ -62,6 +82,7 @@ async def query_ollama_streaming(
         
         # Debug: Print the number of messages being sent and show structure
         print(f"🤖 Sending {len(request_data['messages'])} messages to Ollama")
+        await _update_llm_status("loading...")  # Update LLM status for UI
         for i, msg in enumerate(request_data['messages']):
             role = msg.get('role', 'unknown')
             content_preview = msg.get('content', '')[:50] + '...' if len(msg.get('content', '')) > 50 else msg.get('content', '')
@@ -75,6 +96,7 @@ async def query_ollama_streaming(
                 timeout=aiohttp.ClientTimeout(total=300, connect=30, sock_read=120)
             ) as response:
                 print(f"🤖 Connected, starting stream (HTTP {response.status})")
+                await _update_llm_status("connected...")  # Update LLM status for UI
                 response.raise_for_status()
                 
                 full_response = ""
@@ -103,19 +125,20 @@ async def query_ollama_streaming(
                             data = json.loads(line.decode('utf-8'))
 
                             # Model thinking flag
-                            model_is_thinking = (data.get("thinking", False))
-                            if model_is_thinking:
-                                print(data.get("thinking", "Model is thinking..."))
+                            model_is_thinking =  data.get("message", {}).get("thinking", None)
+                            chunk = data.get("message", {}).get("content", "")
+
                             # Handle thinking state
                             if model_is_thinking and not thinking_sent and callback:
-                                # await callback("🤔 Thinking...")
+                                await _update_llm_status("thinking...")  # Update LLM status for UI
+                                print(" -> thinking...")
                                 thinking_sent = True
                             elif not model_is_thinking and thinking_sent and callback:
-                                await callback("\r")  # Clear the thinking message
                                 thinking_sent = False
 
-                            chunk = data.get("message", {}).get("content", "")
+                            
                             if chunk and not model_is_thinking:  # Only send content when not thinking
+                                await _update_llm_status("")  # Clear status when not thinking
                                 full_response += chunk  # Keep for logging
                                 chunk_count += 1
                                 current_response += chunk  # Current response content
@@ -132,15 +155,12 @@ async def query_ollama_streaming(
                                         websocket
                                     )
                                 
-                                # Debug: Print chunks to see what we're receiving
-                                if chunk_count <= 5:  # Only log first few chunks
-                                    print(f"🤖 Chunk {chunk_count}: '{chunk[:30]}...'")
-                                
                                 if callback:
                                     await callback(chunk)
                             
                             if data.get("done", False):
                                 print(f"🤖 Stream completed: {chunk_count} chunks, {len(full_response)} chars")
+                                await _update_llm_status("")  # Clear status when stream is done
                                 break
                         except json.JSONDecodeError:
                             continue
@@ -149,21 +169,26 @@ async def query_ollama_streaming(
     
     except aiohttp.ClientConnectorError as e:
         print(f"❌ Connection error to Ollama service: {e}")
+        await _update_llm_status("error")  # Set error status
         raise ConnectionError(f"Cannot connect to Ollama service at {base_url}. Please ensure Ollama is running.")
     except aiohttp.ServerTimeoutError as e:
         print(f"❌ Server timeout from Ollama service: {e}")
+        await _update_llm_status("error")  # Set error status
         raise TimeoutError("Ollama service timed out. Try again or check if the model is loaded.")
     except asyncio.TimeoutError as e:
         print(f"❌ Timeout error from Ollama service during streaming: {e}")
+        await _update_llm_status("error")  # Set error status
         raise TimeoutError("Ollama service timed out during streaming. The response may be taking longer than expected.")
     except aiohttp.ClientResponseError as e:
         print(f"❌ HTTP error from Ollama service: {e}")
+        await _update_llm_status("error")  # Set error status
         if e.status == 404:
             raise ValueError("Mistral model not found. Please install it with: ollama pull mistral")
         else:
             raise RuntimeError(f"Ollama service error (HTTP {e.status}): {e.message}")
     except Exception as e:
         print(f"❌ Unexpected error in Ollama streaming: {e}")
+        await _update_llm_status("error")  # Set error status
         raise RuntimeError(f"Unexpected error communicating with AI service: {str(e)}")
 
 

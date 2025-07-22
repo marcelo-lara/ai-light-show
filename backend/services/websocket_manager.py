@@ -31,6 +31,14 @@ class WebSocketManager:
             "blackout": handle_blackout,
         }
 
+    def _get_llm_status(self) -> str:
+        """Get the current LLM status."""
+        try:
+            from .ollama.ollama_streaming import llm_status
+            return llm_status or ""
+        except ImportError:
+            return ""
+
     async def connect(self, websocket: WebSocket) -> None:
         """Accept a new WebSocket connection."""
         await websocket.accept()
@@ -55,6 +63,7 @@ class WebSocketManager:
             "fixtures": app_state.fixture_config,
             "presets": app_state.fixture_presets,
             "actions": actions,  # Send current actionsheet
+            "llm_status": self._get_llm_status(),  # Send current LLM status
         })
     
     async def disconnect(self, websocket: WebSocket) -> None:
