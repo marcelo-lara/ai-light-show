@@ -179,11 +179,8 @@ export default function ChatAssistant({ wsSend, lastResponse, contextProgress, l
               </div>
             )}
             <span className="text-xs font-medium text-gray-700">
-              {llmStatus === "loading..." && "Connecting..."}
-              {llmStatus === "connected..." && "Connected"}
-              {llmStatus === "thinking..." && "thinking..."}
               {llmStatus === "error" && "Connection error"}
-              {!["loading...", "connected...", "thinking...", "error"].includes(llmStatus) && llmStatus}
+              {!["error"].includes(llmStatus) && llmStatus}
             </span>
           </div>
         </div>
