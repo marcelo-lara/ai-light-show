@@ -26,8 +26,8 @@ The system consists of several microservices:
 - Model management and inference
 - load models (more at https://ollama.com/library)
    ```bash
-nohup /root/.ollama/pull_models.sh > /tmp/ollama-download.log 2>&1 &
-tail -f /tmp/ollama-download.log
+   nohup /root/.ollama/pull_models.sh > /tmp/ollama-download.log 2>&1 &
+   tail -f /tmp/ollama-download.log
    ```
 
 ## Features
