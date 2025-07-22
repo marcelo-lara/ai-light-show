@@ -90,41 +90,6 @@ export default function ChatAssistant({ wsSend, lastResponse, contextProgress, l
     <div>
       <h2 className="text-lg mb-2 font-semibold">Assistant</h2>
       
-      {/* LLM Status Indicator */}
-      {llmStatus && llmStatus.length > 0 && (
-        <div className="mb-3 p-2 flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            {llmStatus === "loading..." && (
-              <div className="animate-spin w-4 h-4 border-2 border-yellow-500 border-t-transparent rounded-full"></div>
-            )}
-            {llmStatus === "connected..." && (
-              <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
-            )}
-            {llmStatus === "thinking..." && (
-              <div className="flex gap-1">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-              </div>
-            )}
-            {llmStatus === "error" && (
-              <div className="w-4 h-4 bg-red-500 rounded-full">
-                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-              </div>
-            )}
-            <span className="text-xs font-medium text-gray-700">
-              {llmStatus === "loading..." && "Connecting to AI..."}
-              {llmStatus === "connected..." && "Connected"}
-              {llmStatus === "thinking..." && "AI is thinking..."}
-              {llmStatus === "error" && "Connection error"}
-              {!["loading...", "connected...", "thinking...", "error"].includes(llmStatus) && llmStatus}
-            </span>
-          </div>
-        </div>
-      )}
-      
       {/* Context Analysis Progress Bar */}
       {contextProgress?.isRunning && (
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -189,6 +154,40 @@ export default function ChatAssistant({ wsSend, lastResponse, contextProgress, l
           </div>
         )}
       </div>
+      {/* LLM Status Indicator */}
+      {llmStatus && llmStatus.length > 0 && (
+        <div className="mb-3 p-2 flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            {llmStatus === "loading..." && (
+              <div className="animate-spin w-4 h-4 border-2 border-yellow-500 border-t-transparent rounded-full"></div>
+            )}
+            {llmStatus === "connected..." && (
+              <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
+            )}
+            {llmStatus === "thinking..." && (
+              <div className="flex gap-1">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              </div>
+            )}
+            {llmStatus === "error" && (
+              <div className="w-4 h-4 bg-red-500 rounded-full">
+                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
+            <span className="text-xs font-medium text-gray-700">
+              {llmStatus === "loading..." && "Connecting..."}
+              {llmStatus === "connected..." && "Connected"}
+              {llmStatus === "thinking..." && "thinking..."}
+              {llmStatus === "error" && "Connection error"}
+              {!["loading...", "connected...", "thinking...", "error"].includes(llmStatus) && llmStatus}
+            </span>
+          </div>
+        </div>
+      )}      
       <div className="mt-4 flex gap-2 items-end">
         <textarea
           className="flex-1 min-h-[2.5rem] max-h-32 p-2 bg-gray-800 text-white rounded resize-none"
