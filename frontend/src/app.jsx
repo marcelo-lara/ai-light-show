@@ -10,7 +10,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import ChatAssistant from './ChatAssistant';
 import SongMetadata from './components/SongMetadata';
-import LightingPlan from './components/song/LightingPlan';
+import LightingPlan from './components/LightingPlan';
 
 export function App() {
   const wsRef = useRef(null); // WebSocket reference
@@ -295,7 +295,7 @@ export function App() {
               }}
             />
           </div>
-          <div className="flex gap-6">
+          <div className="flex gap-2">
               <div className="main-left">
                 {/* Chat Card */}
                 <div className="bg-white/10 rounded-2xl p-6 mb-6">
@@ -310,7 +310,7 @@ export function App() {
                 {/* Actions Card: Display lighting actions from the backend */}
                 <ActionsCard wsActions={lightingActions} />
               </div>
-              <div className="main-right">
+              <div className="main-right min-w-[300px] max-w-[450px]">
                 {/* Lighting Plan */}
                 {songData && (
                   <div className="bg-white/10 rounded-2xl p-6 mb-6">
@@ -325,10 +325,6 @@ export function App() {
                 )}
               </div>
           </div>
-
-
-
-
         </div>
       </div>
 

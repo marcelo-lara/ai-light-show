@@ -1,6 +1,5 @@
 import { h } from 'preact';
 import SongKeyMoments from './song/SongKeyMoments';
-import LightingPlan from './song/LightingPlan';
 import SongArrangement from './song/SongArrangement';
 import ChordsCard from './song/ChordsCard';
 import SongAnalysis from './song/SongAnalysis';

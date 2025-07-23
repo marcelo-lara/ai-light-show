@@ -1,4 +1,4 @@
-import { formatTime } from "../../utils";
+import { formatTime } from "../utils";
 import { useEffect, useState, useRef } from 'preact/hooks';
 
 // Light plan item schema: { id, start, end, name, description }
@@ -93,6 +93,12 @@ export default function LightingPlan({
         ]));
     };
 
+    const onDeleteAll = () => {
+        setLightPlan([]);
+        setCurrentItem(null);
+        setEditMode(false);
+    };
+
     return (
         <>
             <h2 className="text-lg mb-2 font-semibold">Lighting Plan</h2>
@@ -171,6 +177,7 @@ export default function LightingPlan({
                 <div className="flex items-center gap-2 mt-2">
                     <button onClick={onSaveLightPlan} className="bg-green-700 hover:bg-green-800 px-2 py-1 rounded text-sm">💾 Save</button>
                     <button onClick={addItem} className="bg-indigo-600 hover:bg-indigo-700 px-2 py-1 rounded text-sm">➕ Add</button>
+                    <button onClick={() => onDeleteAll()} className="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-sm">❌ Delete All</button>
                     <button onClick={() => setEditMode(!editMode)} className="bg-orange-600 hover:bg-orange-700 px-2 py-1 rounded text-sm">✏️ {editMode ? 'Exit' : 'Edit'}</button>
                     <button onClick={() => setShowControls(!showControls)} className="bg-gray-600 hover:bg-gray-700 px-2 py-1 rounded text-sm">⚙️</button>
                 </div>
