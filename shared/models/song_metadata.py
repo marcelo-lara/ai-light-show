@@ -35,6 +35,27 @@ class KeyMoment:
 
     def __str__(self) -> str:
         return f"KeyMoment(start={self.start}, end={self.end}, name='{self.name}', description='{self.description}')"
+    
+@dataclass
+class LightPlanItem:
+    """Represents a lighting plan to be executed at a specific time."""
+    id: int
+    start: float
+    end: Optional[float] = None
+    name: str = ''
+    description: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "start": float(self.start),
+            "end": float(self.end) if self.end is not None else None,
+            "name": self.name,
+            "description": self.description,
+        }
+
+    def __str__(self) -> str:
+        return f"LightPlanItem(id={self.id}, start={self.start}, end={self.end}, name='{self.name}', description='{self.description}')"
 
 
 class Section:
@@ -125,6 +146,7 @@ class SongMetadata:
         self._duration = 2.0 * 60.0 # Default duration of 2 minutes
         self._analysis: List[Dict[str, Any]] = []
         self._key_moments: List[KeyMoment] = []
+        self._light_plan: List[LightPlanItem] = []
 
         self._mp3_path = self._find_mp3_path()
         self._hints_folder = os.path.join(self._songs_folder, "hints")
@@ -206,6 +228,25 @@ class SongMetadata:
     @beats.setter
     def beats(self, value: List[Dict[str, Any]]):
         self._beats = value
+
+    @property
+    def light_plan(self) -> List[LightPlanItem]:
+        return self._light_plan
+
+    @light_plan.setter
+    def light_plan(self, value: List[Any]):
+        # Accepts list of LightPlanItem or dicts
+        if not isinstance(value, list):
+            raise TypeError("light_plan must be a list of LightPlanItem or dict objects.")
+        new_list = []
+        for v in value:
+            if isinstance(v, LightPlanItem):
+                new_list.append(v)
+            elif isinstance(v, dict):
+                new_list.append(LightPlanItem(**v))
+            else:
+                raise TypeError("Elements of light_plan must be LightPlanItem or dict.")
+        self._light_plan = new_list
 
     @property
     def chords(self) -> List[Dict[str, Any]]:
@@ -322,12 +363,17 @@ class SongMetadata:
         # Convert key_moments dicts to KeyMoment objects
         key_moments_data = data.get("key_moments", [])
         self._key_moments = [KeyMoment(**km) if not isinstance(km, KeyMoment) else km for km in key_moments_data]
+        
+        # Convert light_plan dicts to LightPlanItem objects
+        light_plan_data = data.get("light_plan", [])
+        self._light_plan = [LightPlanItem(**lp) if not isinstance(lp, LightPlanItem) else lp for lp in light_plan_data]
 
     def initialize_song_metadata(self) -> None:
         """Initialize song metadata with default values."""
         self.beats = []
         self.arrangement = []
         self.key_moments = []
+        self.light_plan = []
 
     def add_beat(self, time: float, volume: float = 0.0, energy: float = 1.0) -> None:
         """Add a beat to the song metadata."""
@@ -371,10 +417,38 @@ class SongMetadata:
             self._patterns = []
         self._patterns.append({"stem": stem_name, "clusters": patterns})
 
+    def clear_light_plan(self) -> None:
+        """Clear all light plan items."""
+        self.light_plan = []
+
+    def add_light_plan_item(self, id: int, start: float, end: Optional[float] = None, name: str = '', description: Optional[str] = None) -> None:
+        """Add a light plan item to the song metadata."""
+        light_plan_item = LightPlanItem(id=id, start=start, end=end, name=name, description=description)
+        self._light_plan.append(light_plan_item)
+
+    def remove_light_plan_item(self, id: int) -> bool:
+        """Remove a light plan item by ID. Returns True if removed, False if not found."""
+        for i, item in enumerate(self._light_plan):
+            if item.id == id:
+                self._light_plan.pop(i)
+                return True
+        return False
+
+    def get_light_plan_at_time(self, time: float) -> List[LightPlanItem]:
+        """Get all light plan items that are active at a given time."""
+        active_items = []
+        for item in self._light_plan:
+            if item.start <= time and (item.end is None or time <= item.end):
+                active_items.append(item)
+        return active_items
+
     def get_prompt(self) -> str:
         """Generate a prompt for the song metadata."""
         song = self
-        _song_sections_line = [f"  - {s.name} ({s.start:.2f}-{s.end:.2f})" for s in song.arrangement] if song.arrangement else [    ]
+        if song.arrangement:
+            _song_sections_line = '\n'.join([f"  - {s.name} ({s.start:.2f}-{s.end:.2f})" for s in song.arrangement])
+        else:
+            _song_sections_line = "  - None"
 
         return f"""
 Song: {song.title}
@@ -383,6 +457,7 @@ Genre: {song.genre}
 - bpm: {song.bpm}
 - beats time: {', '.join(f'{b["time"]:.2f}' for b in song.beats) if song.beats else 'None'}
 - key moments: {', '.join(f"{km.name} ({km.start:.2f}-{km.end:.2f})" for km in song.key_moments) if song.key_moments else 'None'}
+- light plan: {', '.join(f"{lp.name} ({lp.start:.2f}-{lp.end:.2f})" for lp in song.light_plan) if song.light_plan else 'None'}
 - song sections: 
 {_song_sections_line}
 """
@@ -401,6 +476,7 @@ Genre: {song.genre}
             # Serialize arrangement as list of dicts
             "arrangement": [s.to_dict() if isinstance(s, Section) else s for s in self.arrangement],
             "key_moments": [km.to_dict() if isinstance(km, KeyMoment) else km for km in self.key_moments],
+            "light_plan": [lp.to_dict() if isinstance(lp, LightPlanItem) else lp for lp in self.light_plan],
         }
         # Ensure all data is JSON serializable
         result = ensure_json_serializable(data)
@@ -419,7 +495,7 @@ Genre: {song.genre}
         print(f"ℹ️ Metadata saved for '{self._song_name}' at {self.get_metadata_path()}")
 
     def __str__(self) -> str:
-        return f"SongMetadata(song_name={self._song_name}, title={self.title}, genre={self.genre}, bpm={self.bpm}, duration={self.duration}, beats={len(self.beats)}, arrangement={len(self.arrangement)})"
+        return f"SongMetadata(song_name={self._song_name}, title={self.title}, genre={self.genre}, bpm={self.bpm}, duration={self.duration}, beats={len(self.beats)}, arrangement={len(self.arrangement)}, light_plan={len(self.light_plan)})"
 
 
 

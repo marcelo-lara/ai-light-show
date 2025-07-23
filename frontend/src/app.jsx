@@ -10,6 +10,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import ChatAssistant from './ChatAssistant';
 import SongMetadata from './components/SongMetadata';
+import LightingPlan from './components/song/LightingPlan';
 
 export function App() {
   const wsRef = useRef(null); // WebSocket reference
@@ -294,19 +295,39 @@ export function App() {
               }}
             />
           </div>
+          <div className="flex gap-6">
+              <div className="main-left">
+                {/* Chat Card */}
+                <div className="bg-white/10 rounded-2xl p-6 mb-6">
+                  <ChatAssistant 
+                    wsSend={wsSend} 
+                    lastResponse={lastResponse}
+                    contextProgress={contextProgress}
+                    llmStatus={llmStatus}
+                  />
+                </div>
 
-          {/* Chat Card */}
-          <div className="bg-white/10 rounded-2xl p-6 mb-6">
-            <ChatAssistant 
-              wsSend={wsSend} 
-              lastResponse={lastResponse}
-              contextProgress={contextProgress}
-              llmStatus={llmStatus}
-            />
+                {/* Actions Card: Display lighting actions from the backend */}
+                <ActionsCard wsActions={lightingActions} />
+              </div>
+              <div className="main-right">
+                {/* Lighting Plan */}
+                {songData && (
+                  <div className="bg-white/10 rounded-2xl p-6 mb-6">
+                    <LightingPlan
+                      currentTime={currentTime}
+                      setCurrentTime={setCurrentTime} 
+                      songData={songData}
+                      seekTo={(time) => handleSeekTo(time)}
+                      saveLightPlan={(lp) => {wsSend("saveLightPlan", {light_plan: lp})}}
+                    />
+                  </div>
+                )}
+              </div>
           </div>
 
-          {/* Actions Card: Display lighting actions from the backend */}
-          <ActionsCard wsActions={lightingActions} />
+
+
 
         </div>
       </div>

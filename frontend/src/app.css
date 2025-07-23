@@ -32,6 +32,15 @@
   padding: 2em;
 }
 
+.main-left {
+  flex: 1;
+  margin-right: 1rem;
+}
+
+.main-right {
+  flex: 1;
+}
+
 .read-the-docs {
   color: #888;
 }

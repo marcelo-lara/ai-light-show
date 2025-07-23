@@ -97,6 +97,16 @@ async def handle_save_key_moments(websocket: WebSocket, message: Dict[str, Any])
     else:
         print("No song object loaded; cannot save key moments.")
 
+async def handle_save_light_plan(websocket: WebSocket, message: Dict[str, Any]) -> None:
+    """Handle saving song light plan."""
+    light_plan = message["light_plan"]
+    if app_state.current_song is not None:
+        app_state.current_song.light_plan = light_plan
+        app_state.current_song.save()
+        print(f"✅ Saved {len(light_plan)} light plan items for {app_state.current_song.song_name}")
+    else:
+        print("No song object loaded; cannot save light plan.")
+
 async def handle_analyze_song(websocket: WebSocket, message: Dict[str, Any]) -> None:
     """Handle song analysis using the standalone song analysis service."""
     from ..song_analysis_client import SongAnalysisClient
