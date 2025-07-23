@@ -37,7 +37,12 @@
         }
       }
     ],
-    "effects": ["full", "strobe", "flash", "seek"],
+    "effects": [
+      "full",
+      "strobe",
+      "flash",
+      "seek"
+    ],
     "arm": {
       "shutter": 255
     },
@@ -51,25 +56,25 @@
       },
       "value_mappings": {
         "color": {
-            "0": "White",
-            "25": "Orange",
-            "50": "Cyan",
-            "75": "Purple",
-            "100": "Yellow",
-            "125": "Green",
-            "150": "Blue",
-            "175": "Red"
+          "0": "White",
+          "25": "Orange",
+          "50": "Cyan",
+          "75": "Purple",
+          "100": "Yellow",
+          "125": "Green",
+          "150": "Blue",
+          "175": "Red"
         },
         "gobo": {
-            "0": "Open",
-            "25": "Tunnel",
-            "50": "BigOval",
-            "75": "SmallOval",
-            "100": "Squares",
-            "125": "Shapes",
-            "150": "Tribal",
-            "175": "Slashes"
-        }      
+          "0": "Open",
+          "25": "Tunnel",
+          "50": "BigOval",
+          "75": "SmallOval",
+          "100": "Squares",
+          "125": "Shapes",
+          "150": "Tribal",
+          "175": "Slashes"
+        }
       },
       "position_constraints": {
         "pan": {
@@ -81,7 +86,12 @@
           "max": 3363
         }
       }
-
+    },
+    "position": {
+      "x": 0.5,
+      "y": 0.05,
+      "z": 0.9,
+      "label": "center_stage"
     }
   },
   {
@@ -95,10 +105,14 @@
       "blue": 19,
       "strobe": 20
     },
-    "current_values": {
-    },
+    "current_values": {},
     "presets": [],
-    "effects": ["strobe", "flash", "fade", "full"],
+    "effects": [
+      "strobe",
+      "flash",
+      "fade",
+      "full"
+    ],
     "arm": {
       "dim": 255
     },
@@ -109,6 +123,12 @@
         "green": "color",
         "blue": "color"
       }
+    },
+    "position": {
+      "x": 0.1,
+      "y": 0.1,
+      "z": 0.9,
+      "label": "stage_left"
     }
   },
   {
@@ -132,7 +152,12 @@
       "program": 0
     },
     "presets": [],
-    "effects": ["strobe", "flash", "fade", "full"],
+    "effects": [
+      "strobe",
+      "flash",
+      "fade",
+      "full"
+    ],
     "arm": {
       "dim": 255
     },
@@ -143,6 +168,12 @@
         "green": "color",
         "blue": "color"
       }
+    },
+    "position": {
+      "x": 0.9,
+      "y": 0.1,
+      "z": 0.9,
+      "label": "stage_right"
     }
   },
   {
@@ -166,7 +197,12 @@
       "program": 0
     },
     "presets": [],
-    "effects": ["strobe", "flash", "fade", "full"],
+    "effects": [
+      "strobe",
+      "flash",
+      "fade",
+      "full"
+    ],
     "arm": {
       "dim": 255
     },
@@ -177,6 +213,12 @@
         "green": "color",
         "blue": "color"
       }
+    },
+    "position": {
+      "x": 0.1,
+      "y": 0.8,
+      "z": 0.9,
+      "label": "stage_left"
     }
   },
   {
@@ -200,7 +242,12 @@
       "program": 0
     },
     "presets": [],
-    "effects": ["strobe", "flash", "fade", "full"],
+    "effects": [
+      "strobe",
+      "flash",
+      "fade",
+      "full"
+    ],
     "arm": {
       "dim": 255
     },
@@ -211,6 +258,11 @@
         "green": "color",
         "blue": "color"
       }
+    },
+    "position": {
+      "x": 0.9,
+      "y": 0.8,
+      "label": "stage_right"
     }
   }
 ]
