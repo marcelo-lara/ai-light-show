@@ -34,9 +34,36 @@ The AI Light Show project is a multi-service system designed for music-driven DM
   - Integration with the LangGraph pipeline for segment labeling and lighting hints.
 
 ### 4. `fixtures/`
-- **Purpose**: Defines lighting fixture configurations.
+- **Purpose**: Defines lighting fixture configurations and spatial positioning.
 - **Key Files**:
-  - `fixtures.json`: JSON file containing fixture definitions.
+  - `fixtures.json`: JSON file containing fixture definitions with channel mappings, effects, and position data.
+
+#### Fixture Configuration Structure
+Each fixture in `fixtures.json` includes:
+- **Basic Info**: `id`, `name`, `type` (e.g., "moving_head", "rgb")
+- **DMX Channels**: Channel mappings (e.g., `"dim": 16, "red": 17`)
+- **Effects**: Available effects (e.g., "strobe", "flash", "fade")
+- **Position**: 3D coordinates and labels (e.g., `{"x": 0.5, "y": 0.05, "z": 0.9, "label": "center_stage"}`)
+- **Presets**: Named configurations for quick recall
+- **Metadata**: Channel types, value mappings, and constraints
+
+#### Fixture Model (`backend/models/fixtures/fixture_model.py`)
+- **Properties**:
+  - `position`: Returns a `Position` dataclass with x, y, z coordinates and label
+  - `channel_names`: DMX channel mapping from configuration
+  - `actions`: Available actions derived from action handlers
+- **Methods**:
+  - `render_action()`: Execute lighting effects
+  - `set_arm()`: Enable/disable fixture channels
+  - `set_channel_value()`: Set specific channel values
+  - `fade_channel()`: Create smooth transitions between values
+
+#### Fixtures List Model (`backend/models/fixtures/fixtures_list_model.py`)
+- **Position-Based Queries**:
+  - `get_fixtures_by_position_label()`: Find fixtures by position label (e.g., "stage_left")
+  - `get_fixtures_in_area()`: Find fixtures within a rectangular area using x,y coordinates
+- **Automatic Position Loading**: Position data is automatically loaded from `fixtures.json` when fixtures are initialized
+- **Debug Output**: Shows fixture positions when debug mode is enabled
 
 ### 5. `docs/`
 - **Purpose**: Contains documentation for the project.
@@ -57,6 +84,22 @@ The AI Light Show project is a multi-service system designed for music-driven DM
   - `test_lighting_pipeline.py`: Tests the lighting pipeline.
   - `test_context.py`: Verifies dynamic context building.
   - `test_llm_status_sync.py`: Tests LLM status synchronization.
+
+## Key Data Models
+
+### Position Dataclass (`backend/models/position.py`)
+- **Purpose**: Represents 3D spatial coordinates for fixtures
+- **Fields**:
+  - `x`: Float representing horizontal position (0.0-1.0 normalized)
+  - `y`: Float representing vertical position (0.0-1.0 normalized) 
+  - `z`: Optional float for depth/height
+  - `label`: Optional string identifier (e.g., "center_stage", "stage_left")
+
+### Fixture Model Architecture
+- **Base Class**: `FixtureModel` provides common functionality
+- **Specialized Classes**: Type-specific implementations (e.g., RGB, Moving Head)
+- **DMX Canvas Integration**: All fixtures use a singleton DMX canvas for rendering
+- **Dynamic Configuration**: Fixture capabilities loaded from `fixtures.json`
 
 ## Key Architectural Patterns
 

@@ -66,6 +66,40 @@ class FixturesListModel:
         """
         return self._fixtures.get(id)
     
+    def get_fixtures_by_position_label(self, label: str) -> list[FixtureModel]:
+        """
+        Get all fixtures at a specific position label.
+        Args:
+            label (str): Position label to search for (e.g., 'stage_left', 'center_stage').
+        Returns:
+            list[FixtureModel]: List of fixtures at the specified position.
+        """
+        fixtures_at_position = []
+        for fixture in self._fixtures.values():
+            if fixture.position and fixture.position.label == label:
+                fixtures_at_position.append(fixture)
+        return fixtures_at_position
+    
+    def get_fixtures_in_area(self, min_x: float = 0.0, max_x: float = 1.0, 
+                           min_y: float = 0.0, max_y: float = 1.0) -> list[FixtureModel]:
+        """
+        Get all fixtures within a specified rectangular area.
+        Args:
+            min_x (float): Minimum x coordinate (0.0-1.0).
+            max_x (float): Maximum x coordinate (0.0-1.0).
+            min_y (float): Minimum y coordinate (0.0-1.0).
+            max_y (float): Maximum y coordinate (0.0-1.0).
+        Returns:
+            list[FixtureModel]: List of fixtures within the area.
+        """
+        fixtures_in_area = []
+        for fixture in self._fixtures.values():
+            if fixture.position:
+                pos = fixture.position
+                if (min_x <= pos.x <= max_x and min_y <= pos.y <= max_y):
+                    fixtures_in_area.append(fixture)
+        return fixtures_in_area
+    
     def load_fixtures(self, fixtures_config_file:Path, debug=None) -> None:
         """
         Load fixtures from the fixtures.json file.
@@ -109,4 +143,6 @@ class FixturesListModel:
         if debug:
             print(f"Loaded {len(self._fixtures)} fixtures:")
             for fixture in self._fixtures.values():
-                print(f"  - {fixture}")
+                position = fixture.position
+                position_str = f" at {position.label} ({position.x}, {position.y}, {position.z})" if position else " (no position)"
+                print(f"  - {fixture}{position_str}")

@@ -1,5 +1,6 @@
 from typing import Optional, Dict, Any
 from backend.services.dmx.dmx_canvas import DmxCanvas
+from backend.models.position import Position
 
 class FixtureModel:
     def __init__(self, id: str, name: str, fixture_type: str, channels: int, dmx_canvas: Optional[DmxCanvas] = None, config: Optional[Dict[str, Any]] = None):
@@ -47,6 +48,20 @@ class FixtureModel:
     def channel_names(self) -> Dict[str, int]:
         """Get the channel names to DMX channel mapping from configuration."""
         return self._config.get('channels', {})
+
+    @property
+    def position(self) -> Optional[Position]:
+        """Get the position of the fixture from configuration."""
+        position_config = self._config.get('position', {})
+        if not position_config:
+            return None
+        
+        return Position(
+            x=position_config.get('x', 0.0),
+            y=position_config.get('y', 0.0),
+            z=position_config.get('z'),
+            label=position_config.get('label')
+        )
 
     @property
     def dmx_canvas(self):
