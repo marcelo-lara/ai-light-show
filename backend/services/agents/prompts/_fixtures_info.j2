@@ -1,0 +1,7 @@
+{# Fixtures Information Template - Reusable across agents #}
+{% if fixtures -%}
+## Fixtures Available
+{% for fixture in fixtures -%}
+- {{ fixture.id }} ({{ fixture.type }}): effects = {{ fixture.effects | join(', ') }}
+{% endfor %}
+{%- endif %}

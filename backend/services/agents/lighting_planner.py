@@ -7,6 +7,7 @@ import re
 from typing import Dict, Any, List
 from typing_extensions import TypedDict
 from pathlib import Path
+from jinja2 import Environment, FileSystemLoader
 
 from ..ollama.ollama_api import query_ollama
 
@@ -42,6 +43,13 @@ class LightingPlannerAgent:
     
     def __init__(self, model: str = "mixtral"):
         self.model = model
+        # Setup Jinja2 environment
+        self.prompts_dir = Path(__file__).parent / "prompts"
+        self.jinja_env = Environment(
+            loader=FileSystemLoader(self.prompts_dir),
+            trim_blocks=True,
+            lstrip_blocks=True
+        )
     
     def run(self, state: PipelineState) -> PipelineState:
         """Execute the lighting planning process for LangGraph pipeline"""
@@ -54,8 +62,8 @@ class LightingPlannerAgent:
         end_time = segment.get("end", 0.0)
         duration = end_time - start_time
         
-        # Build prompt for lighting planning
-        prompt = self._build_prompt(context_summary, start_time, end_time, duration)
+        # Build prompt using Jinja2 template
+        prompt = self._build_prompt(context_summary, segment)
         
         try:
             # Call model via Ollama
@@ -87,27 +95,43 @@ class LightingPlannerAgent:
             result_state["actions"] = []
             return result_state
     
-    def _build_prompt(self, context_summary: str, start_time: float, end_time: float, duration: float) -> str:
-        """Build the prompt for lighting planning"""
-        return f"""You are a stage lighting designer.
-
-Based on this musical context:
-"{context_summary}"
-
-Suggest lighting actions. Use "flash", "strobe", "fade", "pulse", "sweep" etc.
-Return JSON array with:
-- type (lighting action type)
-- color (color name)
-- start (seconds from segment start)
-- duration (seconds)
-
-This section starts at: {start_time}s and ends at: {end_time}s (duration: {duration:.1f}s)
-
-Return ONLY valid JSON in this format:
-[
-  {{"type": "strobe", "color": "white", "start": {start_time}, "duration": 2.5}},
-  {{"type": "flash", "color": "blue", "start": {start_time + 1.0}, "duration": 1.0}}
-]"""
+    def _build_prompt(self, context_summary: str, segment: Dict[str, Any]) -> str:
+        """Build the prompt using Jinja2 template"""
+        # Get fixtures from app_state
+        from backend.models.app_state import app_state
+        
+        # Get current song from app_state
+        song = app_state.current_song if app_state.current_song else None
+        
+        # Prepare fixtures data for template
+        fixtures_data = []
+        if app_state.fixtures:
+            for fixture_id, fixture in app_state.fixtures.fixtures.items():
+                fixtures_data.append({
+                    'id': fixture_id,
+                    'type': getattr(fixture, 'type', 'Unknown'),
+                    'effects': getattr(fixture, 'effects', ['flash', 'fade'])
+                })
+        
+        # Calculate segment duration
+        start_time = segment.get("start", 0.0)
+        end_time = segment.get("end", 0.0)
+        duration = end_time - start_time
+        
+        # Add calculated duration to segment data
+        segment_with_duration = segment.copy()
+        segment_with_duration['duration'] = duration
+        
+        # Render template
+        template = self.jinja_env.get_template('lighting_planner.prompt.j2')
+        prompt = template.render(
+            song=song,
+            fixtures=fixtures_data,
+            context_summary=context_summary,
+            segment=segment_with_duration
+        )
+        
+        return prompt
     
     def _parse_actions(self, response: str, start_time: float, duration: float) -> List[Dict[str, Any]]:
         """Parse lighting actions from LLM response"""
@@ -145,16 +169,6 @@ Return ONLY valid JSON in this format:
             ]
         
         return actions
-
-    # Legacy methods for backward compatibility
-    def plan_lighting(self, prompt: str, **kwargs):
-        """Legacy method for simple lighting planning"""
-        response = query_ollama(prompt, model=self.model, **kwargs)
-        return self.parse_response(response)
-
-    def parse_response(self, response):
-        """Simple response parsing for backward compatibility"""
-        return response
 
 
 # Node function for LangGraph compatibility

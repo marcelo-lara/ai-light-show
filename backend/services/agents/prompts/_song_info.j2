@@ -1,0 +1,26 @@
+{# Song Information Template - Reusable across agents #}
+## Song Info
+- Title: {{ song.title }}
+- BPM: {{ song.bpm }}
+- Duration: {{ song.duration }}s
+
+{% if song.arrangement -%}
+## Song Arrangement
+{% for section in song.arrangement -%}
+- {{ section.name }}: {{ section.start }}s → {{ section.end }}s
+{% endfor %}
+{%- endif %}
+
+{% if song.beats -%}
+## Song Beat Times
+{% for beat in song.beats -%}
+- {{ beat.time }}s: {{ beat.description }}
+{% endfor %}
+{%- endif %}
+
+{% if song.key_moments -%}
+## Key Moments
+{% for moment in song.key_moments -%}
+- {{ moment.time }}s - {{ moment.name }}: {{ moment.description }}
+{% endfor %}
+{%- endif %}
