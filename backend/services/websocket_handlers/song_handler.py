@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict, Any
 from fastapi import WebSocket
 from ...models.app_state import app_state
-from ...models.song_metadata import SongMetadata, Section
+from shared.models.song_metadata import SongMetadata, Section
 from ...config import SONGS_DIR
 from ..dmx.dmx_canvas import DmxCanvas
 from ..utils.broadcast import broadcast_to_all
