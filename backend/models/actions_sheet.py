@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import List
 
 from backend.config import SONGS_DIR
-from backend.models.song_metadata import SongMetadata
+from shared.models.song_metadata import SongMetadata
 
 
 @dataclass

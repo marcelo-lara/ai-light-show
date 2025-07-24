@@ -8,7 +8,7 @@ RENDER_DMX = False  # Disable rendering to DMX for this test
 ## 1 Initialize the DMX Canvas singleton with a song duration
 print("⛳️ Initializing DMX Canvas singleton with song duration...")
 from backend.config import SONGS_DIR
-from backend.models.song_metadata import SongMetadata
+from shared.models.song_metadata import SongMetadata
 song_metadata = SongMetadata(
     song_name=f"born_slippy",
     songs_folder=str(SONGS_DIR),
