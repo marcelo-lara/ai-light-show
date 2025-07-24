@@ -117,6 +117,7 @@ python -m song_analysis.test_pipeline_run --song track.mp3
 
 ## Enforcement
 - No hardcoded placeholders when moving code
+- User prompts ALWAYS be handled by LLM (NO HARDCODED LOGIC, except for direct commands)
 - Do NOT create backward compatibility, update to latest patterns if needed.
 - Do not use fallbacks or legacy patterns
 - prepend "clear &&" to test commands.

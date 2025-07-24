@@ -6,6 +6,8 @@ from ...models.app_state import app_state
 from ..utils.broadcast import broadcast_to_all
 from ..direct_commands import DirectCommandsParser
 from .action_executor import execute_confirmed_action
+from ...services.agents import ContextBuilderAgent, LightingPlannerAgent, EffectTranslatorAgent
+from ...services.agents.context_builder import PipelineState
 
 UI_CHAT_MODEL = "qwen3:8b"  # Default model for AI chat
 
@@ -21,7 +23,7 @@ _direct_commands_parser = DirectCommandsParser()
 async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> None:
     """Handle userPrompt with streaming and action proposals/confirmation flow."""
     from ...services.ollama import query_ollama_streaming
-    
+
     prompt = message.get("text", "") or message.get("prompt", "")
     if not prompt:
         await websocket.send_json({"type": "chatResponse", "response": "No prompt provided."})
@@ -29,15 +31,14 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
 
     # Define context separately from the prompt
     context = build_ui_context()
-    print(f"ℹ️ Context: {context}")
 
     try:
         session_id = str(id(websocket))
-        
+
         # Initialize conversation history for this session if not exists
         if session_id not in _conversation_history:
             _conversation_history[session_id] = []
-        
+
         # Check if this is a direct command (starts with #)
         if prompt.strip().startswith("#"):
             await _handle_direct_command(websocket, prompt)
@@ -104,11 +105,13 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
         
         # Send chunk callback for streaming
         async def send_chunk(chunk):
+            nonlocal current_response
+            current_response += chunk
             await websocket.send_json({
                 "type": "chatResponseChunk", 
                 "chunk": chunk
             })
-        
+
         # Stream the AI response
         try:
             # Pass context and conversation history to the AI request
@@ -139,26 +142,23 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
         # Store the conversation in history
         _conversation_history[session_id].append({"role": "user", "content": prompt})
         _conversation_history[session_id].append({"role": "assistant", "content": current_response})
-        
+
         # Limit conversation history to last 20 messages (10 exchanges)
         if len(_conversation_history[session_id]) > 20:
             _conversation_history[session_id] = _conversation_history[session_id][-20:]
-        
-        # Don't send final response - streaming chunks are sufficient
-        # The frontend should handle the streaming chunks properly
-        
+
         # Update status to complete
         await broadcast_to_all({
             "type": "chatStatus",
             "status": "ready"
         })
-    
+
     except Exception as e:
         print(f"❌ Error in handle_user_prompt: {e}")
-        
+
         # Provide user-friendly error messages
         error_message = "Sorry, I'm having trouble connecting to the AI service right now. Please check if the Ollama service is running and try again."
-        
+
         # Check for specific error types
         if "Connection" in str(e) or "connect" in str(e).lower():
             error_message = "Can't connect to the AI service. Please make sure Ollama is running on http://llm-service:11434"
@@ -166,13 +166,13 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
             error_message = "The AI service is taking too long to respond. Please try again in a moment."
         elif "model" in str(e).lower():
             error_message = "The 'mistral' model is not available. Please check that it's installed in Ollama."
-        
+
         # Send streaming end if we started streaming
         try:
             await websocket.send_json({"type": "chatResponseEnd"})
         except:
             pass
-        
+
         # Send the error as a chat response
         await websocket.send_json({
             "type": "chatResponse", 
@@ -249,7 +249,7 @@ async def _process_response_actions(response: str, websocket: WebSocket) -> None
         action_lines = []
         for line in response.split('\n'):
             line = line.strip()
-            if line.startswith('#action') or (line.startswith('#') and any(action in line for action in ['flash', 'strobe', 'fade', 'seek', 'arm'])):
+            if line.startswith('#action') or (line.startswith('#') and any(word in line for word in ['flash', 'strobe', 'fade', 'seek', 'arm'])):
                 action_lines.append(line)
         
         if not action_lines:
@@ -335,64 +335,68 @@ async def check_ai_service_health() -> tuple[bool, str]:
     except Exception as e:
         return False, f"AI service error: {str(e)}"
 
-def _build_fixtures_context() -> str:
-    """Build the context for the lighting interpretation"""
-    fixture_descriptions = []
-    if app_state.fixtures and hasattr(app_state.fixtures, 'fixtures'):
-        fixtures_dict = app_state.fixtures.fixtures
-        for fixture_id, fixture in fixtures_dict.items():
-            fixture_type = "RGB PAR Light" if fixture.fixture_type == "parcan" else fixture.fixture_type
-            fixture_type = "Moving Head" if fixture.fixture_type == "moving_head" else fixture_type
-            fixture_descriptions.append(f"  - {fixture_type} (id: {fixture.id}) -> available actions: {', '.join(fixture.actions)}")
-    else:
-        raise ValueError("Fixtures not available in app_state")
-    
-    # Create the fixture list from the descriptions
-    return "\n".join(fixture_descriptions)
-
 def build_ui_context() -> str:
-    """Build the context for the lighting interpretation"""
+    """Build the context for the lighting interpretation using Jinja2 templates"""
+    from pathlib import Path
+    from jinja2 import Environment, FileSystemLoader
+    
+    # Setup Jinja2 environment
+    prompts_dir = Path(__file__).parent.parent / "agents" / "prompts"
+    jinja_env = Environment(
+        loader=FileSystemLoader(prompts_dir),
+        trim_blocks=True,
+        lstrip_blocks=True
+    )
+    
+    # Load the template
+    template = jinja_env.get_template('ui_context.j2')
+    
+    # Prepare template variables
     song = app_state.current_song
+    song_data = {}
     
     # Handle case when no song is loaded
     if song is None:
-        song_details = "No song currently loaded. Please load a song to get detailed musical analysis."
+        song_data = {
+            "title": "No song loaded",
+            "bpm": 0,
+            "duration": 0,
+            "arrangement": [],
+            "beats": [],
+            "key_moments": []
+        }
     else:
         try:
-            song_details = song.get_prompt()
-        except (AttributeError, Exception) as e:
-            song_details = f"Song: {getattr(song, 'name', 'Unknown')} (analysis not available: {e})"
+            # Extract song data for template
+            song_data = {
+                "title": getattr(song, 'name', 'Unknown'),
+                "bpm": getattr(song, 'bpm', 0),
+                "duration": getattr(song, 'duration', 0),
+                "arrangement": getattr(song, 'sections', []),
+                "beats": getattr(song, 'beats', []),
+                "key_moments": getattr(song, 'key_moments', [])
+            }
+        except Exception as e:
+            print(f"Error preparing song data: {e}")
+            song_data = {
+                "title": getattr(song, 'name', 'Unknown'),
+                "bpm": 0,
+                "duration": 0,
+                "arrangement": [],
+                "beats": [],
+                "key_moments": []
+            }
     
-    return f"""You are a Lighting Effects Assistant for DMX-controlled light shows synced to music.
-You will receive user prompts describing lighting effects, and you will interpret these into actions using the available fixtures.
-
-Song Interpretation Details:
-{song_details}
-
-Capabilities:
-- Understand prompts like "fade from left to right for two beats"
-- Translate into actions for DMX lighting
-- Effects are single or sequential actions like fade, strobe, flash, seek.
-- perform many actions as needed to create the desired effect.
-- Use only this fixtures: 
-{_build_fixtures_context()}
-
-Rules:
-- If a user asks about non-light/music topics, reply with something silly and redirect to lighting.
-    Example non-domain response:
-    User: "What's the capital of Mars?"
-    Assistant: "Probably Disco-topia! Anyway, shall we strobe the red heads to the beat?"
-
-- Use ONLY the supported actions and fixtures.
-- Assume all fixtures are available and ready to use.
-- Lights are located in a venue with a stage and audience (not in a car or other setting)
-- Combine multiple actions to create complex effects when needed.
-- Please respond in English and keep your responses short.
-- If you don't understand a prompt, ask for clarification.
-- When no exact start time is provided, use the current song's closest beat time.
-- actions should be in the EXACTLY format:
-   - "#action <action> <fixture_id> at <start_time> for <duration>" -> example: "#action fade moving_head_1 at 1.21s for 2s"
-   - each action should be a single line starting with #action and not contain any other text.
-- Complex effects may require multiple actions, so you can perform many actions as needed to create the desired effect.
-- DMX Fixtures doesn't have logic for complex effects, so you must perform each action separately.
-"""
+    # Prepare fixtures data
+    fixtures = []
+    if app_state.fixtures and hasattr(app_state.fixtures, 'fixtures'):
+        fixtures_dict = app_state.fixtures.fixtures
+        for fixture_id, fixture in fixtures_dict.items():
+            fixtures.append({
+                "id": fixture.id,
+                "type": fixture.fixture_type,
+                "effects": fixture.actions
+            })
+    
+    # Render the template with context
+    return template.render(song=song_data, fixtures=fixtures)
