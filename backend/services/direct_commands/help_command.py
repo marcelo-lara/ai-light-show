@@ -29,6 +29,11 @@ class HelpCommandHandler(BaseCommandHandler):
         help_text.append("  #analyze context reset     - Clear and regenerate lighting context")
         help_text.append("")
         
+        # Agent Commands
+        help_text.append("🤖 AGENT COMMANDS:")
+        help_text.append("  #call lightingPlanner       - Execute lighting planner agent directly")
+        help_text.append("")
+        
         # Task Management
         help_text.append("⚙️  TASK MANAGEMENT:")
         help_text.append("  #tasks                      - List all background tasks")

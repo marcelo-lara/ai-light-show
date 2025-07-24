@@ -119,6 +119,7 @@ python -m song_analysis.test_pipeline_run --song track.mp3
 - No hardcoded placeholders when moving code
 - Do NOT create backward compatibility, update to latest patterns if needed.
 - Do not use fallbacks or legacy patterns
+- prepend "clear &&" to test commands.
 - Always use class public properties, not private or internal
 - Use latest import paths from `backend/services/agents/`
 - Service boundaries: backend ↔ song_analysis via REST client only

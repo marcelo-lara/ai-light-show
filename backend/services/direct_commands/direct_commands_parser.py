@@ -10,6 +10,7 @@ from .base_command import BaseCommandHandler
 from .help_command import HelpCommandHandler
 from .tasks_command import TasksCommandHandler
 from .analyze_commands import AnalyzeCommandHandler, AnalyzeContextCommandHandler
+from .agent_call_commands import CallAgentCommandHandler
 from .action_commands import (
     RenderCommandHandler, 
     ClearCommandHandler, 
@@ -34,6 +35,7 @@ class DirectCommandsParser:
             TasksCommandHandler(),
             AnalyzeContextCommandHandler(),  # Must come before AnalyzeCommandHandler
             AnalyzeCommandHandler(),
+            CallAgentCommandHandler(),
             CreateLightPlanCommandHandler(),
             DeleteLightPlanCommandHandler(),
             ResetLightPlansCommandHandler(),
