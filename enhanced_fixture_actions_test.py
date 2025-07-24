@@ -22,7 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from backend.models.app_state import app_state
-from backend.services.ollama.direct_commands_parser import DirectCommandsParser
+from backend.services.direct_commands import DirectCommandsParser
 from backend.services.dmx.actions_parser_service import ActionsParserService
 from backend.services.dmx.dmx_canvas import DmxCanvas
 from backend.models.actions_sheet import ActionsSheet

@@ -13,7 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from backend.models.app_state import app_state
-from backend.services.ollama.direct_commands_parser import DirectCommandsParser
+from backend.services.direct_commands import DirectCommandsParser
 from shared.models.song_metadata import SongMetadata
 
 

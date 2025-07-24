@@ -4,7 +4,7 @@ from typing import Dict, Any
 from fastapi import WebSocket
 from ...models.app_state import app_state
 from ..utils.broadcast import broadcast_to_all
-from ..ollama.direct_commands_parser import DirectCommandsParser
+from ..direct_commands import DirectCommandsParser
 from .action_executor import execute_confirmed_action
 
 UI_CHAT_MODEL = "qwen3:8b"  # Default model for AI chat
