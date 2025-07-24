@@ -112,7 +112,7 @@ async def query_ollama_streaming(
                 # Initialize action command parser if auto_execute_commands is enabled
                 if auto_execute_commands and websocket:
                     try:
-                        from .direct_commands_parser import DirectCommandsParser
+                        from ..direct_commands.direct_commands_parser import DirectCommandsParser
                         action_command_parser = DirectCommandsParser()
                         print(f"🎭 Action command parser initialized for session {session_id}")
                     except Exception as e:
@@ -215,11 +215,11 @@ async def _detect_and_execute_action_commands(
         # 3. Commands ending at natural boundaries
         
         # Find simple commands first (help, render, tasks, etc.)
-        simple_commands = re.findall(r'#(?:action\s+)?(help|render|tasks|analyze(?:\s+context(?:\s+reset)?)?|clear\s+(?:all|id\s+\w+|group\s+\w+))', 
+        simple_commands = re.findall(r'#(?:action\s+)?(help|render|tasks|analyze(?:\s+context(?:\s+reset)?)?|clear\s+(?:all|id\s+\w+|group\s+\w+)|reset\s+plans|list\s+plans|plans)', 
                                    accumulated_text, re.IGNORECASE)
         
         # Find complex commands with timing (add, flash, fade, etc.)
-        complex_pattern = r'#(?:action\s+)?((?:add|flash|fade|strobe|set|preset)\s+[^#\n]*?(?:at|to)\s+[\d.]+[sb]?[^#\n]*?)(?=\s*(?:\n|$|\.|\!|\?|,|\s+#|\s+[A-Z][a-z]))'
+        complex_pattern = r'#(?:action\s+)?((?:add|flash|fade|strobe|set|preset|create\s+plan|delete\s+plan)\s+[^#\n]*?(?:at|to)\s+[\d.]+[sb]?[^#\n]*?)(?=\s*(?:\n|$|\.|\!|\?|,|\s+#|\s+[A-Z][a-z]))'
         complex_commands = re.findall(complex_pattern, accumulated_text, re.IGNORECASE | re.DOTALL)
         
         # Combine all found commands
@@ -304,6 +304,11 @@ def _is_valid_action_command(command_text: str) -> bool:
         r'^tasks$',
         r'^analyze\s*(context\s*(reset)?)?$',
         r'^clear\s+(all|id\s+\w+|group\s+\w+)',
+        r'^reset\s+plans$',
+        r'^list\s+plans$',
+        r'^plans$',
+        r'^create\s+plan\s+.+\s+at\s+[\d.]+[sb]?',
+        r'^delete\s+plan\s+.+',
         r'^add\s+\w+\s+to\s+\w+\s+at\s+[\d.]+[sb]?(\s+(for|duration)\s+[\d.]+[sb]?)?',
         r'^(flash|fade|strobe|set|preset)\s+\w+.*?at\s+[\d.]+[sb]?',
         r'^(flash|fade|strobe)\s+\w+.*?(for|duration)\s+[\d.]+[sb]?',

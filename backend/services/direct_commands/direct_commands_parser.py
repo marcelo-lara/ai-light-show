@@ -16,6 +16,12 @@ from .action_commands import (
     AddCommandHandler, 
     DirectActionCommandHandler
 )
+from .light_plan_commands import (
+    CreateLightPlanCommandHandler,
+    DeleteLightPlanCommandHandler,
+    ResetLightPlansCommandHandler,
+    ListLightPlansCommandHandler
+)
 
 
 class DirectCommandsParser:
@@ -28,6 +34,10 @@ class DirectCommandsParser:
             TasksCommandHandler(),
             AnalyzeContextCommandHandler(),  # Must come before AnalyzeCommandHandler
             AnalyzeCommandHandler(),
+            CreateLightPlanCommandHandler(),
+            DeleteLightPlanCommandHandler(),
+            ResetLightPlansCommandHandler(),
+            ListLightPlansCommandHandler(),
             RenderCommandHandler(),
             ClearCommandHandler(),
             AddCommandHandler(),

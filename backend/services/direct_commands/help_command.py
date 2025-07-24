@@ -34,6 +34,15 @@ class HelpCommandHandler(BaseCommandHandler):
         help_text.append("  #tasks                      - List all background tasks")
         help_text.append("")
         
+        # Light Plan Management
+        help_text.append("💡 LIGHT PLAN MANAGEMENT:")
+        help_text.append("  #create plan <name> at <time> [to <end_time>] [description <desc>]")
+        help_text.append("     Example: #create plan 'Intro Flash' at 1m30s to 1m35s description 'Opening sequence'")
+        help_text.append("  #delete plan <id|name>      - Delete light plan by ID or name")
+        help_text.append("  #reset plans               - Delete all light plans")
+        help_text.append("  #list plans                - Show all light plans")
+        help_text.append("")
+        
         # Action Management
         help_text.append("🎭 ACTION MANAGEMENT:")
         help_text.append("  #render                     - Render all actions to DMX canvas")
