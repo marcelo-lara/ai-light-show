@@ -7,6 +7,7 @@ import re
 from typing import Dict, Any, Optional, List
 from typing_extensions import TypedDict
 from pathlib import Path
+from shared.models.song_metadata_new import SongMetadata
 
 from ..ollama.ollama_api import query_ollama
 
@@ -199,7 +200,6 @@ Focus on the mood, energy level, and key instruments. Keep it concise and descri
         """
         # Get the current song (SongMetadata) from app state
         from ...models.app_state import app_state
-        from ...models.song_metadata import SongMetadata
         
         if not app_state.current_song:
             raise ValueError("No song is currently loaded")

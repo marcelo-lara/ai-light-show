@@ -2,7 +2,6 @@
 
 from typing import Dict, Any
 from fastapi import WebSocket
-from ...models.app_state import app_state
 
 async def handle_sync(websocket: WebSocket, message: Dict[str, Any]) -> None:
     """Handle playback synchronization."""
