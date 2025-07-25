@@ -124,16 +124,6 @@ Respond with a short natural language summary like:
 
 Focus on the mood, energy level, and key instruments. Keep it concise and descriptive."""
 
-    # Legacy methods for backward compatibility with SongContextAgent
-    def get_context(self, prompt: str, **kwargs):
-        """Legacy method for simple context extraction"""
-        response = query_ollama(prompt, model=self.model, **kwargs)
-        return self.parse_response(response)
-
-    def parse_response(self, response):
-        """Simple response parsing"""
-        return response
-        
     def extract_lighting_actions(self, response: str, start_time: float, end_time: float) -> list:
         """
         Extract lighting actions from the model response.
@@ -370,9 +360,9 @@ Focus on the mood, energy level, and key instruments. Keep it concise and descri
                                 break
                     
                     full_prompt = song_info + "\n" + prompt
-                    
-                    # query the LLM
-                    response = self.get_context(full_prompt)
+
+                    # query the LLM directly
+                    response = query_ollama(full_prompt, model=self.model)
                     
                     # extract lighting actions from the response
                     lighting_actions = self.extract_lighting_actions(response, chunk['start'], chunk['end'])
@@ -476,7 +466,3 @@ def run_context_builder(state: PipelineState) -> PipelineState:
     """LangGraph-compatible node function"""
     agent = ContextBuilderAgent()
     return agent.run(state)
-
-
-# Backward compatibility alias
-SongContextAgent = ContextBuilderAgent

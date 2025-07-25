@@ -9,12 +9,8 @@ from .context_builder import ContextBuilderAgent
 from .lighting_planner import LightingPlannerAgent
 from .effect_translator import EffectTranslatorAgent
 
-# Backwards compatibility aliases
-SongContextAgent = ContextBuilderAgent
-
 __all__ = [
     "ContextBuilderAgent",
     "LightingPlannerAgent", 
-    "EffectTranslatorAgent",
-    "SongContextAgent"  # For backward compatibility
+    "EffectTranslatorAgent"
 ]

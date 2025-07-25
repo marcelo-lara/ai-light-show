@@ -260,17 +260,6 @@ Return ONLY valid JSON array of command strings."""
         
         return commands
 
-    # Legacy methods for backward compatibility
-    def translate_effect(self, prompt: str, **kwargs):
-        """Legacy method for simple effect translation"""
-        response = query_ollama(prompt, model=self.model, **kwargs)
-        return self.parse_response(response)
-
-    def parse_response(self, response):
-        """Simple response parsing for backward compatibility"""
-        return response
-
-
 # Node function for LangGraph compatibility
 def run_effect_translator(state: PipelineState) -> PipelineState:
     """LangGraph-compatible node function"""

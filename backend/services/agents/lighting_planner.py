@@ -169,10 +169,3 @@ class LightingPlannerAgent:
             ]
         
         return actions
-
-
-# Node function for LangGraph compatibility
-def run_lighting_planner(state: PipelineState) -> PipelineState:
-    """LangGraph-compatible node function"""
-    agent = LightingPlannerAgent()
-    return agent.run(state)
