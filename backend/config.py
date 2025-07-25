@@ -6,7 +6,6 @@ BASE_DIR = Path("/app/static") if Path("/app/static").exists() else Path(__file_
 ## DMX Related
 FIXTURES_FILE = BASE_DIR / "fixtures/fixtures.json"
 MASTER_FIXTURE_CONFIG = BASE_DIR / "fixtures/master_fixture_config.json"
-FIXTURE_PRESETS = BASE_DIR / "fixtures/fixture_presets.json"
 
 
 
@@ -21,7 +20,6 @@ AI_CACHE =  Path("/root/.cache") if Path("/app/static").exists() else BASE_DIR /
 if __name__ == "__main__":
     print(f"Base Directory: {BASE_DIR}")
     print(f"Master Fixture Config: {MASTER_FIXTURE_CONFIG}")
-    print(f"Fixture Presets: {FIXTURE_PRESETS}")
     print(f"Songs Directory: {SONGS_DIR}")
     print(f"Songs Temp Directory: {SONGS_TEMP_DIR}")
     print(f"Local Test Song Path: {LOCAL_TEST_SONG_PATH}")

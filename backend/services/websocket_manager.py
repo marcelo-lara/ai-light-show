@@ -63,7 +63,6 @@ class WebSocketManager:
             "type": "setup",
             "songs": app_state.get_songs_list(),
             "fixtures": app_state.fixture_config,
-            "presets": app_state.fixture_presets,
             "actions": actions,  # Send current actionsheet
             "llm_status": self._get_llm_status(),  # Send current LLM status
         })

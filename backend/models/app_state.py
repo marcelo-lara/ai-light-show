@@ -42,7 +42,6 @@ class AppState:
 
     # Fixture and lighting configuration
     fixture_config: List[Dict[str, Any]] = field(default_factory=list)
-    fixture_presets: List[Dict[str, Any]] = field(default_factory=list)
     
     # Song management
     current_song_file: Optional[str] = None

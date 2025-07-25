@@ -195,6 +195,21 @@ class FixtureModel:
         self._dmx_canvas.paint_range(start_time, end_time, fade_fn)
         print(f"  🌈 {self.name}: Fading channel {channel_name} (DMX {dmx_channel + 1}) from {from_value} to {to_value} over {duration:.2f}s")
     
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the fixture model to a JSON friendly dictionary representation.
+        Returns:
+            dict: Dictionary with fixture properties.
+        """
+        return {
+            'id': self._id,
+            'name': self._name,
+            'fixture_type': self._fixture_type,
+            'channels': self._channels,
+            'config': self._config,
+            'position': self.position.to_dict() if self.position else None
+        }
+
     def __str__(self) -> str:
         """
         String representation of the fixture.

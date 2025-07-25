@@ -1,7 +1,5 @@
 // Fixture Card
 
-// DEPRECATED: PresetSelector import removed - cue system deprecated
-// import PresetSelector from "./PresetSelector";
 import FixtureDmxChannels from "./FixtureDmxChannels";
 import { useState, useEffect, useRef } from "preact/hooks";
 
@@ -50,14 +48,7 @@ export default function FixtureCard({ fixture, currentTime, allPresets, wsSend }
         <div className="px-4 pb-4 text-sm text-gray-300">
           
           <div className="mb-2">
-            {/* DEPRECATED: PresetSelector removed - cue system deprecated */}
-            {/* <PresetSelector
-              fixture={fixture}
-              presets={allPresets}
-              currentTime={currentTime}
-              onAddCue={(cue) => {addCue(cue);}}
-              previewDmx={(cue) => {previewDmx(cue);}}
-            /> */}
+            {/* TODO: Implement add Action at currentTime | request action parameters */}
           </div>
             
 

@@ -5,7 +5,7 @@ export default function Fixtures({ fixtures, currentTime, fixturesPresets, wsSen
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="mt-6">
+    <>
       <h2 
         className="text-lg mb-2 font-semibold cursor-pointer hover:text-gray-300 flex items-center gap-2"
         onClick={() => setIsExpanded(!isExpanded)}
@@ -29,6 +29,6 @@ export default function Fixtures({ fixtures, currentTime, fixturesPresets, wsSen
           )}
         </>
       )}
-    </div>
+    </>
   );
 }

@@ -124,6 +124,7 @@ python -m song_analysis.test_pipeline_run --song track.mp3
 - Always use class public properties, not private or internal
 - Use latest import paths from `backend/services/agents/`
 - Service boundaries: backend ↔ song_analysis via REST client only
+- Service boundaries: backend ↔ frontend via WebSocket only
 - LangGraph pipelines: Song analysis (audio) vs Lighting design (actions) - separate purposes
 
 ---
