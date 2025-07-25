@@ -11,9 +11,11 @@ Modules:
 """
 
 # Import all exports from the client module
-from .ollama_client import *
+from .ollama_api import query_ollama
+from .ollama_streaming import query_ollama_streaming
 
 # Define what gets exported from the package
 __all__ = [
+    'query_ollama',
     'query_ollama_streaming',
 ]
