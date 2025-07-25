@@ -51,9 +51,8 @@ export function App() {
   // Lighting actions state
   const [lightingActions, setLightingActions] = useState([]);
 
-  // DMX fixtures and presets
+  // DMX fixtures
   const [fixtures, setFixtures] = useState([]);
-  const [fixturesPresets, setFixturesPresets] = useState([]);
 
   // UI toast notification state
   const [toastMessage, setToast] = useState(null);
@@ -94,7 +93,6 @@ export function App() {
             console.log("setup:", msg);
             setSongsList(msg.songs || []);
             setFixtures(msg.fixtures || []);
-            setFixturesPresets(msg.presets || []);
             setLightingActions(msg.actions || []);
             setLlmStatus(msg.llm_status || "");
 
@@ -153,7 +151,6 @@ export function App() {
           case "fixturesUpdated": {
             console.log("Received fixtures update:", msg);
             setFixtures(msg.fixtures || []);
-            setFixturesPresets(msg.presets || []);
             setToast("Fixtures updated!");
             break;
           }
@@ -359,7 +356,6 @@ export function App() {
           <Fixtures
             fixtures={fixtures}
             currentTime={currentTime}
-            fixturesPresets={fixturesPresets}
             wsSend={wsSend}
           />
         </div>

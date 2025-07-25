@@ -3,7 +3,7 @@
 import FixtureDmxChannels from "./FixtureDmxChannels";
 import { useState, useEffect, useRef } from "preact/hooks";
 
-export default function FixtureCard({ fixture, currentTime, allPresets, wsSend }) {
+export default function FixtureCard({ fixture, currentTime, wsSend }) {
   const [values, setValues] = useState({ ...fixture.current_values });
   const { name, channels, presets } = fixture;
   const [expandedMap, setExpandedMap] = useState({});
