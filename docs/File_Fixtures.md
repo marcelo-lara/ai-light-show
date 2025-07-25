@@ -27,16 +27,16 @@ Each object represents a **fixture**.
 | `type`           | `string` | Fixture category: `"rgb"` or `"moving_head"`.                                               |
 | `channels`       | `object` | Mapping of logical names (e.g., `"red"`, `"pan_msb"`) to 1-based DMX channel numbers.       |
 | `current_values` | `object` | DMX values for all channels at a given moment (used for state tracking).                    |
-| `presets`        | `array`  | Named presets (e.g., positions or colors) defined by a `name` and `values` object.          |
 | `effects`        | `array`  | List of supported effects such as `"strobe"`, `"flash"`, `"fade"`, `"seek"`, etc.           |
 | `arm`            | `object` | Defines the channels and values required to "arm" or enable the fixture (e.g., `"dim": 255`). |
 | `meta`           | `object` | Metadata used for rendering and interpretation (see below).                                 |
+| `position`       | `object` | Physical position of the fixture in the stage layout.                                       |
 
 ---
 
 ## `meta` Field
 
-Contains fixture specific definitions used to "paint" (transform effects or cues in the DmxCanvas object)
+Contains fixture-specific definitions used to "paint" (transform effects or cues in the DmxCanvas object).
 
 ### `channel_types`
 
@@ -54,7 +54,6 @@ Describes how each channel behaves. Common types:
 * `"color"` – used for RGB or color wheels.
 * `"position_16bit"` – used for pan/tilt with MSB + LSB.
 * `"dimmer"` – continuous brightness.
-* `"strobe"` – for flashing or pulsing.
 * `"wheel"` – for gobos or color wheels with discrete values.
 
 ---
@@ -81,7 +80,6 @@ Maps discrete DMX values to human-readable names (used for UI or logic reasoning
 
 ### `position_constraints` 
 
-
 ```json
 "position_constraints": {
   "pan": { "min": 0, "max": 65535 },
@@ -93,6 +91,19 @@ Defines the physical movement limits of a moving head fixture. These are used to
 
 * Clamp pan/tilt positions to usable zones.
 * Normalize movement paths across multiple fixtures.
+
+---
+
+## `position` Field
+
+Defines the physical position of the fixture in the stage layout.
+
+| Field  | Type     | Description                          |
+| ------ | -------- | ------------------------------------ |
+| `x`    | `float`  | X-coordinate (0.0 to 1.0).           |
+| `y`    | `float`  | Y-coordinate (0.0 to 1.0).           |
+| `z`    | `float`  | Z-coordinate (0.0 to 1.0).           |
+| `label`| `string` | Human-readable label (e.g., `"stage_left"`). |
 
 ---
 
@@ -110,17 +121,6 @@ Defines the physical movement limits of a moving head fixture. These are used to
     "color": 8,
     "gobo": 9
   },
-  "presets": [
-    {
-      "name": "Piano",
-      "values": {
-        "pan": 120,
-        "pan_fine": 35,
-        "tilt": 20,
-        "tilt_fine": 11
-      }
-    }
-  ],
   "effects": ["full", "flash", "seek"],
   "arm": { "shutter": 255 },
   "meta": {
@@ -138,6 +138,12 @@ Defines the physical movement limits of a moving head fixture. These are used to
       "pan": { "min": 0, "max": 65535 },
       "tilt": { "min": 70, "max": 3363 }
     }
+  },
+  "position": {
+    "x": 0.5,
+    "y": 0.05,
+    "z": 0.9,
+    "label": "center_stage"
   }
 }
 ```

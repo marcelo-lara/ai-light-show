@@ -26,17 +26,6 @@
       "movement": 0,
       "reset": 0
     },
-    "presets": [
-      {
-        "name": "Piano",
-        "values": {
-          "pan": 120,
-          "pan_fine": 35,
-          "tilt": 20,
-          "tilt_fine": 11
-        }
-      }
-    ],
     "effects": [
       "full",
       "strobe",
@@ -106,7 +95,6 @@
       "strobe": 20
     },
     "current_values": {},
-    "presets": [],
     "effects": [
       "strobe",
       "flash",
@@ -151,7 +139,6 @@
       "strobe": 0,
       "program": 0
     },
-    "presets": [],
     "effects": [
       "strobe",
       "flash",
@@ -196,7 +183,6 @@
       "strobe": 0,
       "program": 0
     },
-    "presets": [],
     "effects": [
       "strobe",
       "flash",
@@ -241,7 +227,6 @@
       "strobe": 0,
       "program": 0
     },
-    "presets": [],
     "effects": [
       "strobe",
       "flash",
