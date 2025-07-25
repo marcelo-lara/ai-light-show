@@ -62,7 +62,7 @@ class WebSocketManager:
         await websocket.send_json({
             "type": "setup",
             "songs": app_state.get_songs_list(),
-            "fixtures": app_state.fixture_config,
+            "fixtures": [], # Send current fixture configuration
             "actions": actions,  # Send current actionsheet
             "llm_status": self._get_llm_status(),  # Send current LLM status
         })

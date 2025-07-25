@@ -39,9 +39,6 @@ class AppState:
     
     # Fixture management (depends on dmx_canvas)
     fixtures: Optional[FixturesListModel] = field(default=None)
-
-    # Fixture and lighting configuration
-    fixture_config: List[Dict[str, Any]] = field(default_factory=list)
     
     # Song management
     current_song_file: Optional[str] = None

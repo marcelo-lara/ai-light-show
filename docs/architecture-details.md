@@ -74,7 +74,7 @@ app_state.add_client(websocket)
 {
     "type": "setup",
     "songs": app_state.get_songs_list(),
-    "fixtures": app_state.fixture_config,
+    "fixtures": [], # List of available fixtures, with channels and actions
     "actions": []  # Loaded actions if available
 }
 ```
