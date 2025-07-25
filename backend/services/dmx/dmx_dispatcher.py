@@ -1,5 +1,6 @@
 
 from time import perf_counter
+from typing import Optional, Dict, Any
 import socket
 
 # --- DMX Constants ---
@@ -30,6 +31,22 @@ def set_channel(ch: int, val: int) -> bool:
         return True
     send_artnet()
     return False
+
+def get_channel_value(ch: int) -> int:
+    if 0 <= ch < DMX_CHANNELS:
+        return dmx_universe[ch-1]
+    return 0
+
+def get_channels_values(from_ch: int, to_ch: int) -> Dict[int, int]:
+    """
+    Get values for a range of channels.
+    Args:
+        from_ch (int): Start channel (1-based).
+        to_ch (int): End channel (1-based).
+    Returns:
+        Dict[int, int]: Dictionary of channel values.
+    """
+    return {ch: dmx_universe[ch-1] for ch in range(from_ch, to_ch + 1) if 0 < ch <= DMX_CHANNELS}
 
 # --- Send ArtNet packet ---
 last_artnet_send = 0

@@ -50,20 +50,6 @@ export default function FixtureCard({ fixture, currentTime, wsSend }) {
           <div className="mb-2">
             {/* TODO: Implement add Action at currentTime | request action parameters */}
           </div>
-            
-
-          {presets.length > 0 && (
-            <div className="flex gap-2 flex-wrap mt-2">
-              {presets.map((p, i) => (
-                <button
-                  key={i}
-                  className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-xs"
-                >
-                  {p.name}
-                </button>
-              ))}
-            </div>
-          )}
 
           <FixtureDmxChannels
             channels={channels}

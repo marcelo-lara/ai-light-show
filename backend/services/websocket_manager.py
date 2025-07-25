@@ -59,10 +59,15 @@ class WebSocketManager:
             except Exception as e:
                 print(f"❌ Error loading actions for setup: {e}")
         
+        # Prepare fixtures list
+        fixtures_list = []
+        if app_state.fixtures is not None:
+            fixtures_list = [fixture.to_dict() for fixture in app_state.fixtures.fixtures.values()]
+        
         await websocket.send_json({
             "type": "setup",
             "songs": app_state.get_songs_list(),
-            "fixtures": [], # Send current fixture configuration
+            "fixtures": fixtures_list,
             "actions": actions,  # Send current actionsheet
             "llm_status": self._get_llm_status(),  # Send current LLM status
         })
