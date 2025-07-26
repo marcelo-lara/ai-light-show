@@ -71,9 +71,71 @@ class MovingHead(FixtureModel):
         """
         Handle the seek action for the Moving Head fixture.
         Args:
-            pos_x (int): Target X position to seek the fixture (16 bits).
-            pos_y (int): Target Y position to seek the fixture (16 bits).
+            start_time (float): Time to start the movement (seconds).
+            duration (float): Time to complete the movement (seconds).
+            pos_x (int): Target X position (pan) as 16-bit value (0-65535).
+            pos_y (int): Target Y position (tilt) as 16-bit value (0-65535).
         """
-        # TODO: Implement seek movement using fixture configuration
-        print(f"  🔄 {self.name}: Seek to position ({pos_x}, {pos_y}) (not yet implemented)")
-        raise NotImplementedError("Seek movement not yet implemented")
+        # Ensure valid 16-bit values
+        pos_x = max(0, min(65535, int(pos_x)))
+        pos_y = max(0, min(65535, int(pos_y)))
+        
+        # Convert 16-bit positions to MSB/LSB pairs
+        pan_msb = (pos_x >> 8) & 0xFF
+        pan_lsb = pos_x & 0xFF
+        tilt_msb = (pos_y >> 8) & 0xFF
+        tilt_lsb = pos_y & 0xFF
+        
+        # If duration is very short, use direct positioning
+        if duration < 0.1:
+            # Set pan channels
+            self.set_channel_value('pan_msb', pan_msb, start_time=start_time)
+            self.set_channel_value('pan_lsb', pan_lsb, start_time=start_time)
+            
+            # Set tilt channels
+            self.set_channel_value('tilt_msb', tilt_msb, start_time=start_time)
+            self.set_channel_value('tilt_lsb', tilt_lsb, start_time=start_time)
+            
+            print(f"  🔄 {self.name}: Instant seek to position ({pos_x}, {pos_y}) at {start_time:.2f}s")
+        else:
+            # For longer durations, use fading for smooth movement
+            try:
+                # Get current position values if available
+                from backend.services.dmx.dmx_dispatcher import get_channel_value
+                
+                # Get the DMX channels for each component
+                channels = self._config.get('channels', {})
+                pan_msb_ch = channels.get('pan_msb')
+                pan_lsb_ch = channels.get('pan_lsb')
+                tilt_msb_ch = channels.get('tilt_msb')
+                tilt_lsb_ch = channels.get('tilt_lsb')
+                
+                # Check if we have all necessary channel mappings
+                if all(x is not None for x in [pan_msb_ch, pan_lsb_ch, tilt_msb_ch, tilt_lsb_ch]):
+                    # Get current values (convert from 1-based to 0-based)
+                    current_pan_msb = get_channel_value(pan_msb_ch - 1)
+                    current_pan_lsb = get_channel_value(pan_lsb_ch - 1)
+                    current_tilt_msb = get_channel_value(tilt_msb_ch - 1)
+                    current_tilt_lsb = get_channel_value(tilt_lsb_ch - 1)
+                    
+                    # Fade pan channels
+                    self.fade_channel('pan_msb', current_pan_msb, pan_msb, start_time, duration)
+                    self.fade_channel('pan_lsb', current_pan_lsb, pan_lsb, start_time, duration)
+                    
+                    # Fade tilt channels
+                    self.fade_channel('tilt_msb', current_tilt_msb, tilt_msb, start_time, duration)
+                    self.fade_channel('tilt_lsb', current_tilt_lsb, tilt_lsb, start_time, duration)
+                    
+                    print(f"  🔄 {self.name}: Smooth seek to position ({pos_x}, {pos_y}) over {duration:.2f}s starting at {start_time:.2f}s")
+                    return
+            except (KeyError, AttributeError, Exception) as e:
+                # If we can't get current values, fall back to direct setting
+                print(f"  ⚠️ {self.name}: Error getting current position, falling back to direct setting: {e}")
+                
+            # Fallback: directly set target position with no transition
+            self.set_channel_value('pan_msb', pan_msb, start_time=start_time)
+            self.set_channel_value('pan_lsb', pan_lsb, start_time=start_time)
+            self.set_channel_value('tilt_msb', tilt_msb, start_time=start_time)
+            self.set_channel_value('tilt_lsb', tilt_lsb, start_time=start_time)
+            
+            print(f"  🔄 {self.name}: Direct seek to position ({pos_x}, {pos_y}) at {start_time:.2f}s")

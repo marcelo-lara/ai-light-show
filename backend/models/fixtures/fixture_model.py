@@ -216,12 +216,18 @@ class FixtureModel:
                     "value": get_channel_value(channel_number - 1)  # Convert to 0-based index
                 }
                 channels.append(channel)
-        
+
+        # List available actions with parameters
+        actions = [{'name': action, 'handler': handler.__name__, 'params': []} for action, handler in self.action_handlers.items()]
+        for action in actions:
+            action['params'] = [{'name': param, 'default': None} for param in self.action_handlers[action['name']].__code__.co_varnames[1:]]
+
         return {
             'id': self._id,
             'name': self._name,
             'fixture_type': self._fixture_type,
             'channels': channels,
+            'actions': actions,
             'config': self._config,
             'position': self.position.to_dict() if self.position else None
         }
