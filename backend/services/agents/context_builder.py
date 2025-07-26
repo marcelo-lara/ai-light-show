@@ -1,6 +1,8 @@
 """
-Context Builder Agent - Unified Implementation
-Combines functionality from both LangGraph and Ollama implementations
+Context Builder Agent
+
+This agent analyzes musical segments and generates context summaries
+for lighting design.
 """
 import json
 import re
@@ -59,16 +61,17 @@ class SongContextAssembler:
 
 class ContextBuilderAgent:
     """
-    Unified Context Builder Agent
-    - For LangGraph Pipeline: Interprets musical segments and generates context summaries
-    - For Direct Commands: Analyzes full songs and extracts lighting actions
+    Context Builder Agent
+    
+    Interprets musical segments and generates context summaries for lighting design.
+    Also supports full song analysis for direct lighting action extraction.
     """
     
     def __init__(self, model: str = "mixtral"):
         self.model = model
     
     def run(self, state: PipelineState) -> PipelineState:
-        """Execute the context building process for LangGraph pipeline"""
+        """Execute the context building process for the lighting pipeline"""
         print("🎵 Running Context Builder...")
         
         segment = state.get("segment", {})
@@ -461,8 +464,8 @@ Focus on the mood, energy level, and key instruments. Keep it concise and descri
         return "\n".join(prompt_lines)
 
 
-# Node function for LangGraph compatibility
+# Helper function for backward compatibility
 def run_context_builder(state: PipelineState) -> PipelineState:
-    """LangGraph-compatible node function"""
+    """Run context builder on a pipeline state"""
     agent = ContextBuilderAgent()
     return agent.run(state)

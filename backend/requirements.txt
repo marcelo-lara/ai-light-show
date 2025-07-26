@@ -16,5 +16,4 @@ torchaudio
 scipy
 scikit-learn
 aiohttp
-langgraph
 openai

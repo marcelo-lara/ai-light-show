@@ -1,6 +1,7 @@
 """
-Lighting Planner Agent - Unified Implementation
-Combines functionality from both LangGraph and Ollama implementations
+Lighting Planner Agent
+
+This agent proposes symbolic lighting actions based on context summaries.
 """
 import json
 import re
@@ -36,9 +37,10 @@ def save_node_output(node_name: str, data: Dict[str, Any]) -> None:
 
 class LightingPlannerAgent:
     """
-    Unified Lighting Planner Agent
-    - For LangGraph Pipeline: Proposes symbolic lighting actions based on context summaries
-    - For Direct Commands: Simple lighting planning interface
+    Lighting Planner Agent
+    
+    Proposes symbolic lighting actions based on context summaries and musical segments.
+    Provides a simple interface for lighting planning.
     """
     
     def __init__(self, model: str = "mixtral"):
@@ -52,7 +54,7 @@ class LightingPlannerAgent:
         )
     
     def run(self, state: PipelineState) -> PipelineState:
-        """Execute the lighting planning process for LangGraph pipeline"""
+        """Execute the lighting planning process for the pipeline"""
         print("💡 Running Lighting Planner...")
         
         context_summary = state.get("context_summary", "")

@@ -1,6 +1,7 @@
 """
-Effect Translator Agent - Unified Implementation
-Combines functionality from both LangGraph and Ollama implementations
+Effect Translator Agent
+
+This agent converts symbolic lighting actions into standardized direct commands.
 """
 import json
 import re
@@ -35,9 +36,10 @@ def save_node_output(node_name: str, data: Dict[str, Any]) -> None:
 
 class EffectTranslatorAgent:
     """
-    Unified Effect Translator Agent
-    - For LangGraph Pipeline: Converts symbolic lighting actions into standardized direct commands
-    - For Direct Commands: Simple effect translation interface
+    Effect Translator Agent
+    
+    Converts symbolic lighting actions into standardized direct commands.
+    Provides a simple interface for effect translation.
     """
     
     def __init__(self, model: str = "command-r", fallback_model: str = "mixtral"):
@@ -101,7 +103,7 @@ class EffectTranslatorAgent:
             }
     
     def run(self, state: PipelineState) -> PipelineState:
-        """Execute the effect translation process for LangGraph pipeline"""
+        """Execute the effect translation process for the pipeline"""
         print("🎛️ Running Effect Translator...")
         
         actions = state.get("actions", [])
@@ -260,8 +262,8 @@ Return ONLY valid JSON array of command strings."""
         
         return commands
 
-# Node function for LangGraph compatibility
+# Helper function for backward compatibility
 def run_effect_translator(state: PipelineState) -> PipelineState:
-    """LangGraph-compatible node function"""
+    """Run effect translator on a pipeline state"""
     agent = EffectTranslatorAgent()
     return agent.run(state)

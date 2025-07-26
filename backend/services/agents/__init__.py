@@ -1,8 +1,9 @@
 """
-Unified AI Agents for the AI Light Show System
+AI Agents for the AI Light Show System
 
-This module contains all the AI agents consolidated from the langgraph and ollama directories.
-Each agent supports both simple API calls and LangGraph pipeline integration.
+This module contains all the AI agents for the lighting control system.
+Each agent provides specialized functionality for analyzing music, planning lighting effects,
+and translating those effects into actionable DMX commands.
 """
 
 from .context_builder import ContextBuilderAgent
