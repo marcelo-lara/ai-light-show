@@ -17,7 +17,7 @@ class MovingHead(FixtureModel):
         self.action_handlers = {
             'arm': self._handle_arm,
             'flash': self._handle_flash,
-            'pan': self._handle_pan,
+            'seek': self._handle_seek,
         }
 
         super().__init__(id, name, 'moving_head', 12, dmx_canvas, config) # Moving Head uses 12 channels (e.g., pan, tilt, color, etc.)
@@ -67,12 +67,13 @@ class MovingHead(FixtureModel):
 
 
 
-    def _handle_pan(self, position: float) -> None:
+    def _handle_seek(self, start_time: float = 0.0, duration: float = 1.0, pos_x: int = 0, pos_y: int = 0) -> None:
         """
-        Handle the pan action for the Moving Head fixture.
+        Handle the seek action for the Moving Head fixture.
         Args:
-            position (float): Target position to pan the fixture.
+            pos_x (int): Target X position to seek the fixture (2 bytes).
+            pos_y (int): Target Y position to seek the fixture (2 bytes).
         """
-        # TODO: Implement pan movement using fixture configuration
-        print(f"  🔄 {self.name}: Pan to position {position} (not yet implemented)")
-        raise NotImplementedError("Pan movement not yet implemented")
+        # TODO: Implement seek movement using fixture configuration
+        print(f"  🔄 {self.name}: Seek to position ({pos_x}, {pos_y}) (not yet implemented)")
+        raise NotImplementedError("Seek movement not yet implemented")
