@@ -30,6 +30,16 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
         await websocket.send_json({"type": "chatResponse", "response": "No prompt provided."})
         return
 
+    # Check if this is a direct command (starts with #)
+    if prompt.strip().startswith("#"):
+        await _handle_direct_command(websocket, prompt)
+        return
+
+    # Check if this is a direct agent request (starts with :)
+    if prompt.strip().startswith(":"):
+        await _handle_agent_request(websocket, prompt)
+        return
+
     # Define context separately from the prompt
     context = build_ui_context()
 
@@ -39,11 +49,6 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
         # Initialize conversation history for this session if not exists
         if session_id not in _conversation_history:
             _conversation_history[session_id] = []
-
-        # Check if this is a direct command (starts with #)
-        if prompt.strip().startswith("#"):
-            await _handle_direct_command(websocket, prompt)
-            return
 
         # Check if this is a confirmation message for pending actions
         pending_actions = _pending_actions_store.get(session_id)
@@ -179,6 +184,34 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
             "type": "chatResponse", 
             "response": error_message
         })
+
+async def _handle_agent_request(websocket: WebSocket, command: str) -> None:
+    """
+    Handle agent requests that involve the LLM.
+    """
+
+    agent = command.strip().lstrip(":").split(" ")[0].lower()
+    prompt = " ".join(command.strip().lstrip(":").split(" ")[1:])
+
+    agent_handlers = {
+        "context_builder": ContextBuilderAgent,
+        "lighting_planner": LightingPlannerAgent
+    }
+
+    try:
+        # Pass the prompt to the agent for processing
+        response = f"**Agent Request**: {agent.capitalize()} -> {prompt}"
+        await websocket.send_json({
+            "type": "chatResponse",
+            "response": response
+        })
+    except Exception as e:
+        print(f"❌ Error in _handle_agent_request: {e}")
+        await websocket.send_json({
+            "type": "chatResponse",
+            "response": f"**Agent Request Error**: {str(e)}"
+        })
+
 
 async def _handle_direct_command(websocket: WebSocket, command: str) -> None:
     """

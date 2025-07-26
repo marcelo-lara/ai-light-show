@@ -161,35 +161,28 @@ class EffectTranslatorAgent:
         primary_fixture = fixture_ids[0] if fixture_ids else 'parcan_l'
         secondary_fixture = fixture_ids[1] if len(fixture_ids) > 1 else primary_fixture
         
-        return f"""You are a DMX lighting console operator.
-
-Convert these symbolic lighting actions into direct commands:
-{json.dumps(actions, indent=2)}
-
-Available fixtures: {fixture_ids}
-Available channels: {channels}
-Available presets: {presets}
-
-Use direct command syntax like:
-- "#set fixture_id channel to value at time"
-- "#fade fixture_id channel from start_value to end_value duration seconds"
-- "#preset fixture_id preset_name at time"
-- "#strobe fixture_id channel rate hz duration seconds"
-
-Examples:
-- "flash" action → #set fixture dim to 1.0 at start_time, then #set fixture dim to 0.0 at start_time+duration
-- "strobe" action → #strobe fixture dim rate 10 duration duration_seconds
-- "fade" action → #fade fixture dim from 0.0 to 1.0 duration duration_seconds
-- "pulse" action → #set fixture dim to 1.0 at start_time, then #set fixture dim to 0.0 at start_time+0.1
-
-Output as JSON array of command strings:
-[
-  "#set {primary_fixture} dim to 1.0 at 34.2",
-  "#set {primary_fixture} dim to 0.0 at 36.7",
-  "#preset {secondary_fixture} {presets[0] if presets else 'Drop'} at 35.0"
-]
-
-Return ONLY valid JSON array of command strings."""
+        # Setup Jinja2 environment (lazy initialization)
+        if not hasattr(self, 'jinja_env'):
+            from jinja2 import Environment, FileSystemLoader
+            self.prompts_dir = Path(__file__).parent / "prompts"
+            self.jinja_env = Environment(
+                loader=FileSystemLoader(self.prompts_dir),
+                trim_blocks=True,
+                lstrip_blocks=True
+            )
+        
+        # Render template
+        template = self.jinja_env.get_template('effect_translator.j2')
+        prompt = template.render(
+            actions=actions,
+            fixture_ids=fixture_ids,
+            channels=channels,
+            presets=presets,
+            primary_fixture=primary_fixture,
+            secondary_fixture=secondary_fixture
+        )
+        
+        return prompt
     
     def _query_model(self, prompt: str) -> str:
         """Query the model with fallback support"""
@@ -227,40 +220,9 @@ Return ONLY valid JSON array of command strings."""
             return validated_commands
             
         except json.JSONDecodeError:
-            print(f"⚠️ Failed to parse JSON from effect translator: {response}")
-            # Fallback direct commands
-            return self._create_fallback_commands(actions)
-    
-    def _create_fallback_commands(self, actions: List[Dict[str, Any]]) -> List[str]:
-        """Create fallback direct commands when parsing fails using dynamic fixture information"""
-        commands = []
-        
-        # Get dynamic fixture information
-        fixture_info = self._get_dynamic_fixture_info()
-        fixture_ids = fixture_info['fixture_ids']
-        
-        # Use first available fixture for fallback
-        fallback_fixture = fixture_ids[0] if fixture_ids else 'parcan_l'
-        
-        for action in actions:
-            start_time = action.get("start", 0)
-            duration = action.get("duration", 1)
-            action_type = action.get("type", action.get("action", "flash"))
-            
-            # Create basic direct commands based on action type
-            if action_type == "flash":
-                commands.append(f"#set {fallback_fixture} dim to 1.0 at {start_time}")
-                commands.append(f"#set {fallback_fixture} dim to 0.0 at {start_time + duration}")
-            elif action_type == "strobe":
-                commands.append(f"#strobe {fallback_fixture} dim rate 10 duration {duration}")
-            elif action_type == "fade":
-                commands.append(f"#fade {fallback_fixture} dim from 0.0 to 1.0 duration {duration}")
-            else:
-                # Default to flash
-                commands.append(f"#set {fallback_fixture} dim to 1.0 at {start_time}")
-                commands.append(f"#set {fallback_fixture} dim to 0.0 at {start_time + duration}")
-        
-        return commands
+            print(f"☠️☠️ Failed to parse JSON from effect translator: {response}")
+            return []
+
 
 # Helper function for backward compatibility
 def run_effect_translator(state: PipelineState) -> PipelineState:

@@ -25,12 +25,12 @@ async def lifespan(app: FastAPI):
     try:
         # Start the DMX player engine
         await dmx_player.start_playback_engine()
-        print("🎬 DMX Player engine started")
+        print("🐕‍🦺 DMX Player engine started")
         yield
     finally:
         # Stop the DMX player engine
         await dmx_player.stop_playback_engine()
-        print("🎬 DMX Player engine stopped")
+        print("🐕‍🦺 DMX Player engine stopped")
 
 
 def create_app() -> FastAPI:
