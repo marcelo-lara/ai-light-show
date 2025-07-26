@@ -53,7 +53,6 @@ export default function FixtureCard({ fixture, currentTime, wsSend }) {
 
           <FixtureDmxChannels
             channels={channels}
-            values={values}
             setValues={setValues}
             sendDMXUpdate={sendDMXUpdate}
           />

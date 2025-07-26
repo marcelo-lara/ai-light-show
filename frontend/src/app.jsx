@@ -293,7 +293,7 @@ export function App() {
             />
           </div>
           <div className="flex gap-2">
-              <div className="main-left">
+              <div className="main-left max-h-50 overflow-y-auto">
                 {/* Chat Card */}
                 <div className="bg-white/10 rounded-2xl p-6 mb-6">
                   <ChatAssistant 
@@ -328,6 +328,15 @@ export function App() {
       {/* Right Panel */}
       <div className="min-w-[300px] max-w-[450px] w-full text-white p-6 space-y-6  max-h-50 overflow-y-auto" id="app-right-panel">
 
+        {/* Fixtures Control */}
+        <div>
+          <Fixtures
+            fixtures={fixtures}
+            currentTime={currentTime}
+            wsSend={wsSend}
+          />
+        </div>
+
         {/* Song Selection */}
         <div>
           <SongSelector 
@@ -349,17 +358,6 @@ export function App() {
             currentSongFile={currentSongFile}
           />
         )}
-
-
-        {/* Fixtures Control */}
-        <div>
-          <Fixtures
-            fixtures={fixtures}
-            currentTime={currentTime}
-            wsSend={wsSend}
-          />
-        </div>
-
       </div>
     </div>
   );

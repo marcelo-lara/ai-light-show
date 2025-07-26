@@ -201,26 +201,27 @@ class FixtureModel:
         Returns:
             dict: Dictionary with fixture properties.
         """
-        from ...services.dmx.dmx_dispatcher import get_channels_values
+        from ...services.dmx.dmx_dispatcher import get_channel_value
         
         # Get channel mapping from config
         channels_config = self._config.get('channels', {})
         
         # Get channel values if any channels are defined
         if channels_config:
-            # Find min and max channel numbers
-            min_ch = min(channels_config.values())
-            max_ch = max(channels_config.values())
-            
-            # Get current values for all channels in range
-            channel_values = get_channels_values(min_ch, max_ch)
+            channels = []
+            for channel_name, channel_number in channels_config.items():
+                channel = {
+                    "ch": channel_number,
+                    "name": channel_name,
+                    "value": get_channel_value(channel_number - 1)  # Convert to 0-based index
+                }
+                channels.append(channel)
         
         return {
             'id': self._id,
             'name': self._name,
             'fixture_type': self._fixture_type,
-            'channels': self._channels,
-            'current_values': channel_values,
+            'channels': channels,
             'config': self._config,
             'position': self.position.to_dict() if self.position else None
         }

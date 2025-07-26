@@ -1,25 +1,40 @@
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 
-export default function FixtureDmxChannels({ channels, values, setValues, sendDMXUpdate }) {
-  const handleValueChange = (key, dmx, val) => {
+export default function FixtureDmxChannels({ channels, sendDMXUpdate }) {
+  const [values, setValues] = useState({});
+  
+  useEffect(() => {
+    // Initialize values from channels data
+    const initialValues = {};
+    channels.forEach(channel => {
+      initialValues[channel.ch] = channel.value;
+    });
+    setValues(initialValues);
+  }, [channels]);
+
+  const handleValueChange = (ch, val) => {
     const n = parseInt(val, 10);
     if (!isNaN(n) && n >= 0 && n <= 255) {
-      setValues((prev) => ({ ...prev, [key]: n }));
+      setValues((prev) => ({ ...prev, [ch]: n }));
+      sendDMXUpdate({ [ch]: n });
     }
   };
   
+  console.log("FixtureDmxChannels", { channels });
+
   return (
     <table className="text-xs w-full border-collapse">
       <thead>
         <tr className="text-gray-400">
           <th className="text-left py-1">Channel</th>
-          <th className="text-left py-1">DMX</th>
+          <th className="text-left py-1">Name</th>
           <th className="text-left py-1">Value</th>
         </tr>
       </thead>
       <tbody>
-        {Object.entries(channels).map(([key, dmx], idx) => {
-          const val = values[key] ?? 0;
+        {channels.map((channel, idx) => {
+          const { ch, name, value } = channel;
+          const currentValue = values[ch] !== undefined ? values[ch] : value;
           const sliderRef = useRef(null);
 
           useEffect(() => {
@@ -28,18 +43,17 @@ export default function FixtureDmxChannels({ channels, values, setValues, sendDM
 
             const handleInput = (e) => {
               const newVal = parseInt(e.target.value);
-              handleValueChange(key, dmx, newVal);
-              sendDMXUpdate({ [dmx]: newVal });
+              handleValueChange(ch, newVal);
             };
 
             el.addEventListener("input", handleInput);
             return () => el.removeEventListener("input", handleInput);
-          }, [key, dmx]);
+          }, [ch]);
 
           return (
             <tr key={idx} className="border-t border-white/10">
-              <td className="py-1">{key}</td>
-              <td className="py-1">{dmx}</td>
+              <td className="py-1">{ch}</td>
+              <td className="py-1">{name}</td>
               <td className="py-1">
                 <div className="flex items-center gap-2">
                   <input
@@ -47,10 +61,10 @@ export default function FixtureDmxChannels({ channels, values, setValues, sendDM
                     type="range"
                     min={0}
                     max={255}
-                    value={val}
+                    value={currentValue}
                     className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
                   />
-                  <span className="w-8 text-xs text-right text-gray-300">{val}</span>
+                  <span className="w-8 text-xs text-right text-gray-300">{currentValue}</span>
                 </div>
               </td>
             </tr>
