@@ -217,8 +217,8 @@ class FixtureModel:
                 }
                 channels.append(channel)
 
-        # List available actions with parameters
-        actions = [{'name': action, 'handler': handler.__name__, 'params': []} for action, handler in self.action_handlers.items()]
+        # List available actions (except 'arm') with parameters (only from definition not runtime)
+        actions = [{'name': action, 'params': []} for action, _ in self.action_handlers.items() if action != 'arm']
         for action in actions:
             action['params'] = [{'name': param, 'default': None} for param in self.action_handlers[action['name']].__code__.co_varnames[1:]]
 
