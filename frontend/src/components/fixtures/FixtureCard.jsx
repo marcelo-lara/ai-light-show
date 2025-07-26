@@ -1,6 +1,7 @@
 // Fixture Card
 
 import FixtureDmxChannels from "./FixtureDmxChannels";
+import FixtureActions from "./FixtureActions";
 import { useState, useEffect, useRef } from "preact/hooks";
 
 export default function FixtureCard({ fixture, currentTime, wsSend }) {
@@ -47,9 +48,11 @@ export default function FixtureCard({ fixture, currentTime, wsSend }) {
       {expanded && (
         <div className="px-4 pb-4 text-sm text-gray-300">
           
-          <div className="mb-2">
-            {/* TODO: Implement add Action at currentTime | request action parameters */}
-          </div>
+          <FixtureActions 
+            fixture={fixture}
+            currentTime={currentTime}
+            wsSend={wsSend}
+          />
 
           <FixtureDmxChannels
             channels={channels}

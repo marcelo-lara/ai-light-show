@@ -13,6 +13,7 @@ from .websocket_handlers import (
     handle_analyze_song,
     handle_set_dmx,
     handle_user_prompt,
+    handle_add_action,
 )
 from .utils.broadcast import broadcast_to_all
 from pathlib import Path
@@ -31,6 +32,7 @@ class WebSocketManager:
             "setDmx": handle_set_dmx,
             "userPrompt": handle_user_prompt,
             "blackout": handle_blackout,
+            "addAction": handle_add_action,
         }
 
     def _get_llm_status(self) -> str:
