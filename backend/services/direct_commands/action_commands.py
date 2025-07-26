@@ -98,11 +98,25 @@ class ClearCommandHandler(BaseCommandHandler):
             clear_type = parts[1].lower()
             
             if clear_type == "all":
-                # Clear all actions
+                # Check if confirmation flag is present
+                confirmed = False
+                for part in parts:
+                    if part.lower() == "confirm" or part.lower() == "--confirm":
+                        confirmed = True
+                        break
+                
+                if not confirmed:
+                    return False, "For safety, clearing all actions requires confirmation. Please use '#clear all actions confirm' to proceed.", None
+                
+                # Clear all actions (only if confirmed)
                 initial_count = len(actions_sheet)
                 actions_sheet.remove_all_actions()
                 actions_sheet.save_actions()
-                return True, f"Cleared all {initial_count} actions.", None
+                
+                # Return success with action update data
+                return True, f"Cleared all {initial_count} actions.", {
+                    "actions_updated": True
+                }
                 
             elif clear_type == "id" and len(parts) >= 3:
                 # Clear action by ID
@@ -118,7 +132,9 @@ class ClearCommandHandler(BaseCommandHandler):
                 
                 if found:
                     actions_sheet.save_actions()
-                    return True, f"Removed action with ID {action_id}.", None
+                    return True, f"Removed action with ID {action_id}.", {
+                        "actions_updated": True
+                    }
                 else:
                     return False, f"No action found with ID {action_id}.", None
                     
@@ -141,7 +157,9 @@ class ClearCommandHandler(BaseCommandHandler):
                 removed_count = initial_count - len(actions_sheet)
                 if removed_count > 0:
                     actions_sheet.save_actions()
-                    return True, f"Removed {removed_count} actions with group ID {group_id}.", None
+                    return True, f"Removed {removed_count} actions with group ID {group_id}.", {
+                        "actions_updated": True
+                    }
                 else:
                     return False, f"No actions found with group ID {group_id}.", None
             else:
@@ -220,7 +238,9 @@ class AddCommandHandler(BaseCommandHandler):
             )
             actions_sheet.add_action(action)
             actions_sheet.save_actions()
-            return True, f"Added {action_name} to {fixture_id} at {start_time:.2f}s for {duration:.2f}s.", None
+            return True, f"Added {action_name} to {fixture_id} at {start_time:.2f}s for {duration:.2f}s.", {
+                "actions_updated": True
+            }
         except Exception as e:
             return False, f"Error adding action: {e}", None
 
@@ -294,10 +314,13 @@ class DirectActionCommandHandler(BaseCommandHandler):
                 
                 return True, f"Added and rendered {added_count} action(s): {action_list}", {
                     "universe": list(universe),
-                    "message": "DMX Canvas updated by direct action command"
+                    "message": "DMX Canvas updated by direct action command",
+                    "actions_updated": True
                 }
             else:
-                return True, f"Added {added_count} action(s): {action_list} (render to see effect)", None
+                return True, f"Added {added_count} action(s): {action_list} (render to see effect)", {
+                    "actions_updated": True
+                }
                 
         except Exception as e:
             return False, f"Error processing direct action command: {e}", None

@@ -14,13 +14,13 @@
 {% if song.beats -%}
 ## Song Beat Times
 {% for beat in song.beats -%}
-- {{ beat.time }}s: {{ beat.description }}
+- {{ "%.3f"|format(beat) }}s
 {% endfor %}
 {%- endif %}
 
 {% if song.key_moments -%}
 ## Key Moments
 {% for moment in song.key_moments -%}
-- {{ moment.time }}s - {{ moment.name }}: {{ moment.description }}
+- {{ moment.start }}s - {{ moment.name }}: {{ moment.description }}
 {% endfor %}
 {%- endif %}

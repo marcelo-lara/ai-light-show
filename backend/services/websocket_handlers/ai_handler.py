@@ -1,5 +1,6 @@
 """AI prompt handling for WebSocket service."""
 
+import os
 from typing import Dict, Any
 from fastapi import WebSocket
 from ...models.app_state import app_state
@@ -209,7 +210,8 @@ async def _handle_direct_command(websocket: WebSocket, command: str) -> None:
                 })
                 
             # Always broadcast actions update to refresh the UI for any successful direct command
-            if app_state.current_song_file:
+            # or if the additional_data indicates actions were updated
+            if app_state.current_song_file and (additional_data is None or additional_data.get("actions_updated", False)):
                 from pathlib import Path
                 from ...models.actions_sheet import ActionsSheet
                 
@@ -357,35 +359,17 @@ def build_ui_context() -> str:
     
     # Handle case when no song is loaded
     if song is None:
-        song_data = {
-            "title": "No song loaded",
-            "bpm": 0,
-            "duration": 0,
-            "arrangement": [],
-            "beats": [],
-            "key_moments": []
-        }
-    else:
-        try:
-            # Extract song data for template
-            song_data = {
-                "title": getattr(song, 'name', 'Unknown'),
-                "bpm": getattr(song, 'bpm', 0),
-                "duration": getattr(song, 'duration', 0),
-                "arrangement": getattr(song, 'sections', []),
-                "beats": getattr(song, 'beats', []),
-                "key_moments": getattr(song, 'key_moments', [])
-            }
-        except Exception as e:
-            print(f"Error preparing song data: {e}")
-            song_data = {
-                "title": getattr(song, 'name', 'Unknown'),
-                "bpm": 0,
-                "duration": 0,
-                "arrangement": [],
-                "beats": [],
-                "key_moments": []
-            }
+        raise ValueError("No song is currently loaded. Please load a song to build the UI context.")
+
+    # Extract song data for template
+    song_data = {
+        "title": getattr(song, 'song_name', 'Unknown'),
+        "bpm": getattr(song, 'bpm', 0),
+        "duration": getattr(song, 'duration', 0),
+        "arrangement": getattr(song, 'sections', []),
+        "beats": song.get_beats_array(),
+        "key_moments": getattr(song, 'key_moments', [])
+    }
     
     # Prepare fixtures data
     fixtures = []
@@ -399,4 +383,14 @@ def build_ui_context() -> str:
             })
     
     # Render the template with context
-    return template.render(song=song_data, fixtures=fixtures)
+    _prompt = template.render(song=song_data, fixtures=fixtures)
+    
+    # save the prompt to a file for debugging
+    try:
+        _ffile = os.path.join(app_state.current_song.data_folder, "ui_context_debug.txt")
+        with open(_ffile, "w") as f:
+            f.write(_prompt)
+    except Exception as e:
+        print(f"Error saving UI context prompt to file: {e}")
+
+    return _prompt
