@@ -71,8 +71,8 @@ class MovingHead(FixtureModel):
         """
         Handle the seek action for the Moving Head fixture.
         Args:
-            pos_x (int): Target X position to seek the fixture (2 bytes).
-            pos_y (int): Target Y position to seek the fixture (2 bytes).
+            pos_x (int): Target X position to seek the fixture (16 bits).
+            pos_y (int): Target Y position to seek the fixture (16 bits).
         """
         # TODO: Implement seek movement using fixture configuration
         print(f"  🔄 {self.name}: Seek to position ({pos_x}, {pos_y}) (not yet implemented)")
