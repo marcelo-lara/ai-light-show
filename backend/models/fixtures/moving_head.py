@@ -75,6 +75,9 @@ class MovingHead(FixtureModel):
             duration (float): Time to complete the movement (seconds).
             pos_x (int): Target X position (pan) as 16-bit value (0-65535).
             pos_y (int): Target Y position (tilt) as 16-bit value (0-65535).
+        Note:
+            The pan/tilt values are maintained after the action completes until the next seek
+            action or the end of the song.
         """
         # Ensure valid 16-bit values
         pos_x = max(0, min(65535, int(pos_x)))
@@ -86,17 +89,21 @@ class MovingHead(FixtureModel):
         tilt_msb = (pos_y >> 8) & 0xFF
         tilt_lsb = pos_y & 0xFF
         
+        # Get the maximum time value for the DMX canvas to maintain values until the end of the song
+        # Using a very large integer (24 hours in seconds) instead of infinity to avoid conversion errors
+        max_time = 86400  # 24 hours in seconds, practically the end of any song
+        
         # If duration is very short, use direct positioning
         if duration < 0.1:
-            # Set pan channels
-            self.set_channel_value('pan_msb', pan_msb, start_time=start_time)
-            self.set_channel_value('pan_lsb', pan_lsb, start_time=start_time)
+            # Set pan channels and maintain values indefinitely
+            self.set_channel_value('pan_msb', pan_msb, start_time=start_time, duration=max_time)
+            self.set_channel_value('pan_lsb', pan_lsb, start_time=start_time, duration=max_time)
             
-            # Set tilt channels
-            self.set_channel_value('tilt_msb', tilt_msb, start_time=start_time)
-            self.set_channel_value('tilt_lsb', tilt_lsb, start_time=start_time)
+            # Set tilt channels and maintain values indefinitely
+            self.set_channel_value('tilt_msb', tilt_msb, start_time=start_time, duration=max_time)
+            self.set_channel_value('tilt_lsb', tilt_lsb, start_time=start_time, duration=max_time)
             
-            print(f"  🔄 {self.name}: Instant seek to position ({pos_x}, {pos_y}) at {start_time:.2f}s")
+            print(f"  🔄 {self.name}: Instant seek to position ({pos_x}, {pos_y}) at {start_time:.2f}s (values maintained)")
         else:
             # For longer durations, use fading for smooth movement
             try:
@@ -118,24 +125,30 @@ class MovingHead(FixtureModel):
                     current_tilt_msb = get_channel_value(tilt_msb_ch - 1)
                     current_tilt_lsb = get_channel_value(tilt_lsb_ch - 1)
                     
-                    # Fade pan channels
+                    # Fade pan channels during the movement
                     self.fade_channel('pan_msb', current_pan_msb, pan_msb, start_time, duration)
                     self.fade_channel('pan_lsb', current_pan_lsb, pan_lsb, start_time, duration)
                     
-                    # Fade tilt channels
+                    # Fade tilt channels during the movement
                     self.fade_channel('tilt_msb', current_tilt_msb, tilt_msb, start_time, duration)
                     self.fade_channel('tilt_lsb', current_tilt_lsb, tilt_lsb, start_time, duration)
                     
-                    print(f"  🔄 {self.name}: Smooth seek to position ({pos_x}, {pos_y}) over {duration:.2f}s starting at {start_time:.2f}s")
+                    # After the fade completes, maintain the final values indefinitely
+                    self.set_channel_value('pan_msb', pan_msb, start_time=start_time + duration, duration=max_time)
+                    self.set_channel_value('pan_lsb', pan_lsb, start_time=start_time + duration, duration=max_time)
+                    self.set_channel_value('tilt_msb', tilt_msb, start_time=start_time + duration, duration=max_time)
+                    self.set_channel_value('tilt_lsb', tilt_lsb, start_time=start_time + duration, duration=max_time)
+                    
+                    print(f"  🔄 {self.name}: Smooth seek to position ({pos_x}, {pos_y}) over {duration:.2f}s starting at {start_time:.2f}s (values maintained)")
                     return
             except (KeyError, AttributeError, Exception) as e:
                 # If we can't get current values, fall back to direct setting
                 print(f"  ⚠️ {self.name}: Error getting current position, falling back to direct setting: {e}")
                 
-            # Fallback: directly set target position with no transition
-            self.set_channel_value('pan_msb', pan_msb, start_time=start_time)
-            self.set_channel_value('pan_lsb', pan_lsb, start_time=start_time)
-            self.set_channel_value('tilt_msb', tilt_msb, start_time=start_time)
-            self.set_channel_value('tilt_lsb', tilt_lsb, start_time=start_time)
+            # Fallback: directly set target position with no transition and maintain indefinitely
+            self.set_channel_value('pan_msb', pan_msb, start_time=start_time, duration=max_time)
+            self.set_channel_value('pan_lsb', pan_lsb, start_time=start_time, duration=max_time)
+            self.set_channel_value('tilt_msb', tilt_msb, start_time=start_time, duration=max_time)
+            self.set_channel_value('tilt_lsb', tilt_lsb, start_time=start_time, duration=max_time)
             
-            print(f"  🔄 {self.name}: Direct seek to position ({pos_x}, {pos_y}) at {start_time:.2f}s")
+            print(f" FALLBACK 🔄 {self.name}: Direct seek to position ({pos_x}, {pos_y}) at {start_time:.2f}s (values maintained)")
