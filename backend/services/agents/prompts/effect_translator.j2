@@ -5,7 +5,12 @@ Convert these symbolic lighting actions into direct commands:
 
 Available fixtures: {{ fixture_ids }}
 Available channels: {{ channels }}
-Available presets: {{ presets }}
+Available actions: {{ available_actions }}
+
+Fixture details:
+{% for fixture_id, details in fixtures_details.items() %}
+- {{ fixture_id }} ({{ details.type }}): channels={{ details.channels }}, actions={{ details.actions }}
+{% endfor %}
 
 Use direct command syntax like:
 - "#set fixture_id channel to value at time"

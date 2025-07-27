@@ -120,9 +120,9 @@ python -m song_analysis.test_pipeline_run --song track.mp3
 - User prompts ALWAYS be handled by LLM (NO HARDCODED LOGIC, except for direct commands)
 - Do NOT create backward compatibility, update to latest patterns if needed.
 - Do not create tests, think in the chat context and then implement the code directly.
-- Do not use fallbacks or legacy patterns
+- Do NOT use fallbacks or legacy patterns
 - prepend "clear &&" to test commands.
-- Always use class public properties, not private or internal
+- ALWAYS use public properties of classes, not private (_) or internal (__) properties. Add public properties if needed.
 - Use latest import paths from `backend/services/agents/`
 - Service boundaries: backend ↔ song_analysis via REST client only
 - Service boundaries: backend ↔ frontend via WebSocket only

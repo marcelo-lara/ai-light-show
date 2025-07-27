@@ -146,3 +146,11 @@ class FixturesListModel:
                 position = fixture.position
                 position_str = f" at {position.label} ({position.x}, {position.y}, {position.z})" if position else " (no position)"
                 print(f"  - {fixture}{position_str}")
+
+    def __iter__(self):
+        """
+        Iterate over the fixtures in the model.
+        Returns:
+            Iterator[FixtureModel]: Iterator over the fixtures.
+        """
+        return iter(self._fixtures.values())

@@ -7,10 +7,22 @@ import json
 import re
 from typing import Dict, Any, List, Optional
 from typing_extensions import TypedDict
-from config import LOGS_DIR
 from pathlib import Path
 
-from ..ollama.ollama_api import query_ollama
+from ...models.app_state import app_state
+
+# Import ollama with fallback
+try:
+    from ..ollama.ollama_api import query_ollama
+except ImportError:
+    from backend.services.ollama.ollama_api import query_ollama
+
+# Import LOGS_DIR from config
+try:
+    from ...config import LOGS_DIR
+except ImportError:
+    # Fallback if relative import fails
+    from backend.config import LOGS_DIR
 
 
 class PipelineState(TypedDict):
@@ -49,50 +61,65 @@ class EffectTranslatorAgent:
     
     def _get_dynamic_fixture_info(self) -> Dict[str, Any]:
         """Get dynamic fixture information from the global app_state"""
-        try:
-            from ...models.app_state import app_state
+        if not app_state.fixtures:
+            raise ValueError("☠️ Fixtures not loaded in app_state")
+        
+        fixture_ids = list(app_state.fixtures.fixtures.keys())
+        
+        # Get all available channels from all fixtures
+        channels = set()
+        actions = set()
+        fixture_types = {}
+        fixtures_details = {}
+        
+        for fixture_id, fixture in app_state.fixtures.fixtures.items():
+            # Get fixture type
+            fixture_types[fixture_id] = fixture.fixture_type
             
-            if not app_state.fixtures:
-                raise ValueError("☠️ Fixtures not loaded in app_state")
-            
-            fixture_ids = list(app_state.fixtures.fixtures.keys())
-            
-            # Get all available channels from all fixtures
-            channels = set()
-            actions = set()
-            fixture_types = {}
-            
-            for fixture_id, fixture in app_state.fixtures.fixtures.items():
-                # Get fixture type
-                fixture_types[fixture_id] = fixture.fixture_type
-                
-                # Get channels from fixture's _config
-                if hasattr(fixture, '_config') and fixture._config and 'channels' in fixture._config:
-                    channels.update(fixture._config['channels'].keys())
-                
-                # Get actions from fixture's _config
-                if hasattr(fixture, '_config') and fixture._config and 'actions' in fixture._config:
-                    for preset in fixture._config['actions']:
-                        if isinstance(preset, dict) and 'name' in preset:
-                            actions.add(preset['name'])
-            
-            # Add common channels if none found
-            if not channels:
-                raise ValueError("☠️ Fixtures channels not loaded")
-            
-            # Add common actions if none found
-            if not actions:
-                raise ValueError("☠️ Fixtures actions not loaded")
-
-            return {
-                'fixture_ids': fixture_ids,
-                'channels': sorted(list(channels)),
-                'actions': sorted(list(actions)),
-                'fixture_types': fixture_types
+            # Initialize fixture details
+            fixtures_details[fixture_id] = {
+                'type': fixture.fixture_type,
+                'channels': [],
+                'actions': []
             }
-        except ImportError:
-            raise ValueError("☠️ Import error: Ensure app_state and fixtures are loaded")
+            
+            # Get channels from fixture's _config
+            if hasattr(fixture, '_config') and fixture._config and 'channels' in fixture._config:
+                fixture_channels = list(fixture._config['channels'].keys())
+                channels.update(fixture_channels)
+                fixtures_details[fixture_id]['channels'] = fixture_channels
+            
+            # Get actions from fixture's _config or actions property
+            if hasattr(fixture, '_config') and fixture._config and 'actions' in fixture._config:
+                fixture_actions = []
+                for preset in fixture._config['actions']:
+                    if isinstance(preset, dict) and 'name' in preset:
+                        action_name = preset['name']
+                        actions.add(action_name)
+                        fixture_actions.append(action_name)
+                fixtures_details[fixture_id]['actions'] = fixture_actions
+            elif hasattr(fixture, 'actions') and fixture.actions:
+                # Try to get actions from the fixture's actions property
+                fixture_actions = list(fixture.actions)
+                actions.update(fixture_actions)
+                fixtures_details[fixture_id]['actions'] = fixture_actions
+        
+        # Require channels to be found
+        if not channels:
+            raise ValueError("☠️ Fixtures channels not loaded")
+        
+        # Actions are optional - many fixtures don't have predefined actions
+        if not actions:
+            print("ℹ️ No predefined actions found in fixtures")
+            actions = set()
 
+        return {
+            'fixture_ids': fixture_ids,
+            'channels': sorted(list(channels)),
+            'actions': sorted(list(actions)),
+            'fixture_types': fixture_types,
+            'fixtures_details': fixtures_details
+        }
     
     def run(self, state: PipelineState) -> PipelineState:
         """Execute the effect translation process for the pipeline"""
@@ -142,11 +169,11 @@ class EffectTranslatorAgent:
             result_state = state.copy()
             return result_state
     
-    def _build_prompt(self, actions: List[Dict[str, Any]], fixture_info: Dict[str, Any]) -> str:
+    def _build_prompt(self, input_actions: List[Dict[str, Any]], fixture_info: Dict[str, Any]) -> str:
         """Build the prompt for effect translation"""
         fixture_ids = fixture_info.get('fixture_ids', [])
         channels = fixture_info.get('channels', [])
-        actions = fixture_info.get('actions', [])
+        available_actions = fixture_info.get('actions', [])
         
         primary_fixture = fixture_ids[0] if fixture_ids else 'parcan_l'
         secondary_fixture = fixture_ids[1] if len(fixture_ids) > 1 else primary_fixture
@@ -164,9 +191,11 @@ class EffectTranslatorAgent:
         # Render template
         template = self.jinja_env.get_template('effect_translator.j2')
         prompt = template.render(
-            actions=actions,
+            actions=input_actions,
             fixture_ids=fixture_ids,
             channels=channels,
+            available_actions=available_actions,
+            fixtures_details=fixture_info.get('fixtures_details', {}),
             primary_fixture=primary_fixture,
             secondary_fixture=secondary_fixture
         )
@@ -214,6 +243,42 @@ class EffectTranslatorAgent:
             
         except json.JSONDecodeError:
             print(f"☠️☠️ Failed to parse JSON from effect translator: {response}")
+            return []
+    
+    def translate_actions(self, actions: List[Dict[str, Any]]) -> List[str]:
+        """Translate a list of actions into DMX commands
+        
+        This is a direct method that can be called from other services
+        without using the pipeline state.
+        """
+        # Get fixture information for context
+        fixture_info = self._get_dynamic_fixture_info()
+        
+        # Build prompt for effect translation
+        prompt = self._build_prompt(actions, fixture_info)
+        
+        try:
+            # Call model via Ollama with fallback
+            response = self._query_model(prompt)
+            
+            # Parse direct command strings from response
+            dmx_commands = self._parse_dmx_commands(response, actions)
+            
+            # Save output for debugging
+            save_node_output("effect_translator_direct", {
+                "input": {
+                    "actions": actions,
+                    "fixture_info": fixture_info
+                },
+                "dmx_commands": dmx_commands,
+                "model_response": response
+            })
+            
+            print(f"✅ Generated {len(dmx_commands)} DMX commands")
+            return dmx_commands
+            
+        except Exception as e:
+            print(f"❌ Effect Translator failed: {e}")
             return []
 
 
