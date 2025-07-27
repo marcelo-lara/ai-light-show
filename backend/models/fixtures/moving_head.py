@@ -18,6 +18,11 @@ class MovingHead(FixtureModel):
             'arm': self._handle_arm,
             'flash': self._handle_flash,
             'seek': self._handle_seek,
+            'center_sweep': self._handle_center_sweep,
+            'searchlight': self._handle_searchlight,
+            'flyby': self._handle_flyby,
+            'strobe': self._handle_strobe,
+            'strobe_burst': self._handle_strobe_burst,
         }
 
         super().__init__(id, name, 'moving_head', 12, dmx_canvas, config) # Moving Head uses 12 channels (e.g., pan, tilt, color, etc.)
@@ -64,8 +69,94 @@ class MovingHead(FixtureModel):
 
         print(f"  ⚡ {self.name}: Flash effect at {start_time:.2f}s - peak {dmx_intensity}, fade over {duration:.2f}s")
 
+    def _handle_center_sweep(self, 
+                             start_time: float = 0.0, 
+                             duration: float = 1.0, 
+                             subject_position_x: int = 0, 
+                             subject_position_y: int = 0,
+                             start_position_x: int = 0,
+                             start_position_y: int = 0) -> None:
+        """
+        A smooth linear pan or tilt movement from point A to B with a dimmer curve that peaks in the middle. 
+        Often used to highlight a performer or object momentarily during a sweeping motion.
+        Args:
+            start_time (float): Start time for the sweep in seconds (default: 0.0).
+            duration (float): Duration of the sweep in seconds (default: 1.0).
+        """
+        # Currently, this method does nothing but can be extended later
+        print(f"  ⚠️ {self.name}: Center sweep from ({start_position_x}, {start_position_y}) to ({subject_position_x}, {subject_position_y}) over {duration:.2f}s starting at {start_time:.2f}s")
 
+    def _handle_searchlight(self,
+                            start_time: float = 0.0, 
+                            duration: float = 1.0, 
+                            radius: int = 0,
+                            center_x: int = 0,
+                            center_y: int = 0) -> None:
 
+        """
+        A dramatic, wide pan movement imitating old searchlights, sometimes with shutter flicker or strobe for intensity.
+        This is a placeholder for future implementation.
+        Args:
+            start_time (float): Start time for the searchlight in seconds (default: 0.0).
+            duration (float): Duration of the searchlight in seconds (default: 1.0).
+        """        
+        # Currently, this method does nothing but can be extended later
+        print(f"  ⚠️ {self.name}: Searchlight from ({center_x}, {center_y}) radius ({radius}) over {duration:.2f}s starting at {start_time:.2f}s")
+
+    def _handle_flyby(self, 
+                        start_time: float = 0.0, 
+                        duration: float = 1.0, 
+                        subject_position_x: int = 0, 
+                        subject_position_y: int = 0,
+                        start_position_x: int = 0,
+                        start_position_y: int = 0) -> None:
+        """
+        The beam sweeps past a subject without stopping, similar to "center sweep" but with constant dimmer
+        This is a placeholder for future implementation.
+        Args:
+            start_time (float): Start time for the searchlight in seconds (default: 0.0).
+            duration (float): Duration of the searchlight in seconds (default: 1.0).
+        """
+        # Currently, this method does nothing but can be extended later
+        print(f"  ⚠️ {self.name}: Flyby from ({start_position_x}, {start_position_y}) to ({subject_position_x}, {subject_position_y}) over {duration:.2f}s starting at {start_time:.2f}s")
+
+    def _handle_strobe(self,
+                        start_time: float = 0.0,
+                        duration: float = 1.0,
+                        intensity: float = 1.0,
+                        frequency: float = 1.0) -> None:
+        """
+        Handle the strobe effect for the Moving Head fixture.
+        Args:
+            start_time (float): Start time for the strobe effect in seconds (default: 0.0).
+            duration (float): Duration of the strobe effect in seconds (default: 1.0).
+            intensity (float): Intensity of the strobe effect (0.0 to 1.0, default: 1.0).
+            frequency (float): Frequency of the strobe effect in Hz (default: 1.0).
+        """
+        # Currently, this method does nothing but can be extended later
+        print(f"  ⚠️ {self.name}: Strobe effect at {start_time:.2f}s for {duration:.2f}s with intensity {intensity:.2f} and frequency {frequency:.2f}Hz")
+
+    def _handle_strobe_burst(self,
+                             start_time: float = 0.0,
+                             duration: float = 1.0,
+                             start_intensity: float = 0.0,
+                             start_frequency: float = 0.0,
+                             end_frequency: float = 1.0,
+                             end_intensity: float = 1.0) -> None:
+        """
+        Handle the strobe burst effect for the Moving Head fixture.
+        The strobe burst is a rapid series of flashes that can vary in intensity and frequency.
+        Frequently used in drops or climactic moments in EDM.
+        Args:
+            start_time (float): Start time for the strobe burst in seconds (default: 0.0).
+            duration (float): Duration of the strobe burst in seconds (default: 1.0).
+            start_intensity (float): Initial intensity of the strobe burst (0.0 to 1.0, default: 0.0).
+            start_frequency (float): Initial frequency of the strobe burst in Hz (default: 0.0).
+            end_frequency (float): Final frequency of the strobe burst in Hz (default: 1.0).
+            end_intensity (float): Final intensity of the strobe burst (0.0 to 1.0, default: 1.0).
+        """
+        # Currently, this method does nothing but can be extended later
+        print(f"  ⚠️ {self.name}: Strobe burst effect at {start_time:.2f}s for {duration:.2f}s with intensity {start_intensity:.2f} and frequency ramp from {start_frequency:.2f}Hz to {end_frequency:.2f}Hz ending at intensity {end_intensity:.2f}")
 
     def _handle_seek(self, start_time: float = 0.0, duration: float = 1.0, pos_x: int = 0, pos_y: int = 0) -> None:
         """
