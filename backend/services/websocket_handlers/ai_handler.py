@@ -190,13 +190,21 @@ async def _handle_agent_request(websocket: WebSocket, command: str) -> None:
     Handle agent requests that involve the LLM.
     """
 
-    agent = command.strip().lstrip(":").split(" ")[0].lower()
-    prompt = " ".join(command.strip().lstrip(":").split(" ")[1:])
-
     agent_handlers = {
+        "fx": EffectTranslatorAgent,
         "context_builder": ContextBuilderAgent,
         "lighting_planner": LightingPlannerAgent
     }
+
+    agent = command.strip().lstrip(":").split(" ")[0].lower()
+    prompt = " ".join(command.strip().lstrip(":").split(" ")[1:])
+
+    if agent not in agent_handlers:
+        await websocket.send_json({
+            "type": "chatResponse",
+            "response": f"Unknown agent '{agent}'. Available agents: {', '.join(agent_handlers.keys())}"
+        })
+        return
 
     try:
         # Pass the prompt to the agent for processing

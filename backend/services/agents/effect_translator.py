@@ -170,7 +170,11 @@ class EffectTranslatorAgent:
             primary_fixture=primary_fixture,
             secondary_fixture=secondary_fixture
         )
-        
+
+        # Save prompt to file for debugging
+        with open(LOGS_DIR / "effect_translator.prompt.txt", 'w') as f:
+            f.write(prompt)
+
         return prompt
     
     def _query_model(self, prompt: str) -> str:
