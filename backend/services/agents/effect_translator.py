@@ -7,6 +7,7 @@ import json
 import re
 from typing import Dict, Any, List, Optional
 from typing_extensions import TypedDict
+from config import LOGS_DIR
 from pathlib import Path
 
 from ..ollama.ollama_api import query_ollama
@@ -21,7 +22,7 @@ class PipelineState(TypedDict):
 
 def save_node_output(node_name: str, data: Dict[str, Any]) -> None:
     """Save node output to logs for debugging"""
-    logs_dir = Path("logs")
+    logs_dir = LOGS_DIR
     logs_dir.mkdir(exist_ok=True)
     
     output_file = logs_dir / f"{node_name}.json"
@@ -42,7 +43,7 @@ class EffectTranslatorAgent:
     Provides a simple interface for effect translation.
     """
     
-    def __init__(self, model: str = "command-r", fallback_model: str = "mixtral"):
+    def __init__(self, model: str = "command-r", fallback_model: str = "mistral"):
         self.model = model
         self.fallback_model = fallback_model
     
@@ -52,18 +53,13 @@ class EffectTranslatorAgent:
             from ...models.app_state import app_state
             
             if not app_state.fixtures:
-                # Fallback to hardcoded values if fixtures not loaded
-                return {
-                    'fixture_ids': ['head_el150', 'parcan_l', 'parcan_r', 'parcan_pl', 'parcan_pr'],
-                    'channels': ['red', 'green', 'blue', 'white', 'dim', 'dimmer', 'pan', 'tilt', 'color', 'gobo', 'shutter'],
-                    'presets': ['Drop', 'Flash', 'Strobe', 'Home', 'Piano']
-                }
+                raise ValueError("☠️ Fixtures not loaded in app_state")
             
             fixture_ids = list(app_state.fixtures.fixtures.keys())
             
             # Get all available channels from all fixtures
             channels = set()
-            presets = set()
+            actions = set()
             fixture_types = {}
             
             for fixture_id, fixture in app_state.fixtures.fixtures.items():
@@ -74,33 +70,29 @@ class EffectTranslatorAgent:
                 if hasattr(fixture, '_config') and fixture._config and 'channels' in fixture._config:
                     channels.update(fixture._config['channels'].keys())
                 
-                # Get presets from fixture's _config
-                if hasattr(fixture, '_config') and fixture._config and 'presets' in fixture._config:
-                    for preset in fixture._config['presets']:
+                # Get actions from fixture's _config
+                if hasattr(fixture, '_config') and fixture._config and 'actions' in fixture._config:
+                    for preset in fixture._config['actions']:
                         if isinstance(preset, dict) and 'name' in preset:
-                            presets.add(preset['name'])
+                            actions.add(preset['name'])
             
             # Add common channels if none found
             if not channels:
-                channels = {'red', 'green', 'blue', 'white', 'dim', 'dimmer', 'pan', 'tilt', 'color', 'gobo', 'shutter'}
+                raise ValueError("☠️ Fixtures channels not loaded")
             
-            # Add common presets if none found
-            if not presets:
-                presets = {'Drop', 'Flash', 'Strobe', 'Home', 'Piano'}
-            
+            # Add common actions if none found
+            if not actions:
+                raise ValueError("☠️ Fixtures actions not loaded")
+
             return {
                 'fixture_ids': fixture_ids,
                 'channels': sorted(list(channels)),
-                'presets': sorted(list(presets)),
+                'actions': sorted(list(actions)),
                 'fixture_types': fixture_types
             }
         except ImportError:
-            # Fallback to hardcoded values if app_state not available
-            return {
-                'fixture_ids': ['head_el150', 'parcan_l', 'parcan_r', 'parcan_pl', 'parcan_pr'],
-                'channels': ['red', 'green', 'blue', 'white', 'dim', 'dimmer', 'pan', 'tilt', 'color', 'gobo', 'shutter'],
-                'presets': ['Drop', 'Flash', 'Strobe', 'Home', 'Piano']
-            }
+            raise ValueError("☠️ Import error: Ensure app_state and fixtures are loaded")
+
     
     def run(self, state: PipelineState) -> PipelineState:
         """Execute the effect translation process for the pipeline"""
@@ -147,16 +139,14 @@ class EffectTranslatorAgent:
         except Exception as e:
             print(f"❌ Effect Translator failed: {e}")
             # Create fallback commands
-            fallback_commands = self._create_fallback_commands(actions)
             result_state = state.copy()
-            result_state["dmx"] = fallback_commands
             return result_state
     
     def _build_prompt(self, actions: List[Dict[str, Any]], fixture_info: Dict[str, Any]) -> str:
         """Build the prompt for effect translation"""
         fixture_ids = fixture_info.get('fixture_ids', [])
         channels = fixture_info.get('channels', [])
-        presets = fixture_info.get('presets', [])
+        actions = fixture_info.get('actions', [])
         
         primary_fixture = fixture_ids[0] if fixture_ids else 'parcan_l'
         secondary_fixture = fixture_ids[1] if len(fixture_ids) > 1 else primary_fixture
@@ -177,7 +167,6 @@ class EffectTranslatorAgent:
             actions=actions,
             fixture_ids=fixture_ids,
             channels=channels,
-            presets=presets,
             primary_fixture=primary_fixture,
             secondary_fixture=secondary_fixture
         )
@@ -185,7 +174,7 @@ class EffectTranslatorAgent:
         return prompt
     
     def _query_model(self, prompt: str) -> str:
-        """Query the model with fallback support"""
+        """Query the model"""
         try:
             return query_ollama(prompt, model=self.model)
         except:
@@ -207,8 +196,8 @@ class EffectTranslatorAgent:
                     commands = json.loads(json_match.group(0))
                 else:
                     # Fallback: create basic direct commands
-                    commands = self._create_fallback_commands(actions)
-                    
+                    print("⚠️ No JSON found in response.")
+
             # Ensure all commands are strings and start with #
             validated_commands = []
             for cmd in commands:

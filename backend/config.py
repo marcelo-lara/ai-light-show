@@ -2,6 +2,8 @@ from pathlib import Path
 
 ### Paths
 BASE_DIR = Path("/app/static") if Path("/app/static").exists() else Path(__file__).parent.parent
+LOGS_DIR = Path("/app/logs") if Path("/app/logs").exists() else BASE_DIR / "logs"
+
 
 ## DMX Related
 FIXTURES_FILE = BASE_DIR / "fixtures/fixtures.json"
