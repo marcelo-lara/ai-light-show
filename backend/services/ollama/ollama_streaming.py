@@ -65,7 +65,7 @@ async def query_ollama_streaming(
             "messages": [],
             "temperature": temperature,
             "stream": True,  # Enable streaming
-            "think": True  # Enable thinking mode for the model
+            # "think": True  # Enable thinking mode for the model
         }
         
         # Add system context if provided

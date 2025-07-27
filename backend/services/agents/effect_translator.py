@@ -178,6 +178,15 @@ class EffectTranslatorAgent:
         primary_fixture = fixture_ids[0] if fixture_ids else 'parcan_l'
         secondary_fixture = fixture_ids[1] if len(fixture_ids) > 1 else primary_fixture
         
+        # Get current song beat times if available
+        beat_times = None
+        if app_state.current_song:
+            try:
+                beat_times = app_state.current_song.get_beats_array()
+                print(f"✅ Found {len(beat_times)} beat times for the current song")
+            except (AttributeError, Exception) as e:
+                print(f"⚠️ Could not get beat times: {e}")
+        
         # Setup Jinja2 environment (lazy initialization)
         if not hasattr(self, 'jinja_env'):
             from jinja2 import Environment, FileSystemLoader
@@ -197,7 +206,8 @@ class EffectTranslatorAgent:
             available_actions=available_actions,
             fixtures_details=fixture_info.get('fixtures_details', {}),
             primary_fixture=primary_fixture,
-            secondary_fixture=secondary_fixture
+            secondary_fixture=secondary_fixture,
+            beat_times=beat_times
         )
 
         # Save prompt to file for debugging

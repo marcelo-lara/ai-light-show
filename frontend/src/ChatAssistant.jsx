@@ -9,6 +9,7 @@ export default function ChatAssistant({ wsSend, lastResponse, contextProgress, l
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentStreamingMessage, setCurrentStreamingMessage] = useState("");
   const chatContainerRef = useRef(null);
+  const textareaRef = useRef(null);
 
   // Configure marked for safer HTML output
   marked.setOptions({
@@ -48,12 +49,25 @@ export default function ChatAssistant({ wsSend, lastResponse, contextProgress, l
     setChat(prev => [...prev, { sender: 'assistant', text: currentStreamingMessage }]);
     setCurrentStreamingMessage("");
     setIsStreaming(false);
+    // Focus the textarea after response
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
+    }, 100);
   };
 
   // Auto-scroll when chat updates
   useEffect(() => {
     scrollToBottom();
   }, [chat, currentStreamingMessage]);
+
+  // Focus textarea on mount
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, []);
 
   const sendMessage = () => {
     if (!message.trim()) return;
@@ -73,16 +87,23 @@ export default function ChatAssistant({ wsSend, lastResponse, contextProgress, l
 
   useEffect(() => {
     if (lastResponse) {
-      // Only add lastResponse if streaming was never started (non-streaming response)
-      if (!isStreaming && currentStreamingMessage === "") {
-        // Check if the last message in chat is already this response
-        setChat((prev) => {
-          if (prev.length > 0 && prev[prev.length - 1].sender === 'assistant' && prev[prev.length - 1].text === lastResponse) {
-            return prev; // Don't add duplicate
+                // Only add lastResponse if streaming was never started (non-streaming response)
+          if (!isStreaming && currentStreamingMessage === "") {
+            // Check if the last message in chat is already this response
+            setChat((prev) => {
+              if (prev.length > 0 && prev[prev.length - 1].sender === 'assistant' && prev[prev.length - 1].text === lastResponse) {
+                return prev; // Don't add duplicate
+              }
+              return [...prev, { sender: 'assistant', text: lastResponse }];
+            });
+            
+            // Focus the textarea after non-streaming response
+            setTimeout(() => {
+              if (textareaRef.current) {
+                textareaRef.current.focus();
+              }
+            }, 100);
           }
-          return [...prev, { sender: 'assistant', text: lastResponse }];
-        });
-      }
     }
   }, [lastResponse, isStreaming, currentStreamingMessage]);
   
@@ -187,6 +208,7 @@ export default function ChatAssistant({ wsSend, lastResponse, contextProgress, l
       )}      
       <div className="mt-4 flex gap-2 items-end">
         <textarea
+          ref={textareaRef}
           className="flex-1 min-h-[2.5rem] max-h-32 p-2 bg-gray-800 text-white rounded resize-none"
           placeholder="Type a message or # command (e.g. #add flash to parcan at 1m23s duration 2b)"
           rows="1"

@@ -10,7 +10,7 @@ from .action_executor import execute_confirmed_action
 from ...services.agents import ContextBuilderAgent, LightingPlannerAgent, EffectTranslatorAgent
 from ...services.agents.context_builder import PipelineState
 
-UI_CHAT_MODEL = "qwen3:8b"  # Default model for AI chat
+UI_CHAT_MODEL = "cogito:8b" #"deepseek-r1:8b"  # Default model for AI chat
 
 # Store pending actions for each WebSocket session
 _pending_actions_store = {}
@@ -467,7 +467,7 @@ def build_ui_context() -> str:
             fixtures.append({
                 "id": fixture.id,
                 "type": fixture.fixture_type,
-                "effects": fixture.actions
+                "effects": [action for action in fixture.actions if action != 'arm']  # omit 'arm' action
             })
     
     # Render the template with context
