@@ -99,11 +99,20 @@ async def handle_save_key_moments(websocket: WebSocket, message: Dict[str, Any])
 
 async def handle_save_light_plan(websocket: WebSocket, message: Dict[str, Any]) -> None:
     """Handle saving song light plan."""
+    from ..utils.broadcast import broadcast_to_all
+    
     light_plan = message["light_plan"]
     if app_state.current_song is not None:
         app_state.current_song.light_plan = light_plan
         app_state.current_song.save()
         print(f"✅ Saved {len(light_plan)} light plan items for {app_state.current_song.song_name}")
+        
+        # Broadcast light plan update to all clients
+        await broadcast_to_all({
+            "type": "lightPlanUpdate",
+            "light_plan": light_plan,
+            "song_name": app_state.current_song.song_name
+        })
     else:
         print("No song object loaded; cannot save light plan.")
 

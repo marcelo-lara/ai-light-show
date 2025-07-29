@@ -113,6 +113,15 @@ class CreateLightPlanCommandHandler(BaseCommandHandler):
                 description=description
             )
             
+            # Broadcast light plan update to all clients
+            if websocket:
+                from ...services.utils.broadcast import broadcast_to_all
+                await broadcast_to_all({
+                    "type": "lightPlanUpdate",
+                    "light_plan": [plan.to_dict() for plan in app_state.current_song.light_plan],
+                    "song_name": app_state.current_song.song_name
+                })
+            
             return True, f"Created light plan '{plan_name}' (ID: {new_id}) at {time_range}{desc_text}", {
                 "light_plan": created_plan.to_dict()
             }
@@ -188,6 +197,15 @@ class DeleteLightPlanCommandHandler(BaseCommandHandler):
             if hasattr(app_state.current_song, 'save'):
                 app_state.current_song.save()
             
+            # Broadcast light plan update to all clients
+            if websocket:
+                from ...services.utils.broadcast import broadcast_to_all
+                await broadcast_to_all({
+                    "type": "lightPlanUpdate",
+                    "light_plan": [plan.to_dict() for plan in app_state.current_song.light_plan],
+                    "song_name": app_state.current_song.song_name
+                })
+            
             return True, f"Deleted light plan '{plan_to_delete.name}' (ID: {plan_to_delete.id})", None
             
         except Exception as e:
@@ -226,6 +244,15 @@ class ResetLightPlansCommandHandler(BaseCommandHandler):
             # Save the song metadata
             if hasattr(app_state.current_song, 'save'):
                 app_state.current_song.save()
+            
+            # Broadcast light plan update to all clients
+            if websocket:
+                from ...services.utils.broadcast import broadcast_to_all
+                await broadcast_to_all({
+                    "type": "lightPlanUpdate",
+                    "light_plan": [],  # Empty array after clearing all plans
+                    "song_name": app_state.current_song.song_name
+                })
             
             return True, f"Reset {plan_count} light plan(s) from the current song.", None
             

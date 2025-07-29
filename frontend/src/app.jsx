@@ -25,6 +25,7 @@ export function App() {
   const [syncTime, setSyncTime] = useState(0);
   const [songsList, setSongsList] = useState([]);
   const [seekToTime, setSeekToTime] = useState(0);
+  const [lightPlan, setLightPlan] = useState([]);
 
   // model chat
   const [lastResponse, setLastResponse] = useState(null);
@@ -143,7 +144,6 @@ export function App() {
             break;
           }
           case "songLoaded": {
-            // DEPRECATED: setCues removed - cue system deprecated
             setSongData(msg.metadata || {});
             console.log("Song loaded:", msg.metadata);
             break;
@@ -162,6 +162,12 @@ export function App() {
             // Handle lighting actions updates from backend
             console.log("Received actions update:", msg);
             setLightingActions(msg.actions || []);
+            break;
+          }
+          case "lightPlanUpdate": {
+            // Handle light plan updates from backend
+            console.log("Received light plan update:", msg);
+            setLightPlan(msg.light_plan || []);
             break;
           }
           case "llmStatus": {
@@ -314,7 +320,8 @@ export function App() {
                     <LightingPlan
                       currentTime={currentTime}
                       setCurrentTime={setCurrentTime} 
-                      songData={songData}
+                      lightPlan={lightPlan}
+                      setLightPlan={setLightPlan}
                       seekTo={(time) => handleSeekTo(time)}
                       saveLightPlan={(lp) => {wsSend("saveLightPlan", {light_plan: lp})}}
                     />

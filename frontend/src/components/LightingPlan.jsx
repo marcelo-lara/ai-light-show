@@ -7,20 +7,15 @@ import { useEffect, useState, useRef } from 'preact/hooks';
 export default function LightingPlan({
     currentTime,
     seekTo,
-    setCurrentTime,
+    lightPlan,
+    setLightPlan,
     songData,
     saveLightPlan
 }) {
     const [currentItem, setCurrentItem] = useState(null);
     const [editMode, setEditMode] = useState(false);
-    const [lightPlan, setLightPlan] = useState([]);
     const [showControls, setShowControls] = useState(false);
     const currentItemRef = useRef(null);
-
-    // Load light plan from song data if available
-    useEffect(() => {
-        setLightPlan(Array.isArray(songData?.light_plan) ? songData.light_plan : []);
-    }, [songData]);
 
     // Find the current light plan item based on current time
     useEffect(() => {

@@ -51,11 +51,11 @@ class EffectTranslatorAgent:
     """
     Effect Translator Agent
     
-    Converts symbolic lighting actions into standardized direct commands.
-    Provides a simple interface for effect translation.
+    Converts lighting intentions into standardized Action (ActionModel).
+    Interpret chasser effects and translate into a set of Actions (ActionModel)
     """
     
-    def __init__(self, model: str = "command-r", fallback_model: str = "mistral"):
+    def __init__(self, model: str = "cogito:8b", fallback_model: str = "command-r"):
         self.model = model
         self.fallback_model = fallback_model
     
