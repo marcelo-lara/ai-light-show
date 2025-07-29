@@ -12,6 +12,9 @@
 }
 
 #app-right-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   max-width: 450px;
   height: 100vh;
   overflow-y: scroll;  

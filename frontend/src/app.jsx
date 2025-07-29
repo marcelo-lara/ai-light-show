@@ -277,7 +277,7 @@ export function App() {
   return (
     <div className="flex flex-row gap-2">
       {/* Main Panel */}
-      <div className="flex-1" id="app-main-panel">
+      <div className="flex-1  overflow-y-auto max-h-screen" id="app-main-panel">
         <div className="p-6 bg-black text-white min-h-screen">
           <h1 className="text-3xl font-bold mb-4">🎛️ AI Light Show Designer</h1>
 
@@ -298,22 +298,28 @@ export function App() {
               }}
             />
           </div>
-          <div className="flex gap-2">
-              <div className="main-left max-h-50 overflow-y-auto">
-                {/* Chat Card */}
+          <div className="flex gap-2 overflow-y-auto">
+              <div className="main-left min-w-[300px] max-w-[450px]">
                 <div className="bg-white/10 rounded-2xl p-6 mb-6">
-                  <ChatAssistant 
-                    wsSend={wsSend} 
-                    lastResponse={lastResponse}
-                    contextProgress={contextProgress}
-                    llmStatus={llmStatus}
+                {/* Song Metadata Components */}
+                {songData && (
+                  <>
+                  <h2>Song Analysis</h2>
+                  <SongMetadata
+                    currentTime={currentTime}
+                    setCurrentTime={setCurrentTime}
+                    songData={songData}
+                    seekTo={(time) => handleSeekTo(time)}
+                    wsSend={wsSend}
+                    analysisResult={analysisResult}
+                    currentSongFile={currentSongFile}
                   />
+                  </>
+                )}
                 </div>
 
-                {/* Actions Card: Display lighting actions from the backend */}
-                <ActionsCard wsActions={lightingActions} />
               </div>
-              <div className="main-right min-w-[300px] max-w-[450px]">
+              <div className="main-right">
                 {/* Lighting Plan */}
                 {songData && (
                   <div className="bg-white/10 rounded-2xl p-6 mb-6">
@@ -327,6 +333,10 @@ export function App() {
                     />
                   </div>
                 )}
+
+                {/* Actions Card: Display lighting actions from the backend */}
+                <ActionsCard wsActions={lightingActions} />
+
               </div>
           </div>
         </div>
@@ -334,37 +344,35 @@ export function App() {
 
       {/* Right Panel */}
       <div className="min-w-[300px] max-w-[450px] w-full text-white p-6 space-y-6  max-h-50 overflow-y-auto" id="app-right-panel">
+        <div id="right-panel-top" >
+          {/* Song Selection */}
+          <div>
+            <SongSelector 
+              currentSongFile={currentSongFile} 
+              songsList={songsList} 
+              setCurrentSongFile={setCurrentSongFile} 
+            />
+          </div>
 
-        {/* Fixtures Control */}
-        <div>
-          <Fixtures
-            fixtures={fixtures}
-            currentTime={currentTime}
-            wsSend={wsSend}
-          />
+          {/* Fixtures Control */}
+          <div>
+            <Fixtures
+              fixtures={fixtures}
+              currentTime={currentTime}
+              wsSend={wsSend}
+            />
+          </div>
         </div>
 
-        {/* Song Selection */}
-        <div>
-          <SongSelector 
-            currentSongFile={currentSongFile} 
-            songsList={songsList} 
-            setCurrentSongFile={setCurrentSongFile} 
-          />
+        <div id="right-panel-bottom">
+        {/* Chat Card */}
+        <ChatAssistant 
+          wsSend={wsSend} 
+          lastResponse={lastResponse}
+          contextProgress={contextProgress}
+          llmStatus={llmStatus}
+        />
         </div>
-
-        {/* Song Metadata Components */}
-        {songData && (
-          <SongMetadata
-            currentTime={currentTime}
-            setCurrentTime={setCurrentTime}
-            songData={songData}
-            seekTo={(time) => handleSeekTo(time)}
-            wsSend={wsSend}
-            analysisResult={analysisResult}
-            currentSongFile={currentSongFile}
-          />
-        )}
       </div>
     </div>
   );
