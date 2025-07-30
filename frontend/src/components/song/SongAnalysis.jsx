@@ -14,8 +14,7 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime, an
     const [showPatterns, setShowPatterns] = useState(true);
     const [showAudioPatterns, setShowAudioPatterns] = useState(false);
     const [showBeats, setShowBeats] = useState(false);
-    // DEPRECATED: generateCues state removed - cue system deprecated
-    // const [generateCues, setGenerateCues] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(true); // State to toggle collapse
     const currentBeatRef = useRef(null);
     const currentClusterBeatRef = useRef(null);
 
@@ -95,14 +94,18 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime, an
     }
 
     const handleAnalyzeSong = () => {
-      // DEPRECATED: renderTestCues parameter removed - cue system deprecated
       analyzeSong({songFile: currentSongFile});
     }
 
     return (
     <>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-x2 font-bold">🤖 Song Analysis</h2>
+        <h2 
+          className="text-x2 font-bold cursor-pointer" 
+          onClick={() => setIsCollapsed(!isCollapsed)}
+        >
+          {isCollapsed ? '▼' : '▲'} 🤖 Song Analysis
+        </h2>
         <div>
           <div className="flex items-center space-x-6">
 
@@ -117,145 +120,146 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime, an
           </div>
         </div>
       </div>
-        <div>
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={showPatterns}
-                onChange={(e) => setShowPatterns(e.target.checked)}
-                className="form-checkbox h-4 w-4 text-blue-600"
-              />
-              <span className="text-sm">Patterns</span>
-            </label>
-            
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={showAudioPatterns}
-                onChange={(e) => setShowAudioPatterns(e.target.checked)}
-                className="form-checkbox h-4 w-4 text-blue-600"
-              />
-              <span className="text-sm">Audio Patterns</span>
-            </label>
-            
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={showBeats}
-                onChange={(e) => setShowBeats(e.target.checked)}
-                className="form-checkbox h-4 w-4 text-blue-600"
-              />
-              <span className="text-sm">Beats</span>
-            </label>
-        </div>
-
-        {showPatterns && (
-        <div className="mt-4">
-          <h3 className="text-x1 font-bold mb-2">patterns</h3>
-          {/* unique clusters by stem */}
-          <div className="overflow-x-auto">
-            { patterns.map((pattern, index) => (
-              <div key={index} className="px-1 py-2">
-                <div className="text-xs">{pattern.stem}</div>
-                <div className="flex space-x-3">
-                  {getUniquePatterns(pattern.clusters).map((cluster, cIndex) => {
-                    // Check if this cluster is currently active
-                    const isCurrentCluster = pattern.clusters.some(c => 
-                      c.cluster === cluster && 
-                      currentTime >= c.start && 
-                      currentTime <= c.end
-                    );
-                    
-                    return (
-                      <div
-                        className={`rounded text-xs min-w-2 px-2 py-1 ${
-                          isCurrentCluster 
-                            ? 'bg-green-500 text-white' 
-                            : 'bg-gray-700 text-gray-300'
-                        }`}
-                        key={cIndex}
-                      >
-                        {cluster}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )) }  
+      {!isCollapsed && (
+        <>
+          <div>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={showPatterns}
+                  onChange={(e) => setShowPatterns(e.target.checked)}
+                  className="form-checkbox h-4 w-4 text-blue-600"
+                />
+                <span className="text-sm">Patterns</span>
+              </label>
+              
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={showAudioPatterns}
+                  onChange={(e) => setShowAudioPatterns(e.target.checked)}
+                  className="form-checkbox h-4 w-4 text-blue-600"
+                />
+                <span className="text-sm">Audio Patterns</span>
+              </label>
+              
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={showBeats}
+                  onChange={(e) => setShowBeats(e.target.checked)}
+                  className="form-checkbox h-4 w-4 text-blue-600"
+                />
+                <span className="text-sm">Beats</span>
+              </label>
           </div>
-        </div>
-        )}      
 
-
-
-      {/* Beats and patterns */}
-      {showAudioPatterns && patterns.length > 0 && (
-        <AudioPatternsDisplay 
-          songData={songData}
-          beats={beats}
-          currentTime={currentTime}
-          setCurrentTime={setCurrentTime}
-          currentClusterBeat={currentClusterBeat}
-          currentClusterBeatRef={currentClusterBeatRef}
-        />
-      )}
-
-      {/* Drum Parts */}
-      {songData.drums?.length>0 && (
-        <div className="mt-4">
-          <h3 className="text-x1 font-bold mb-2">Drum Parts</h3>
-          <div className="overflow-x-auto">
-            <div className="px-1">
-              {songData.drums.map((_type, index) => (
-                <div key={index} className="flex items-center space-x-4">
-                  <div className="text-xs text-gray-400">{_type['type']}</div>
-                  <div className="flex space-x-1">
-                    {_type['time'].map((_time, regionIndex) => (
-                      <div key={regionIndex} 
-                          className={`px-2 py-1 rounded text-xs ${currentTime >= _time[0] ? 'bg-green-500' : 'bg-gray-900'}`} 
-                          onClick={() => setCurrentTime(_time[0])}>
-                        {_time[0]}<br />
-                        {_time[1].toFixed(2)}
-                      </div>
-                    ))}
+          {showPatterns && (
+          <div className="mt-4">
+            <h3 className="text-x1 font-bold mb-2">patterns</h3>
+            {/* unique clusters by stem */}
+            <div className="overflow-x-auto">
+              { patterns.map((pattern, index) => (
+                <div key={index} className="px-1 py-2">
+                  <div className="text-xs">{pattern.stem}</div>
+                  <div className="flex space-x-3">
+                    {getUniquePatterns(pattern.clusters).map((cluster, cIndex) => {
+                      // Check if this cluster is currently active
+                      const isCurrentCluster = pattern.clusters.some(c => 
+                        c.cluster === cluster && 
+                        currentTime >= c.start && 
+                        currentTime <= c.end
+                      );
+                      
+                      return (
+                        <div
+                          className={`rounded text-xs min-w-2 px-2 py-1 ${
+                            isCurrentCluster 
+                              ? 'bg-green-500 text-white' 
+                              : 'bg-gray-700 text-gray-300'
+                          }`}
+                          key={cIndex}
+                        >
+                          {cluster}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              ))}
+              )) }  
             </div>
           </div>
-        </div>
-      )}
+          )}      
 
-      {/* Song Beats */}
-      {showBeats && (
-      <div className="mt-4">
-        <h3 className="text-x1 font-bold mb-2">beats</h3>
-        <div className="overflow-x-auto">
-          <div className="flex items-end space-x-1 px-1 py-2">
-            {beats.map((beat, index) => {
-              const energyPercent = ((beat.volume - minEnergy) / (maxEnergy - minEnergy)) * 100;
+          {/* Beats and patterns */}
+          {showAudioPatterns && patterns.length > 0 && (
+            <AudioPatternsDisplay 
+              songData={songData}
+              beats={beats}
+              currentTime={currentTime}
+              setCurrentTime={setCurrentTime}
+              currentClusterBeat={currentClusterBeat}
+              currentClusterBeatRef={currentClusterBeatRef}
+            />
+          )}
 
-              return (
-                <div
-                  key={index}
-                  ref={index === currentBeat ? currentBeatRef : null}
-                  className={index === currentBeat ? 'ring-2 ring-gray-400' : ''}
-                  onClick={() => setCurrentTime(beat.time)}
-                >
-                  <Bar
-                    level={energyPercent}
-                    label={index}
-                    color={labelColorMap[beat.label]}
-                  />
+          {/* Drum Parts */}
+          {songData.drums?.length>0 && (
+            <div className="mt-4">
+              <h3 className="text-x1 font-bold mb-2">Drum Parts</h3>
+              <div className="overflow-x-auto">
+                <div className="px-1">
+                  {songData.drums.map((_type, index) => (
+                    <div key={index} className="flex items-center space-x-4">
+                      <div className="text-xs text-gray-400">{_type['type']}</div>
+                      <div className="flex space-x-1">
+                        {_type['time'].map((_time, regionIndex) => (
+                          <div key={regionIndex} 
+                              className={`px-2 py-1 rounded text-xs ${currentTime >= _time[0] ? 'bg-green-500' : 'bg-gray-900'}`} 
+                              onClick={() => setCurrentTime(_time[0])}>
+                            {_time[0]}<br />
+                            {_time[1].toFixed(2)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              );
-            })}
+              </div>
+            </div>
+          )}
 
+          {/* Song Beats */}
+          {showBeats && (
+          <div className="mt-4">
+            <h3 className="text-x1 font-bold mb-2">beats</h3>
+            <div className="overflow-x-auto">
+              <div className="flex items-end space-x-1 px-1 py-2">
+                {beats.map((beat, index) => {
+                  const energyPercent = ((beat.volume - minEnergy) / (maxEnergy - minEnergy)) * 100;
+
+                  return (
+                    <div
+                      key={index}
+                      ref={index === currentBeat ? currentBeatRef : null}
+                      className={index === currentBeat ? 'ring-2 ring-gray-400' : ''}
+                      onClick={() => setCurrentTime(beat.time)}
+                    >
+                      <Bar
+                        level={energyPercent}
+                        label={index}
+                        color={labelColorMap[beat.label]}
+                      />
+                    </div>
+                  );
+                })}
+
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+          )}
+        </>
       )}
-
     </>
-  );
+    );
 }

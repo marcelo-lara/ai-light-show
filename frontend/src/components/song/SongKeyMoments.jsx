@@ -15,6 +15,7 @@ export default function SongKeyMoments({
     const [editMode, setEditMode] = useState(false);
     const [keyMoments, setKeyMoments] = useState([]);
     const [showControls, setShowControls] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(true); // State to toggle collapse
     const currentMomentRef = useRef(null);
 
     // Load key moments from song data if available
@@ -88,73 +89,82 @@ export default function SongKeyMoments({
 
     return (
         <>
-            <h2 className="text-lg mb-2 font-semibold">Key Moments</h2>
-            <ul className="space-y-1 max-h-36 overflow-y-auto">
-                {keyMoments
-                    .sort((a, b) => a.start - b.start)
-                    .map((moment, idx) => (
-                        <li 
-                            key={idx} 
-                            ref={idx === currentMoment ? currentMomentRef : null}
-                            className={idx === currentMoment ? 'bg-blue-700 px-2 py-1 rounded text-sm' : 'text-gray-300 text-sm'}
-                        >
-                            {editMode ? (
-                                <div className="flex items-center gap-2">
-                                    <input 
-                                        className="text-black px-1 rounded w-16" 
-                                        type="number" 
-                                        step="0.1"
-                                        value={moment.start} 
-                                        onChange={e => updateMoment(idx, 'start', parseFloat(e.target.value))} 
-                                    />
-                                    <input 
-                                        className="text-black px-1 rounded w-24" 
-                                        value={moment.name} 
-                                        onChange={e => updateMoment(idx, 'name', e.target.value)} 
-                                    />
-                                    <input 
-                                        className="text-black px-1 rounded w-40" 
-                                        value={moment.description} 
-                                        onChange={e => updateMoment(idx, 'description', e.target.value)} 
-                                    />
-                                    <input 
-                                        className="text-black px-1 rounded w-16" 
-                                        type="number" 
-                                        step="0.1"
-                                        min="0"
-                                        value={moment.end || moment.start} 
-                                        onChange={e => updateMoment(idx, 'end', parseFloat(e.target.value) || null)} 
-                                        placeholder="End Time"
-                                    />
-                                    <button onClick={() => deleteMoment(idx)}>❌</button>
-                                </div>
-                            ) : (
-                                <>
-                                    <span
-                                        className="cursor-pointer hover:text-gray-500"
-                                        onClick={() => seekTo(moment.start)}
-                                    >
-                                        {formatTime(moment.start)} - {moment.name}{moment.end && moment.end > moment.start ? ` (to ${formatTime(moment.end)})` : ''}
-                                    </span>
-                                    
-                                    <span className="text-gray-400" style="display: block"> 
-                                        {moment.description}
-                                    </span>
-                                </>
-                            )}
-                        </li>
-                    ))}
-            </ul>
-            {showControls && (
-                <div className="flex items-center gap-2 mt-2">
-                    <button onClick={onSaveKeyMoments} className="bg-green-700 hover:bg-green-800 px-2 py-1 rounded text-sm">💾 Save</button>
-                    <button onClick={addMoment} className="bg-indigo-600 hover:bg-indigo-700 px-2 py-1 rounded text-sm">➕ Add</button>
-                    <button onClick={() => setEditMode(!editMode)} className="bg-orange-600 hover:bg-orange-700 px-2 py-1 rounded text-sm">✏️ {editMode ? 'Exit' : 'Edit'}</button>
-                    <button onClick={() => setShowControls(!showControls)} className="bg-gray-600 hover:bg-gray-700 px-2 py-1 rounded text-sm">⚙️</button>
-                </div>
-            )}
-            {!showControls && (
-                <button onClick={() => setShowControls(true)} className="bg-gray-600 hover:bg-gray-700 px-2 py-1 rounded text-sm mt-2">⚙️</button>
+            <h2 
+                className="text-lg mb-2 font-semibold cursor-pointer" 
+                onClick={() => setIsCollapsed(!isCollapsed)}
+            >
+                {isCollapsed ? '▼' : '▲'} Key Moments
+            </h2>
+            {!isCollapsed && (
+                <>
+                    <ul className="space-y-1 max-h-36 overflow-y-auto">
+                        {keyMoments
+                            .sort((a, b) => a.start - b.start)
+                            .map((moment, idx) => (
+                                <li 
+                                    key={idx} 
+                                    ref={idx === currentMoment ? currentMomentRef : null}
+                                    className={idx === currentMoment ? 'bg-blue-700 px-2 py-1 rounded text-sm' : 'text-gray-300 text-sm'}
+                                >
+                                    {editMode ? (
+                                        <div className="flex items-center gap-2">
+                                            <input 
+                                                className="text-black px-1 rounded w-16" 
+                                                type="number" 
+                                                step="0.1"
+                                                value={moment.start} 
+                                                onChange={e => updateMoment(idx, 'start', parseFloat(e.target.value))} 
+                                            />
+                                            <input 
+                                                className="text-black px-1 rounded w-24" 
+                                                value={moment.name} 
+                                                onChange={e => updateMoment(idx, 'name', e.target.value)} 
+                                            />
+                                            <input 
+                                                className="text-black px-1 rounded w-40" 
+                                                value={moment.description} 
+                                                onChange={e => updateMoment(idx, 'description', e.target.value)} 
+                                            />
+                                            <input 
+                                                className="text-black px-1 rounded w-16" 
+                                                type="number" 
+                                                step="0.1"
+                                                min="0"
+                                                value={moment.end || moment.start} 
+                                                onChange={e => updateMoment(idx, 'end', parseFloat(e.target.value) || null)} 
+                                                placeholder="End Time"
+                                            />
+                                            <button onClick={() => deleteMoment(idx)}>❌</button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <span
+                                                className="cursor-pointer hover:text-gray-500"
+                                                onClick={() => seekTo(moment.start)}
+                                            >
+                                                {formatTime(moment.start)} - {moment.name}{moment.end && moment.end > moment.start ? ` (to ${formatTime(moment.end)})` : ''}
+                                            </span>
+                                            
+                                            <span className="text-gray-400" style="display: block"> 
+                                                {moment.description}
+                                            </span>
+                                        </>
+                                    )}
+                                </li>
+                            ))}
+                    </ul>
+                    {showControls && (
+                        <div className="flex items-center gap-2 mt-2">
+                            <button onClick={onSaveKeyMoments} className="bg-green-700 hover:bg-green-800 px-2 py-1 rounded text-sm">💾 Save</button>
+                            <button onClick={addMoment} className="bg-indigo-600 hover:bg-indigo-700 px-2 py-1 rounded text-sm">➕ Add</button>
+                            <button onClick={() => setEditMode(!editMode)} className="bg-orange-600 hover:bg-orange-700 px-2 py-1 rounded text-sm">✏️ {editMode ? 'Exit' : 'Edit'}</button>
+                            <button onClick={() => setShowControls(!showControls)} className="bg-gray-600 hover:bg-gray-700 px-2 py-1 rounded text-sm">⚙️</button>
+                        </div>
+                    )}
+                    {!showControls && (
+                        <button onClick={() => setShowControls(true)} className="bg-gray-600 hover:bg-gray-700 px-2 py-1 rounded text-sm mt-2">⚙️</button>
+                    )}
+                </>
             )}
         </>
     );

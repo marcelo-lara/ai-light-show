@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 export default function ChordsCard({ songData, currentTime, setCurrentTime }) {
   const containerRef = useRef(null);
   const [currentChordIndex, setCurrentChordIndex] = useState(-1);
+  const [isCollapsed, setIsCollapsed] = useState(true); // State to toggle collapse
 
   const chords = songData?.chords || [];
 
@@ -39,39 +40,46 @@ export default function ChordsCard({ songData, currentTime, setCurrentTime }) {
 
   return (
     <>
-      <h2 className="text-lg mb-2 font-semibold">Chords</h2>
-      <div
-        ref={containerRef}
-        className="overflow-y-auto max-h-40 px-1 space-y-2"
-        style={{ scrollBehavior: 'smooth' }}
+      <h2
+        className="text-lg mb-2 font-semibold cursor-pointer"
+        onClick={() => setIsCollapsed(!isCollapsed)}
       >
-        {groupedChords.map((row, rowIdx) => (
-          <div
-            id={`row-${rowIdx}`}
-            key={rowIdx}
-            className="grid grid-cols-8 gap-1"
-          >
-            {row.map((entry, colIdx) => {
-              const chordIndex = rowIdx * 8 + colIdx;
-              const isCurrent = chordIndex === currentChordIndex;
+        {isCollapsed ? '▼' : '▲'} Chords
+      </h2>
+      {!isCollapsed && (
+        <div
+          ref={containerRef}
+          className="overflow-y-auto max-h-40 px-1 space-y-2"
+          style={{ scrollBehavior: 'smooth' }}
+        >
+          {groupedChords.map((row, rowIdx) => (
+            <div
+              id={`row-${rowIdx}`}
+              key={rowIdx}
+              className="grid grid-cols-8 gap-1"
+            >
+              {row.map((entry, colIdx) => {
+                const chordIndex = rowIdx * 8 + colIdx;
+                const isCurrent = chordIndex === currentChordIndex;
 
-              return (
-                <div
-                  key={colIdx}
-                  className={`aspect-square flex items-center justify-center rounded text-xs font-semibold cursor-pointer ${
-                    isCurrent
-                      ? 'bg-gray-200 text-black'
-                      : 'bg-black/30 text-gray-300 hover:bg-black/50'
-                  }`}
-                  onClick={() => setCurrentTime(entry.curr_beat_time)}
-                >
-                  {entry.chord_simple_pop}
-                </div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
+                return (
+                  <div
+                    key={colIdx}
+                    className={`aspect-square flex items-center justify-center rounded text-xs font-semibold cursor-pointer ${
+                      isCurrent
+                        ? 'bg-gray-200 text-black'
+                        : 'bg-black/30 text-gray-300 hover:bg-black/50'
+                    }`}
+                    onClick={() => setCurrentTime(entry.curr_beat_time)}
+                  >
+                    {entry.chord_simple_pop}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }
