@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { useWebSocket } from '../../context/WebSocketContext.jsx';
 
 export default function FixtureDmxChannels({ channels, sendDMXUpdate }) {
   const [values, setValues] = useState({});
-  
+  const { lastMessage } = useWebSocket();
+
   useEffect(() => {
     // Initialize values from channels data
     const initialValues = {};
@@ -20,6 +22,11 @@ export default function FixtureDmxChannels({ channels, sendDMXUpdate }) {
     }
   };
   
+useEffect(() => {
+    // Log the channels for debugging
+    console.log("lastMessage from FixtureDmxChannels:", lastMessage);
+  }, [lastMessage]);
+
   console.log("FixtureDmxChannels", { channels });
 
   return (

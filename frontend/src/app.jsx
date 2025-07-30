@@ -1,20 +1,20 @@
 import './app.css';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import FixtureCard from './components/fixtures/FixtureCard';
 import AudioPlayer from './AudioPlayer'; 
 import SongSelector from './components/song/SongSelector';
 import Fixtures from './components/fixtures/Fixtures';
 import ActionsCard from './components/ActionsCard';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useWebSocket } from './context/WebSocketContext';
+import { AppProvider } from './context/AppProvider';
 
 import ChatAssistant from './ChatAssistant';
 import SongMetadata from './components/SongMetadata';
 import LightingPlan from './components/LightingPlan';
 
-export function App() {
-  const wsRef = useRef(null); // WebSocket reference
-  const [wsConnected, setWsConnected] = useState(false);
+function AppContent() {
+  const { wsSend, wsConnected, lastMessage } = useWebSocket();
 
   // Song metadata and playback state
   const [currentSongFile, setCurrentSongFile] = useState();
@@ -67,28 +67,10 @@ export function App() {
     fixturesRef.current = fixtures;
   }, [fixtures]);
 
-  ///////////////////////////////////////////////////////
-  // WebSocket connection and message handling
-  const wsSend = (cmd, data) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: cmd, ...data
-      }));
-    }
-  }
-
+  // WebSocket message handling
   useEffect(() => {
-    const ws = new WebSocket(`ws://${window.location.host}/ws`);
-    wsRef.current = ws;
-    
-    ws.onopen = () => {
-      console.log("🎵 WebSocket connected");
-      setWsConnected(true);
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
+    if (lastMessage) {
+      const msg = lastMessage;
         switch (msg.type) {
           case "setup": {
             console.log("setup:", msg);
@@ -215,21 +197,9 @@ export function App() {
           default:
             console.warn("Unhandled message type:", msg.type);
         }
-      } catch (err) {
-        console.error("WebSocket message error:", err);
-      }
-    };
+    }
+  }, [lastMessage]);
 
-    ws.onerror = (e) => console.error("WebSocket error:", e);
-    ws.onclose = () => {
-      console.log("WebSocket closed")
-      setWsConnected(false);
-    };
-
-    return () => ws.close();
-  }, []);
-
-  // Send update when play/pause changes
   useEffect(() => {
     wsSend("sync", {isPlaying, currentTime});
   }, [isPlaying, syncTime]);
@@ -375,5 +345,13 @@ export function App() {
         </div>
       </div>
     </div>
+  );
+}
+
+export function App() {
+  return (
+    <AppProvider>
+      <AppContent />
+    </AppProvider>
   );
 }
