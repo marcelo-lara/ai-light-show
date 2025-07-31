@@ -3,7 +3,7 @@ import { useWebSocket } from '../../context/WebSocketContext.jsx';
 
 export default function FixtureDmxChannels({ channels, sendDMXUpdate }) {
   const [values, setValues] = useState({});
-  const { lastMessage } = useWebSocket();
+  const { wsMessage } = useWebSocket();
 
   useEffect(() => {
     // Initialize values from channels data
@@ -24,8 +24,8 @@ export default function FixtureDmxChannels({ channels, sendDMXUpdate }) {
   
 useEffect(() => {
     // Log the channels for debugging
-    console.log("lastMessage from FixtureDmxChannels:", lastMessage);
-  }, [lastMessage]);
+    console.log("wsMessage from FixtureDmxChannels:", wsMessage);
+  }, [wsMessage]);
 
   console.log("FixtureDmxChannels", { channels });
 

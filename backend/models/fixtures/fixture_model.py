@@ -220,7 +220,11 @@ class FixtureModel:
         # List available actions (except 'arm') with parameters (only from definition not runtime)
         actions = [{'name': action, 'params': []} for action, _ in self.action_handlers.items() if action != 'arm']
         for action in actions:
-            action['params'] = [{'name': param, 'default': None} for param in self.action_handlers[action['name']].__code__.co_varnames[1:]]
+            params = [{'name': param, 'default': None} for param in self.action_handlers[action['name']].__code__.co_varnames[1:]]
+            if 'kwargs' in self.action_handlers[action['name']].__code__.co_varnames:
+                idx = self.action_handlers[action['name']].__code__.co_varnames.index('kwargs')
+                params = params[:idx - 1]
+            action['params'] = params
 
         return {
             'id': self._id,

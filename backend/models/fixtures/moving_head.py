@@ -75,7 +75,8 @@ class MovingHead(FixtureModel):
                              subject_position_x: int = 0, 
                              subject_position_y: int = 0,
                              start_position_x: int = 0,
-                             start_position_y: int = 0) -> None:
+                             start_position_y: int = 0, 
+                             **kwargs) -> None:
         """
         A smooth linear pan or tilt movement from point A to B with a dimmer curve that peaks in the middle. 
         This effect is used to highlight a performer or object momentarily during a sweeping motion.
@@ -99,8 +100,8 @@ class MovingHead(FixtureModel):
             return
         
         # Ensure we have the required channels
-        if 'pan_msb' not in self.channel_names or 'pan_lsb' not in self.channel_names or \
-           'tilt_msb' not in self.channel_names or 'tilt_lsb' not in self.channel_names:
+        required_channels = ['pan_msb', 'pan_lsb', 'tilt_msb', 'tilt_lsb']
+        if not all(ch in self.channel_names for ch in required_channels):
             print(f"  ⚠️ {self.name}: Missing pan/tilt channels for center sweep")
             return
         
@@ -179,7 +180,8 @@ class MovingHead(FixtureModel):
                             intensity: float = 1.0,
                             radius: int = 0,
                             center_x: int = 0,
-                            center_y: int = 0) -> None:
+                            center_y: int = 0, 
+                            **kwargs) -> None:
 
         """
         A dramatic, wide pan movement imitating old searchlights, sometimes with shutter flicker or strobe for intensity.
@@ -200,7 +202,8 @@ class MovingHead(FixtureModel):
                         subject_position_x: int = 0, 
                         subject_position_y: int = 0,
                         start_position_x: int = 0,
-                        start_position_y: int = 0) -> None:
+                        start_position_y: int = 0,
+                        **kwargs) -> None:
         """
         The beam sweeps past a subject without stopping, similar to "center sweep" but with constant dimmer
         This is a placeholder for future implementation.
@@ -215,7 +218,8 @@ class MovingHead(FixtureModel):
                         start_time: float = 0.0,
                         duration: float = 1.0,
                         intensity: float = 1.0,
-                        frequency: float = 1.0) -> None:
+                        frequency: float = 1.0, 
+                        **kwargs) -> None:
         """
         Handle the strobe effect for the Moving Head fixture.
         Creates a strobe effect by rapidly switching the shutter channel on and off.
@@ -284,7 +288,8 @@ class MovingHead(FixtureModel):
                              start_intensity: float = 0.0,
                              start_frequency: float = 0.0,
                              end_frequency: float = 1.0,
-                             end_intensity: float = 1.0) -> None:
+                             end_intensity: float = 1.0, 
+                             **kwargs) -> None:
         """
         Handle the strobe burst effect for the Moving Head fixture.
         The strobe burst is a rapid series of flashes that can vary in intensity and frequency.
@@ -321,6 +326,12 @@ class MovingHead(FixtureModel):
         # Calculate end time
         end_time = start_time + duration
         
+        # Handle dimmer channel if available
+        if 'dim' in self.channel_names:
+            start_dmx_intensity = int(start_intensity * 255)
+            end_dmx_intensity = int(end_intensity * 255)
+            self.fade_channel('dim', start_dmx_intensity, end_dmx_intensity, start_time, duration)
+
         # For very short durations or invalid parameters, just set a constant value
         if duration < 0.01 or (start_frequency <= 0 and end_frequency <= 0):
             # Calculate average intensity
@@ -378,11 +389,11 @@ class MovingHead(FixtureModel):
             flash_count = 0
             
             while current_time < segment_end_time and flash_count < 1000:  # Safety limit
-                # Set shutter to "open" (0) for the first half of the period
+                # Set shutter to "closed" (0) for the first half of the period
                 self.set_channel_value('shutter', 0, start_time=current_time, duration=half_period)
                 
-                # Set shutter to "closed" (dmx_intensity) for the second half
-                dmx_intensity = int(current_intensity * 255)
+                # Set shutter to "open" (dmx_intensity) for the second half
+                dmx_intensity = 255 # Strobe is usually full open on shutter
                 self.set_channel_value('shutter', dmx_intensity, start_time=current_time + half_period, duration=half_period)
                 
                 # Move to next cycle
@@ -400,7 +411,7 @@ class MovingHead(FixtureModel):
         
         print(f"  ⚡ {self.name}: Strobe burst effect at {start_time:.2f}s for {duration:.2f}s with intensity ramp from {start_intensity:.2f} to {end_intensity:.2f} and frequency ramp from {start_frequency:.2f}Hz to {end_frequency:.2f}Hz ({total_flashes} total flashes)")
 
-    def _handle_seek(self, start_time: float = 0.0, duration: float = 1.0, pos_x: int = 0, pos_y: int = 0) -> None:
+    def _handle_seek(self, start_time: float = 0.0, duration: float = 1.0, pos_x: int = 0, pos_y: int = 0, **kwargs) -> None:
         """
         Handle the seek action for the Moving Head fixture.
         Args:

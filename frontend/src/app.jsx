@@ -14,7 +14,7 @@ import SongMetadata from './components/SongMetadata';
 import LightingPlan from './components/LightingPlan';
 
 function AppContent() {
-  const { wsSend, wsConnected, lastMessage } = useWebSocket();
+  const { wsSend, wsConnected, wsMessage } = useWebSocket();
 
   // Song metadata and playback state
   const [currentSongFile, setCurrentSongFile] = useState();
@@ -69,8 +69,8 @@ function AppContent() {
 
   // WebSocket message handling
   useEffect(() => {
-    if (lastMessage) {
-      const msg = lastMessage;
+    if (wsMessage) {
+      const msg = wsMessage;
         switch (msg.type) {
           case "setup": {
             console.log("setup:", msg);
@@ -127,6 +127,7 @@ function AppContent() {
           }
           case "songLoaded": {
             setSongData(msg.metadata || {});
+            setLightPlan(msg.metadata?.light_plan || []);
             console.log("Song loaded:", msg.metadata);
             break;
           }
@@ -198,7 +199,7 @@ function AppContent() {
             console.warn("Unhandled message type:", msg.type);
         }
     }
-  }, [lastMessage]);
+  }, [wsMessage]);
 
   useEffect(() => {
     wsSend("sync", {isPlaying, currentTime});

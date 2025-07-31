@@ -1,8 +1,6 @@
 import { formatTime } from "../utils";
 import { useEffect, useState, useRef } from 'preact/hooks';
-
-// Light plan item schema: { id, start, end, name, description }
-// Light plan is an array of light plan item objects
+import { useWebSocket } from '../context/WebSocketContext.jsx';
 
 export default function LightingPlan({
     currentTime,
@@ -16,6 +14,13 @@ export default function LightingPlan({
     const [editMode, setEditMode] = useState(false);
     const [showControls, setShowControls] = useState(false);
     const currentItemRef = useRef(null);
+    const {wsMessage} = useWebSocket();
+
+    useEffect(() => {
+        // Log the WebSocket message for debugging
+        console.log("wsMessage from LightingPlan:", wsMessage);
+    }, [wsMessage]);
+
 
     // Find the current light plan item based on current time
     useEffect(() => {

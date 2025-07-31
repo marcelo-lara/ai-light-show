@@ -8,7 +8,7 @@ export const useWebSocket = () => useContext(WebSocketContext);
 export const WebSocketProvider = ({ children }) => {
     const wsRef = useRef(null);
     const [wsConnected, setWsConnected] = useState(false);
-    const [lastMessage, setLastMessage] = useState(null);
+    const [wsMessage, setWsMessage] = useState(null);
 
     useEffect(() => {
         const connect = () => {
@@ -23,7 +23,7 @@ export const WebSocketProvider = ({ children }) => {
             ws.onmessage = (event) => {
                 try {
                     const msg = JSON.parse(event.data);
-                    setLastMessage({ ...msg, timestamp: Date.now() }); // new object to trigger updates
+                    setWsMessage({ ...msg, timestamp: Date.now() }); // new object to trigger updates
                 } catch (err) {
                     console.error("WebSocket message error:", err);
                 }
@@ -51,7 +51,7 @@ export const WebSocketProvider = ({ children }) => {
         }
     };
 
-    const value = { wsSend, wsConnected, lastMessage };
+    const value = { wsSend, wsConnected, wsMessage };
 
     return (
         <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>
