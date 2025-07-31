@@ -1,14 +1,7 @@
 """
-Standalone Song Analysis Service for AI Light Show
-
-This service handles audio analysis tasks including:
-- Song structure analysis using Essentia
-- Beat detection and BPM analysis
-- Stem separation using Demucs
-- Pattern detection and clustering
-- Audio feature extraction
-
-Built to be consumed by the main AI Light Show backend service.
+Song Analysis Microservice for AI Light Show.
+Handles audio analysis: beat detection, stem separation, pattern analysis, etc.
+Consumed by the main backend service.
 """
 
 from fastapi import FastAPI, HTTPException, UploadFile, File
@@ -18,12 +11,14 @@ from pathlib import Path
 import tempfile
 import os
 import json
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import logging
 
 # Import audio analysis modules
 from services.audio_analyzer import SongAnalyzer
+from services.beats_rms_flux import analyze_beats_rms_flux, create_dataframe, filter_dataframe, dataframe_to_response
 from shared.models.song_metadata import SongMetadata
+import pandas as pd
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -58,6 +53,20 @@ class AnalysisResponse(BaseModel):
     metadata: Dict[str, Any]
     message: Optional[str] = None
 
+# New models for the beats/RMS/flux endpoint
+class BeatsRmsFluxRequest(BaseModel):
+    song_name: str
+    force: bool = False
+    start_time: Optional[float] = None
+    end_time: Optional[float] = None
+
+class BeatsRmsFluxResponse(BaseModel):
+    status: str
+    beats: List[float]
+    rms: List[float]
+    flux: List[float]
+    message: Optional[str] = None
+
 @app.get("/")
 async def root():
     """Health check endpoint"""
@@ -78,7 +87,68 @@ async def health_check():
         }
     }
 
-@app.post("/analyze", response_model=AnalysisResponse)
+@app.post("/analyze", response_model=BeatsRmsFluxResponse)
+async def analyze_beats_rms_flux_endpoint(request: BeatsRmsFluxRequest):
+    """
+    Extracts beats, RMS, and flux from an audio file with caching.
+
+    - Caches analysis results in a .pkl file to speed up subsequent requests.
+    - Use `force=true` to bypass the cache.
+    - Supports `start_time` and `end_time` to filter the response data.
+
+    Args:
+        request: Request model with `song_name` and options.
+
+    Returns:
+        Response model with beat times, RMS, and spectral flux arrays.
+    """
+    try:
+        logger.info(f"Requested beats/RMS/flux analysis for: {request.song_name}")
+        song_name = request.song_name
+        # Validate song path exists
+        song_metadata = SongMetadata(song_name)
+        song_path = song_metadata.mp3_path
+        
+        # Use SongMetadata to get the data folder path
+        pickle_path = Path(song_metadata.data_folder) / f"{song_name}.pkl"
+        
+        # Ensure data folder exists
+        pickle_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Check if we should load from cache or force re-analysis
+        if not request.force and pickle_path.exists():
+            logger.info(f"Loading existing analysis from: {pickle_path}")
+            df = pd.read_pickle(pickle_path)
+        else:
+            logger.info(f"Performing new analysis for: {song_path}")
+            # Perform analysis
+            analysis_data = analyze_beats_rms_flux(song_path)
+            
+            # Create DataFrame
+            df = create_dataframe(analysis_data)
+            
+            # Save to pickle
+            df.to_pickle(pickle_path)
+            logger.info(f"Analysis saved to: {pickle_path}")
+        
+        # Filter by time range if specified
+        df_filtered = filter_dataframe(df, request.start_time, request.end_time)
+        
+        # Convert to response format
+        response_data = dataframe_to_response(df_filtered)
+        
+        return BeatsRmsFluxResponse(
+            status="ok",
+            beats=response_data["beats"],
+            rms=response_data["rms"],
+            flux=response_data["flux"]
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to analyze beats/RMS/flux: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+@app.post("/analyze_song", response_model=AnalysisResponse)
 async def analyze_song(request: AnalysisRequest):
     """
     Analyze a song file using song name and return metadata including beats, BPM, patterns, etc.
