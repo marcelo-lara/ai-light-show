@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def guess_arrangement_using_drum_patterns(song: SongMetadata) -> SongMetadata:
+    ## LLM: Guess song arrangement (sections) using drum patterns. Updates SongMetadata.arrangement.
     """
     Guess the arrangement of the song based on its drum patterns.
     This function will analyze the song's drum patterns to determine sections.
@@ -23,6 +24,7 @@ def guess_arrangement_using_drum_patterns(song: SongMetadata) -> SongMetadata:
 
 
 def guess_arrangement(song: SongMetadata, ignore_current_data: bool=False) -> SongMetadata:
+    ## LLM: Guess song arrangement using beats and patterns. Fills SongMetadata.arrangement with section info.
     """
     Guess the arrangement of the song based on its beats and patterns.
     This function will analyze the song's beats and patterns to determine sections.

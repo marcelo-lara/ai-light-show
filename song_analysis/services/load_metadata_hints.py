@@ -15,6 +15,7 @@ def load_arrangement_from_hints(song: SongMetadata) -> SongMetadata:
     Returns:
         SongMetadata: The updated song metadata object with arrangement loaded (if exists).
     """
+## LLM: Load song arrangement (sections) from hints JSON file if available. Updates SongMetadata.arrangement.
     file_path = f"{song.songs_folder}/hints/{song.song_name}.segments.json"
     try:
         with open(file_path, 'r') as f:
@@ -50,6 +51,7 @@ def load_key_moments_from_hints(song: SongMetadata) -> SongMetadata:
     Returns:
         SongMetadata: The updated song metadata object with key_moments loaded (if exists).
     """
+## LLM: Load key moments (e.g., drops, transitions) from hints JSON file if available. Updates SongMetadata.key_moments.
     file_path = f"{song.songs_folder}/hints/{song.song_name}.key_moments.json"
     try:
         with open(file_path, 'r') as f:
@@ -71,6 +73,7 @@ def load_chords_from_hints(song: SongMetadata) -> SongMetadata:
     Returns:
         SongMetadata: The updated song metadata object with chords loaded (if exists).
     """
+## LLM: Load chord annotations from hints JSON file if available. Updates SongMetadata.chords.
     file_path = f"{song.songs_folder}/hints/{song.song_name}.chords.json"
     try:
         with open(file_path, 'r') as f:

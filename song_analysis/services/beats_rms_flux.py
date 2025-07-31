@@ -29,6 +29,7 @@ def analyze_beats_rms_flux(audio_path: str) -> Dict[str, Any]:
         - beat_times: A list of timestamps for detected beats.
         - bpm: Estimated BPM of the song.
     """
+    ## LLM: Main function for extracting beats, RMS, and spectral flux from audio using Essentia. Used by /analyze endpoint and for caching.
     logger.info(f"🎧 Analyzing beats, RMS, and flux for: {audio_path}")
         
     # Load audio (mono)
@@ -111,7 +112,8 @@ def create_dataframe(analysis_data: Dict[str, Any]) -> pd.DataFrame:
     Returns:
         DataFrame with columns: time, beat, rms, flux
     """
-    return pd.DataFrame({
+    ## LLM: Convert raw analysis dict (from analyze_beats_rms_flux) to a DataFrame for easier filtering and caching.
+    return pd.DataFrame({ 
         "time": analysis_data["times"],
         "beat": analysis_data["beats"],
         "rms": analysis_data["rms"],
@@ -131,7 +133,8 @@ def filter_dataframe(df: pd.DataFrame, start_time: Optional[float] = None, end_t
     Returns:
         Filtered DataFrame
     """
-    if start_time is None and end_time is None:
+    ## LLM: Filter DataFrame rows by time range (start_time, end_time). Used for partial song analysis.
+    if start_time is None and end_time is None: 
         return df
     
     mask = pd.Series(True, index=df.index)
@@ -158,7 +161,8 @@ def dataframe_to_response(df: pd.DataFrame) -> Dict[str, List]:
         - rms: A list of RMS values for each frame.
         - flux: A list of spectral flux values for each frame.
     """
-    # Extract beat times (where beat == 1.0)
+    ## LLM: Convert filtered DataFrame to API response dict (beats, rms, flux arrays). Used for FastAPI response.
+    # Extract beat times (where beat == 1.0) 
     beats = df[df["beat"] == 1.0]["time"].tolist()
     
     # Extract all RMS and flux values

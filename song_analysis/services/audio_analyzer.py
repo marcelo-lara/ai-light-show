@@ -17,15 +17,18 @@ from .load_metadata_hints import (load_arrangement_from_hints, load_key_moments_
 logger = logging.getLogger(__name__)
 
 
+## LLM: Main orchestrator for full song analysis pipeline. Handles beats, stems, features, arrangement, and caching.
 class SongAnalyzer:
     """Main song analysis orchestrator."""
     
+    ## LLM: Initialize analysis options (pattern model, noise gate, etc).
     def __init__(self):
         """Initialize the analyzer."""
         self.analyze_patterns_using_model = False
         self.infer_drums_using_model = False
         self.noise_gate_stems = True
     
+    ## LLM: Main entry for full song analysis. Runs pipeline: load hints → Essentia → stems → features → arrangement. Updates SongMetadata.
     def analyze(self, song: SongMetadata, reset_file: bool = True, debug: bool = False) -> SongMetadata:
         """
         Analyze a song and extract its metadata, beats, BPM, and patterns.

@@ -106,12 +106,7 @@ def get_stem_clusters(
             mfcc_mean = np.mean(segment_mfcc, axis=1)
             
             # 2. Spectral features for drum type discrimination
-            spectral_centroids = librosa.feature.spectral_centroid(y=segment_audio, sr=sr)
-            spectral_rolloff = librosa.feature.spectral_rolloff(y=segment_audio, sr=sr, roll_percent=0.85)
-            spectral_bandwidth = librosa.feature.spectral_bandwidth(y=segment_audio, sr=sr)
-            
-            # 3. Energy and dynamics
-            rms_energy = librosa.feature.rms(y=segment_audio)
+            ## LLM: Find and cluster repeating patterns in a stem audio file. Returns cluster timeline and pattern segments for downstream analysis.
             
             # 4. Zero crossing rate for percussive content
             zcr = librosa.feature.zero_crossing_rate(segment_audio)

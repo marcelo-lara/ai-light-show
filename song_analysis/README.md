@@ -1,3 +1,26 @@
+
+# ⚡️ LLM/Copilot Guidance
+
+> **For Copilot, GPT-4, and other LLM agents:**
+>
+> - **Code Structure:**
+>   - Main API: `app.py` (FastAPI endpoints)
+>   - Core analysis: `services/audio_analyzer.py`, `services/beats_rms_flux.py`, `services/audio/`
+>   - Data models: `shared/models/song_metadata.py`
+> - **Entry Points:**
+>   - Use function/class docstrings and `# LLM:` comments for context.
+>   - For beats/RMS/flux: see `analyze_beats_rms_flux` in `services/beats_rms_flux.py`.
+>   - For full song analysis: see `SongAnalyzer.analyze` in `services/audio_analyzer.py`.
+> - **Efficiency:**
+>   - Avoid reading large files unless necessary; prefer docstrings and summary comments.
+>   - Use API endpoints for most tasks (see below).
+>   - Caching is used throughout; check for `.pkl` or cached results before re-analysis.
+> - **When editing:**
+>   - Add/maintain concise docstrings and `# LLM:` comments for all functions/classes.
+>   - Keep comments high-level and focused on intent/data flow.
+> - **Code rules**
+>   - Get file paths from `shared/models/song_metadata.py`. Do not hardcode paths.
+
 # Song Analysis Service
 
 A standalone microservice for audio analysis in the AI Light Show system.
