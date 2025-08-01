@@ -114,18 +114,24 @@ class ContextBuilderAgent:
     
     def _build_prompt(self, name: str, start_time: float, end_time: float, features: Dict[str, Any]) -> str:
         """Build the prompt for context interpretation"""
-        return f"""You are a music context interpreter.
-Describe the emotional and sonic feel of this section:
+        from jinja2 import Environment, FileSystemLoader
 
-Segment: {name}
-Start: {start_time}s
-End: {end_time}s
-Features: {json.dumps(features)}
+        # Set up Jinja environment
+        env = Environment(loader=FileSystemLoader('backend/services/agents/prompts'))
+        template = env.get_template('context_builder.j2')
 
-Respond with a short natural language summary like:
-"High energy climax with heavy bass and bright synth"
+        # Exclude the full beats array from the prompt to save tokens
+        features_without_beats = features.copy()
+        if 'beats' in features_without_beats:
+            del features_without_beats['beats']
 
-Focus on the mood, energy level, and key instruments. Keep it concise and descriptive."""
+        # Render the template with the provided variables
+        return template.render(
+            name=name,
+            start_time=start_time,
+            end_time=end_time,
+            features=json.dumps(features_without_beats)
+        )
 
     def extract_lighting_actions(self, response: str, start_time: float, end_time: float) -> list:
         """

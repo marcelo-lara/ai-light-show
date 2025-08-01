@@ -130,7 +130,7 @@ export default function ChatAssistant({ wsSend, lastResponse, contextProgress, l
         </div>
       )}
       
-      <div className="flex flex-col gap-2 mb-4 max-h-60 overflow-y-auto" ref={chatContainerRef}>
+      <div className="flex flex-col gap-2 mb-4 max-h-[38rem] overflow-y-auto" ref={chatContainerRef}>
         {chat.length === 0 && (
           <p className="text-sm text-gray-400">No messages yet.</p>
         )}
@@ -138,7 +138,7 @@ export default function ChatAssistant({ wsSend, lastResponse, contextProgress, l
           <div
             key={idx}
             className={
-              'max-w-[75%] px-4 py-2 rounded-lg text-sm ' +
+              'max-w-[90%] px-4 py-2 rounded-lg text-sm ' +
               (msg.sender === 'user'
                 ? (msg.isDirectCommand 
                    ? 'bg-purple-600 text-white self-end ml-auto text-right'

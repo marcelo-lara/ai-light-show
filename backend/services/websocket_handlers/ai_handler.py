@@ -325,6 +325,26 @@ async def _handle_direct_command(websocket: WebSocket, command: str) -> None:
             "response": f"**Direct Command Error**: {str(e)}"
         })
 
+async def check_ai_service_health() -> tuple[bool, str]:
+    """Check if the AI service (Ollama) is available and return status."""
+    try:
+        from ...services.ollama import query_ollama_streaming
+        
+        # Try a simple test prompt
+        test_response = ""
+        async def test_callback(chunk):
+            nonlocal test_response
+            test_response += chunk
+        
+        await query_ollama_streaming("Hi", "health_check", callback=test_callback)
+        return True, "AI service is ready"
+    except ConnectionError:
+        return False, "Cannot connect to Ollama service. Please ensure Ollama is running on http://llm-service:11434"
+    except ValueError:
+        return False, "Mistral model not found. Please install it with: ollama pull mistral"
+    except Exception as e:
+        return False, f"AI service error: {str(e)}"
+
 async def _process_response_actions(response: str, websocket: WebSocket) -> None:
     """
     Process the AI response to detect and save any action commands, 
@@ -404,26 +424,6 @@ async def _process_response_actions(response: str, websocket: WebSocket) -> None
         
     except Exception as e:
         print(f"❌ Error in _process_response_actions: {e}")
-
-async def check_ai_service_health() -> tuple[bool, str]:
-    """Check if the AI service (Ollama) is available and return status."""
-    try:
-        from ...services.ollama import query_ollama_streaming
-        
-        # Try a simple test prompt
-        test_response = ""
-        async def test_callback(chunk):
-            nonlocal test_response
-            test_response += chunk
-        
-        await query_ollama_streaming("Hi", "health_check", callback=test_callback)
-        return True, "AI service is ready"
-    except ConnectionError:
-        return False, "Cannot connect to Ollama service. Please ensure Ollama is running on http://llm-service:11434"
-    except ValueError:
-        return False, "Mistral model not found. Please install it with: ollama pull mistral"
-    except Exception as e:
-        return False, f"AI service error: {str(e)}"
 
 def build_ui_context() -> str:
     """Build the context for the lighting interpretation using Jinja2 templates"""

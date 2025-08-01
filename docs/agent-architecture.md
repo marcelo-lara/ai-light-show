@@ -1,218 +1,122 @@
+
 # Agent Architecture Documentation
 
 ## Overview
 
-The LangGraph Lighting Pipeline has been refactored into individual, modular agents for better organization, testing, and maintainability.
+The AI Light Show backend uses modular, LLM-driven agents to analyze music and generate lighting actions. Each agent is implemented as a Python class in `backend/services/agents/`, with a clear separation of responsibilities and LLM-friendly interfaces. Agents are orchestrated in sequence (or independently) and can be composed using frameworks like LlamaIndex.
 
 ## File Structure
 
 ```
-backend/services/langgraph/
-├── lighting_pipeline.py           # Main pipeline orchestration
-├── agents/
-│   ├── __init__.py                # Agent exports
-│   ├── context_builder.py         # Agent 1: Musical context interpretation
-│   ├── lighting_planner.py        # Agent 2: Lighting action planning
-│   └── effect_translator.py       # Agent 3: DMX command translation
+backend/services/agents/
+├── __init__.py                # Agent exports
+├── context_builder.py         # ContextBuilderAgent: musical context interpretation
+├── lighting_planner.py        # LightingPlannerAgent: lighting action planning
+└── effect_translator.py       # EffectTranslatorAgent: DMX command translation
 ```
 
-## Agent Classes
+## Agent Classes and LLM Instructions
 
 ### ContextBuilderAgent
-**File**: `agents/context_builder.py`
-**Purpose**: Interprets musical segments into natural language context summaries
-**Model**: Mixtral (configurable)
+**File**: `context_builder.py`
 
-```python
-from backend.services.langgraph.agents import ContextBuilderAgent
+**Purpose**: Analyzes musical segments and generates concise, natural language context summaries for lighting design. Optionally, can process an entire song in chunks and assemble a timeline of lighting actions.
 
-agent = ContextBuilderAgent(model="mixtral")
-result = agent.run(pipeline_state)
+**LLM Prompt Pattern:**
+```
+You are a music context interpreter.
+Describe the emotional and sonic feel of this section:
+
+Segment: {name}
+Start: {start_time}s
+End: {end_time}s
+Features: {features_json}
+
+Respond with a short natural language summary like:
+"High energy climax with heavy bass and bright synth"
+
+Focus on the mood, energy level, and key instruments. Keep it concise and descriptive.
 ```
 
-### LightingPlannerAgent  
-**File**: `agents/lighting_planner.py`
-**Purpose**: Creates high-level lighting actions from context summaries
-**Model**: Mixtral (configurable)
+**Key Methods:**
+- `run(state: PipelineState) -> PipelineState`: Given a segment dict, returns a state with a context summary (calls LLM via `query_ollama`).
+- `extract_lighting_actions(response: str, start_time: float, end_time: float) -> list`: Parses LLM output for lighting actions, with fallback to generic action if no structured data is found.
+- `analyze_song_context(...)`: Asynchronously analyzes an entire song, chunk by chunk, updating progress and saving partial results. Uses the global `app_state` for state and progress tracking.
 
-```python
-from backend.services.langgraph.agents import LightingPlannerAgent
+**LLM-Friendly Context:**
+- All prompts are explicit, concise, and focused on musical mood and features.
+- LLM responses are expected to be short summaries or structured JSON (for lighting actions).
+- Error handling and progress reporting are built-in for robust orchestration.
 
-agent = LightingPlannerAgent(model="mixtral")
-result = agent.run(pipeline_state)
+### LightingPlannerAgent
+**File**: `lighting_planner.py`
+
+**Purpose**: Converts context summaries into high-level lighting actions (e.g., strobe, color changes, movement cues). Uses LLMs to interpret context and generate a list of lighting actions for each segment.
+
+**LLM Prompt Pattern:**
 ```
+You are a lighting designer. Given the following musical context, generate a list of lighting actions (as JSON) that would best express the mood and energy of the segment.
+
+Context: {context_summary}
+Segment: {segment_info}
+
+Respond with a JSON list of lighting actions, each with start, end, type, color, intensity, and description fields.
+```
+
+**Key Methods:**
+- `run(state: PipelineState) -> PipelineState`: Given a state with context summary, returns a state with lighting actions (calls LLM).
+- LLM output is parsed for a list of lighting actions; fallback to generic action if needed.
+
+**LLM-Friendly Context:**
+- Prompts are structured to elicit JSON lists of actions.
+- All lighting actions are described in terms of time, type, color, intensity, and description.
 
 ### EffectTranslatorAgent
-**File**: `agents/effect_translator.py`
-**Purpose**: Translates lighting actions into specific DMX commands
-**Model**: Command-R with Mixtral fallback (configurable)
+**File**: `effect_translator.py`
 
-```python
-from backend.services.langgraph.agents import EffectTranslatorAgent
+**Purpose**: Translates high-level lighting actions into concrete DMX channel commands, suitable for real hardware. Uses LLMs to map abstract actions to DMX values and timings.
 
-agent = EffectTranslatorAgent(model="command-r", fallback_model="mixtral")
-result = agent.run(pipeline_state)
+**LLM Prompt Pattern:**
+```
+You are a DMX effect translator. Given a list of lighting actions, output the corresponding DMX channel commands (as JSON) for each action.
+
+Actions: {actions_json}
+Fixture definitions: {fixtures_json}
+
+Respond with a JSON list of DMX commands, each with channel, value, start, end, and description fields.
 ```
 
-## Benefits of Modular Design
+**Key Methods:**
+- `run(state: PipelineState) -> PipelineState`: Given a state with lighting actions, returns a state with DMX commands (calls LLM).
+- LLM output is parsed for DMX command lists; fallback to generic DMX action if needed.
 
-### 1. **Independent Testing**
-Each agent can be tested individually:
-```python
-# Test only the context builder
-context_agent = ContextBuilderAgent()
-context_result = context_agent.run(test_state)
+**LLM-Friendly Context:**
+- Prompts include fixture definitions and expect structured JSON output.
+- All DMX commands are described in terms of channel, value, timing, and description.
 
-# Test only the lighting planner
-planner_agent = LightingPlannerAgent()
-planner_result = planner_agent.run(context_result)
-```
+## Agent Orchestration
 
-### 2. **Flexible Configuration**
-Different models can be used for each agent:
-```python
-# Use different models for different tasks
-context_agent = ContextBuilderAgent(model="llama2")
-planner_agent = LightingPlannerAgent(model="mixtral")
-translator_agent = EffectTranslatorAgent(model="command-r")
-```
+- Agents are designed to be composed in sequence: ContextBuilderAgent → LightingPlannerAgent → EffectTranslatorAgent.
+- Each agent operates on a shared `PipelineState` dict, passing results to the next agent.
+- Agents can be run independently for testing or partial pipeline execution.
+- Orchestration is framework-agnostic (e.g., can be used with LlamaIndex, custom scripts, or other workflow tools).
 
-### 3. **Easy Extension**
-New agents can be added without modifying existing code:
-```python
-# Add a new agent for beat detection
-class BeatDetectorAgent:
-    def run(self, state: PipelineState) -> PipelineState:
-        # Implementation here
-        pass
-```
+## Testing and Debugging
 
-### 4. **Better Error Isolation**
-Issues in one agent don't affect others:
-```python
-try:
-    result = context_agent.run(state)
-except Exception as e:
-    print(f"Context agent failed: {e}")
-    # Continue with fallback or skip this agent
-```
-
-### 5. **Partial Pipeline Execution**
-Start from any point in the pipeline:
-```python
-# Skip context building, start from planning
-state_with_context = {
-    "segment": segment_data,
-    "context_summary": "Pre-generated context",
-    "actions": [],
-    "dmx": []
-}
-
-planner_result = planner_agent.run(state_with_context)
-final_result = translator_agent.run(planner_result)
-```
-
-## Usage Examples
-
-### Basic Agent Usage
-```python
-from backend.services.langgraph.agents import ContextBuilderAgent
-
-# Create agent with custom model
-agent = ContextBuilderAgent(model="mixtral")
-
-# Prepare state
-state = {
-    "segment": {
-        "name": "Chorus",
-        "start": 30.0,
-        "end": 45.0,
-        "features": {"energy": 0.8, "tempo": 128}
-    },
-    "context_summary": "",
-    "actions": [],
-    "dmx": []
-}
-
-# Run agent
-result = agent.run(state)
-print(f"Context: {result['context_summary']}")
-```
-
-### Partial Pipeline
-```python
-from backend.services.langgraph.agents import LightingPlannerAgent, EffectTranslatorAgent
-
-# Start from step 2 (lighting planning)
-planner = LightingPlannerAgent()
-translator = EffectTranslatorAgent()
-
-# State with pre-filled context
-state = {
-    "segment": segment_data,
-    "context_summary": "High energy drop section with heavy bass",
-    "actions": [],
-    "dmx": []
-}
-
-# Run remaining pipeline steps
-planning_result = planner.run(state)
-final_result = translator.run(planning_result)
-```
-
-### Custom Error Handling
-```python
-def robust_agent_execution(agent, state):
-    try:
-        return agent.run(state)
-    except Exception as e:
-        print(f"Agent {agent.__class__.__name__} failed: {e}")
-        # Return state with error marker
-        error_state = state.copy()
-        error_state["error"] = str(e)
-        return error_state
-
-# Use with any agent
-context_agent = ContextBuilderAgent()
-result = robust_agent_execution(context_agent, initial_state)
-```
-
-## LangGraph Compatibility
-
-All agents maintain compatibility with LangGraph through wrapper functions:
-
-```python
-# These functions are available for LangGraph workflows
-from backend.services.langgraph.agents.context_builder import run_context_builder
-from backend.services.langgraph.agents.lighting_planner import run_lighting_planner
-from backend.services.langgraph.agents.effect_translator import run_effect_translator
-
-# Used automatically in the main pipeline
-workflow.add_node("context_builder", run_context_builder)
-workflow.add_node("lighting_planner", run_lighting_planner)
-workflow.add_node("effect_translator", run_effect_translator)
-```
+- Each agent can be tested individually by calling its `run()` method with a suitable state dict.
+- For full song analysis, use `ContextBuilderAgent.analyze_song_context()` (async, with progress reporting).
+- All agent outputs can be logged to the `logs/` directory for inspection.
+- Use the provided test scripts (e.g., `python test_lighting_pipeline.py`) for end-to-end validation.
 
 ## Migration Notes
 
-- **Old Code**: All agent logic was in `lighting_pipeline.py`
-- **New Code**: Each agent is in its own file under `agents/`
-- **Compatibility**: The main pipeline API remains unchanged
-- **Testing**: New individual agent testing capabilities added
+- All agent logic is now modularized in `backend/services/agents/`.
+- No hardcoded logic: all user prompts and musical analysis are handled by LLMs.
+- Global state and fixtures are managed via `app_state` and `fixtures.json`.
+- No references to LangGraph remain; orchestration is now open to LlamaIndex or other frameworks.
 
-## Testing
-
-Run individual agent tests:
-```bash
-python test_agents_individual.py
-```
-
-Run full pipeline tests:
-```bash
-python test_lighting_pipeline.py
-```
-
-Run integration tests:
-```bash
-python pipeline_integration_example.py
-```
+---
+**For LLM developers:**
+- All prompts should be explicit, concise, and focused on the agent's role.
+- Always return structured JSON when requested.
+- Avoid hardcoded or static responses; use the provided context and features.
