@@ -185,89 +185,6 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
             "response": error_message
         })
 
-async def _handle_agent_request(websocket: WebSocket, command: str) -> None:
-    """
-    Handle agent requests that involve the LLM.
-    """
-
-    agent_handlers = {
-        "fx": EffectTranslatorAgent,
-        "context_builder": ContextBuilderAgent,
-        "lighting_planner": LightingPlannerAgent
-    }
-
-    agent = command.strip().lstrip(":").split(" ")[0].lower()
-    prompt = " ".join(command.strip().lstrip(":").split(" ")[1:])
-
-    if agent not in agent_handlers:
-        await websocket.send_json({
-            "type": "chatResponse",
-            "response": f"Unknown agent '{agent}'. Available agents: {', '.join(agent_handlers.keys())}"
-        })
-        return
-
-    try:
-        # Call the appropriate agent handler and execute the prompt
-        agent_class = agent_handlers[agent]
-        agent_instance = agent_class()
-        
-        # Show processing message to the user
-        await websocket.send_json({
-            "type": "chatResponseStart"
-        })
-        
-        if agent == "context_builder":
-            # Create a pipeline state with empty segment for direct context building
-            segment = {"name": "Custom", "start": 0.0, "end": 0.0, "features": {}}
-            state = PipelineState(segment=segment, context_summary="", actions=[], dmx=[])
-            
-            # Either use the prompt as context or generate context based on the prompt
-            if prompt.strip():
-                result = agent_instance.get_context(prompt)
-            else:
-                result = agent_instance.run(state)
-                result = result.get("context_summary", "No context generated")
-                
-        elif agent == "lighting_planner":
-            # Generate lighting actions based on prompt
-            context = prompt
-            result = agent_instance.get_lighting_plan(context)
-            
-        elif agent == "fx" or agent == "effect_translator":
-            # Generate DMX commands for the prompt
-            actions = [{"type": "custom", "description": prompt, "start": 0.0, "duration": 5.0}]
-            result = agent_instance.translate_actions(actions)
-        
-        # Format the response for the frontend
-        if isinstance(result, dict) or isinstance(result, list):
-            import json
-            response = f"**{agent.capitalize()} Result**:\n```json\n{json.dumps(result, indent=2)}\n```"
-        else:
-            response = f"**{agent.capitalize()} Result**:\n{result}"
-        
-        # Send the response to the frontend
-        await websocket.send_json({
-            "type": "chatResponseEnd"
-        })
-        
-        await websocket.send_json({
-            "type": "chatResponse",
-            "response": response
-        })
-    except Exception as e:
-        print(f"❌ Error in _handle_agent_request: {e}")
-        
-        # End the response stream if it was started
-        await websocket.send_json({
-            "type": "chatResponseEnd"
-        })
-        
-        await websocket.send_json({
-            "type": "chatResponse",
-            "response": f"**Agent Request Error**: {str(e)}"
-        })
-
-
 async def _handle_direct_command(websocket: WebSocket, command: str) -> None:
     """
     Handle direct action commands that bypass the LLM.
@@ -482,3 +399,86 @@ def build_ui_context() -> str:
         print(f"Error saving UI context prompt to file: {e}")
 
     return _prompt
+
+async def _handle_agent_request(websocket: WebSocket, command: str) -> None:
+    """
+    Handle agent requests that involve the LLM.
+    """
+
+    agent_handlers = {
+        "fx": EffectTranslatorAgent,
+        "context_builder": ContextBuilderAgent,
+        "lighting_planner": LightingPlannerAgent
+    }
+
+    agent = command.strip().lstrip(":").split(" ")[0].lower()
+    prompt = " ".join(command.strip().lstrip(":").split(" ")[1:])
+
+    if agent not in agent_handlers:
+        await websocket.send_json({
+            "type": "chatResponse",
+            "response": f"Unknown agent '{agent}'. Available agents: {', '.join(agent_handlers.keys())}"
+        })
+        return
+
+    try:
+        # Call the appropriate agent handler and execute the prompt
+        agent_class = agent_handlers[agent]
+        agent_instance = agent_class()
+        
+        # Show processing message to the user
+        await websocket.send_json({
+            "type": "chatResponseStart"
+        })
+        
+        if agent == "context_builder":
+            # Create a pipeline state with empty segment for direct context building
+            segment = {"name": "Custom", "start": 0.0, "end": 0.0, "features": {}}
+            state = PipelineState(segment=segment, context_summary="", actions=[], dmx=[])
+            
+            # Either use the prompt as context or generate context based on the prompt
+            if prompt.strip():
+                result = agent_instance.get_context(prompt)
+            else:
+                result = agent_instance.run(state)
+                result = result.get("context_summary", "No context generated")
+                
+        elif agent == "lighting_planner":
+            # Generate lighting actions based on prompt
+            context = prompt
+            result = agent_instance.get_lighting_plan(context)
+            
+        elif agent == "fx" or agent == "effect_translator":
+            # Generate DMX commands for the prompt
+            actions = [{"type": "custom", "description": prompt, "start": 0.0, "duration": 5.0}]
+            result = agent_instance.translate_actions(actions)
+        
+        # Format the response for the frontend
+        if isinstance(result, dict) or isinstance(result, list):
+            import json
+            response = f"**{agent.capitalize()} Result**:\n```json\n{json.dumps(result, indent=2)}\n```"
+        else:
+            response = f"**{agent.capitalize()} Result**:\n{result}"
+        
+        # Send the response to the frontend
+        await websocket.send_json({
+            "type": "chatResponseEnd"
+        })
+        
+        await websocket.send_json({
+            "type": "chatResponse",
+            "response": response
+        })
+    except Exception as e:
+        print(f"❌ Error in _handle_agent_request: {e}")
+        
+        # End the response stream if it was started
+        await websocket.send_json({
+            "type": "chatResponseEnd"
+        })
+        
+        await websocket.send_json({
+            "type": "chatResponse",
+            "response": f"**Agent Request Error**: {str(e)}"
+        })
+
