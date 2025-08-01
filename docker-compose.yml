@@ -27,6 +27,7 @@ services:
       - ./songs:/app/static/songs
       - ./.cache:/app/cache
       - ./shared:/app/shared
+      - ./logs:/app/logs
     restart: unless-stopped
     ports:
       - "8001:8001"

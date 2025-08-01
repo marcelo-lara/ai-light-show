@@ -35,6 +35,9 @@ class TaskState:
 class AppState:
     """Central application state management."""
 
+    # Logs folder path
+    logs_folder: Path = Path("/app/logs") if Path("/app/logs").exists() else Path(__file__).parent.parent / "logs"
+
     # DMX Canvas - Using singleton instance
     dmx_canvas: DmxCanvas = field(init=False)
     

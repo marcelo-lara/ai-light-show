@@ -9,7 +9,7 @@ from typing import Dict, Any, List
 from typing_extensions import TypedDict
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
-
+from ...models.app_state import app_state
 from ..ollama.ollama_api import query_ollama
 
 
@@ -22,9 +22,8 @@ class PipelineState(TypedDict):
 
 def save_node_output(node_name: str, data: Dict[str, Any]) -> None:
     """Save node output to logs for debugging"""
-    logs_dir = Path("logs")
+    logs_dir = app_state.logs_folder / "node_outputs"
     logs_dir.mkdir(exist_ok=True)
-    
     output_file = logs_dir / f"{node_name}.json"
     try:
         data_dict = dict(data) if hasattr(data, 'keys') else data
