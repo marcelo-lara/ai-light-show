@@ -11,12 +11,14 @@
 {% endfor %}
 {%- endif %}
 
-{% if song.beats -%}
-## Song Beat Times
-{% for beat in song.beats -%}
-- {{ "%.3f"|format(beat) }}s
-{% endfor %}
-{%- endif %}
+## Beat Information
+The song has beats available from the song analysis service. **ALWAYS use exact times - NO GUESSING allowed:**
+- Use the direct command `#analyze beats <start_time> <end_time>` to get beat times for a specific time range
+- Example: `#analyze beats 0 30` gets beats for the first 30 seconds
+- Example: `#analyze beats 60 90` gets beats for seconds 60-90
+- **CRITICAL: When the user doesn't provide exact timing, you MUST use this command to get precise beat data**
+- **NEVER estimate or guess beat positions - always request exact data from the analysis service**
+- This provides precise timing data and avoids loading the full beats array
 
 {% if song.key_moments -%}
 ## Key Moments

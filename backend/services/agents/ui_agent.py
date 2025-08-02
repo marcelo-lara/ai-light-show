@@ -32,18 +32,18 @@ class UIAgent(AgentModel):
                 raise ValueError("No prompt provided in input_data")
             
             # Build context for the UI agent
-            context = self._build_context(input_data)
+            context_data = self._build_context(input_data)
             
-            # Build the complete prompt using the template
-            prompt_with_context = self._build_prompt(context)
+            # Build the system context using the template
+            system_context = self._build_prompt(context_data)
             
             # Call Ollama with streaming support
             response = await self._call_ollama_async(
-                prompt=prompt_with_context,  # Use the full prompt with context
-                context=None,  # No additional system context needed
+                prompt=user_prompt,  # User's actual prompt
+                context=system_context,  # System context with song/fixture info
                 callback=callback,
                 conversation_history=conversation_history,
-                auto_execute_commands=True  # Enable auto-execution of action commands
+                auto_execute_commands=False  # Disable auto-execution, we handle it in _process_response_actions
             )
             
             # Process any action commands found in the response
@@ -89,7 +89,7 @@ class UIAgent(AgentModel):
                 "bpm": getattr(song, 'bpm', 120),
                 "duration": getattr(song, 'duration', 0),
                 "arrangement": getattr(song, 'arrangement', []),
-                "beats": song.get_beats_array() if hasattr(song, 'get_beats_array') and callable(getattr(song, 'get_beats_array', None)) else [],
+                "beats": [],  # Don't send full beats array, agent will request sections as needed
                 "key_moments": getattr(song, 'key_moments', [])
             }
         except AttributeError as e:
@@ -100,7 +100,7 @@ class UIAgent(AgentModel):
                 "bpm": 120,
                 "duration": 0,
                 "arrangement": [],
-                "beats": [],
+                "beats": [],  # Don't send full beats array
                 "key_moments": []
             }
         
@@ -127,7 +127,6 @@ class UIAgent(AgentModel):
         
         Args:
             response (str): The complete AI response text
-            websocket: The WebSocket connection for sending updates
         """
         try:
             # Extract action commands from the response (lines starting with #action or #)

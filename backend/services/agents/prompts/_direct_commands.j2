@@ -6,6 +6,41 @@
     - `#clear action <action_id>` - Remove a specific action by ID
     - `#clear group <group_id>` - Remove all actions with a specific group ID
 
+### Analysis Commands
+    - `#analyze beats <start_time> <end_time>` - Get precise beat times for a time range
+    - `#analyze context` - Generate lighting context for current song
+
+## Direct Commands
+
+### Action Management
+    - `#add <action> to <fixture> at <start_time> for <duration>` - Add a specific action
+    - `#clear all actions` - Remove all actions (REQUIRES CONFIRMATION: add 'confirm' at the end)
+    - `#clear action <action_id>` - Remove a specific action by ID
+    - `#clear group <group_id>` - Remove all actions with a specific group ID
+
+### Analysis Commands
+    - `#analyze beats <start_time> <end_time>` - Get precise beat times for a time range (**USE THIS FOR EXACT TIMING**)
+    - `#analyze context` - Generate lighting context for current song
+
+### Light Plan Management
+    - `#create plan <n> at <start_time> [to <end_time>] [description <description>]` - Create a new light plan
+    - `#delete plan <id|name>` - Delete a light plan by ID or name
+    - `#reset plans` - Delete all light plans
+    - `#list plans` - Show all light plans
+
+### Time Formats
+    - `1m23.45s` (1 minute 23.45 seconds)
+    - `2b` (duration of 2 beats at the song's BPM)
+    - `12.5` (seconds)
+
+**TIMING RULE: ALWAYS use exact times from `#analyze beats` - NO guessing or estimating allowed.**mands
+
+### Action Management
+    - `#add <action> to <fixture> at <start_time> for <duration>` - Add a specific action
+    - `#clear all actions` - Remove all actions (REQUIRES CONFIRMATION: add 'confirm' at the end)
+    - `#clear action <action_id>` - Remove a specific action by ID
+    - `#clear group <group_id>` - Remove all actions with a specific group ID
+
 ### Light Plan Management
     - `#create plan <name> at <start_time> [to <end_time>] [description <description>]` - Create a new light plan
     - `#delete plan <id|name>` - Delete a light plan by ID or name

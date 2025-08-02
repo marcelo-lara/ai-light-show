@@ -27,6 +27,8 @@ class HelpCommandHandler(BaseCommandHandler):
         help_text.append("  #analyze                    - Analyze current song (requires WebSocket)")
         help_text.append("  #analyze context           - Generate lighting context for current song")
         help_text.append("  #analyze context reset     - Clear and regenerate lighting context")
+        help_text.append("  #analyze beats <start> <end> - Get beat times for specific time range")
+        help_text.append("                              - Example: #analyze beats 0 30")
         help_text.append("")
         
         # Agent Commands

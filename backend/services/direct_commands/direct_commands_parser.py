@@ -9,7 +9,7 @@ from typing import Dict, Any, Tuple, List, Optional
 from .base_command import BaseCommandHandler
 from .help_command import HelpCommandHandler
 from .tasks_command import TasksCommandHandler
-from .analyze_commands import AnalyzeCommandHandler, AnalyzeContextCommandHandler
+from .analyze_commands import AnalyzeCommandHandler, AnalyzeContextCommandHandler, AnalyzeBeatsCommandHandler
 from .agent_call_commands import CallAgentCommandHandler
 from .action_commands import (
     RenderCommandHandler, 
@@ -33,6 +33,7 @@ class DirectCommandsParser:
         self.handlers: List[BaseCommandHandler] = [
             HelpCommandHandler(),
             TasksCommandHandler(),
+            AnalyzeBeatsCommandHandler(),    # Must come before AnalyzeContextCommandHandler
             AnalyzeContextCommandHandler(),  # Must come before AnalyzeCommandHandler
             AnalyzeCommandHandler(),
             CallAgentCommandHandler(),

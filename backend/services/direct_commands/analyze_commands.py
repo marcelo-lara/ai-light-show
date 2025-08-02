@@ -214,3 +214,92 @@ class AnalyzeContextCommandHandler(BaseCommandHandler):
                     })
                 return False, error_message, None
         return False, "WebSocket connection required for analyze context command", None
+
+
+class AnalyzeBeatsCommandHandler(BaseCommandHandler):
+    """Handler for the 'analyze beats' command to get beat times for specific time ranges."""
+    
+    def matches(self, command: str) -> bool:
+        """Check if this is an analyze beats command."""
+        return command.lower().startswith("analyze beats")
+    
+    async def handle(self, command: str, websocket=None) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+        """Handle the analyze beats command."""
+        import re
+        
+        # Parse command: "analyze beats <start_time> <end_time>"
+        match = re.match(r"analyze\s+beats\s+([\d.]+)\s+([\d.]+)", command.lower())
+        if not match:
+            return False, "Invalid format. Use: #analyze beats <start_time> <end_time>", None
+        
+        start_time = float(match.group(1))
+        end_time = float(match.group(2))
+        
+        if start_time >= end_time:
+            return False, "Start time must be less than end time", None
+        
+        try:
+            from ..song_analysis_client import SongAnalysisClient
+            from ...models.app_state import app_state
+            
+            # Get current song
+            current_song = getattr(app_state, 'current_song', None)
+            if not current_song:
+                return False, "No song loaded for beat analysis", None
+            
+            song_name = Path(current_song.mp3_path).stem if getattr(current_song, 'mp3_path', None) else None
+            if not song_name:
+                return False, "No song file path available", None
+            
+            # Request beats from song analysis service
+            async with SongAnalysisClient() as client:
+                health = await client.health_check()
+                if health.get("status") != "healthy":
+                    return False, f"Song analysis service is not healthy: {health.get('error', 'Unknown error')}", None
+                
+                # Use the analyze endpoint to get beats for the specific time range
+                result = await client.analyze_beats_rms_flux(
+                    song_name=song_name, 
+                    start_time=start_time, 
+                    end_time=end_time,
+                    force=False  # Use cache if available
+                )
+                
+                if result.get("status") == "ok":
+                    beats = result.get("beats", [])
+                    
+                    # Filter beats to the requested time range (double-check)
+                    filtered_beats = [beat for beat in beats if start_time <= beat <= end_time]
+                    
+                    if websocket:
+                        await websocket.send_json({
+                            "type": "analyzeBeatsResult",
+                            "status": "ok",
+                            "start_time": start_time,
+                            "end_time": end_time,
+                            "beats": filtered_beats,
+                            "beat_count": len(filtered_beats)
+                        })
+                    
+                    beat_times_str = ", ".join([f"{beat:.3f}s" for beat in filtered_beats[:10]])  # Show first 10 beats
+                    if len(filtered_beats) > 10:
+                        beat_times_str += f" ... ({len(filtered_beats)} total beats)"
+                    
+                    return True, f"Found {len(filtered_beats)} beats between {start_time}s and {end_time}s: {beat_times_str}", {
+                        "beats": filtered_beats,
+                        "start_time": start_time,
+                        "end_time": end_time
+                    }
+                else:
+                    error_msg = result.get("message", "Unknown error")
+                    return False, f"Beat analysis failed: {error_msg}", None
+                    
+        except Exception as e:
+            error_message = f"Error analyzing beats: {str(e)}"
+            if websocket:
+                await websocket.send_json({
+                    "type": "analyzeBeatsResult",
+                    "status": "error",
+                    "message": error_message
+                })
+            return False, error_message, None
