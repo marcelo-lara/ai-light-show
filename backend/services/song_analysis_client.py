@@ -54,6 +54,46 @@ class SongAnalysisClient:
             logger.error(f"Health check failed: {str(e)}")
             return {"status": "unreachable", "error": str(e)}
     
+    async def analyze_beats_rms_flux(self, song_name: str, force: bool = False, 
+                                    start_time: Optional[float] = None, 
+                                    end_time: Optional[float] = None) -> Dict[str, Any]:
+        """
+        Analyze beats, RMS, and flux for a song.
+        
+        Args:
+            song_name: Name of the song (without .mp3 extension, e.g., "born_slippy")
+            force: Force re-analysis even if cache exists
+            start_time: Optional start time in seconds for filtering
+            end_time: Optional end time in seconds for filtering
+            
+        Returns:
+            Dict with beats, rms, and flux arrays
+        """
+        try:
+            if not self.session:
+                raise Exception("No session available")
+                
+            data = {
+                "song_name": song_name,
+                "force": force
+            }
+            
+            if start_time is not None:
+                data["start_time"] = start_time
+            if end_time is not None:
+                data["end_time"] = end_time
+            
+            async with self.session.post(f"{self.base_url}/analyze", json=data) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    error_text = await response.text()
+                    raise Exception(f"Beats/RMS/Flux analysis failed with HTTP {response.status}: {error_text}")
+                    
+        except Exception as e:
+            logger.error(f"Beats/RMS/Flux analysis failed: {str(e)}")
+            raise
+
     async def analyze_song(self, song_name: str, reset_file: bool = True, debug: bool = False) -> Dict[str, Any]:
         """
         Analyze a song file by name.
@@ -153,5 +193,28 @@ def analyze_song_sync(song_name: str, reset_file: bool = True, debug: bool = Fal
     async def _analyze():
         async with SongAnalysisClient() as client:
             return await client.analyze_song(song_name, reset_file, debug)
+    
+    return asyncio.run(_analyze())
+
+
+# Convenience function for beats/RMS/flux analysis
+def analyze_beats_rms_flux_sync(song_name: str, force: bool = False, 
+                               start_time: Optional[float] = None, 
+                               end_time: Optional[float] = None) -> Dict[str, Any]:
+    """
+    Synchronous wrapper for beats/RMS/flux analysis.
+    
+    Args:
+        song_name: Name of the song (without .mp3 extension, e.g., "born_slippy")
+        force: Force re-analysis even if cache exists
+        start_time: Optional start time in seconds for filtering
+        end_time: Optional end time in seconds for filtering
+        
+    Returns:
+        Dict with beats, rms, and flux arrays
+    """
+    async def _analyze():
+        async with SongAnalysisClient() as client:
+            return await client.analyze_beats_rms_flux(song_name, force, start_time, end_time)
     
     return asyncio.run(_analyze())

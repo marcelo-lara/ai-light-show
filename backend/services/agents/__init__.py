@@ -6,12 +6,11 @@ Each agent provides specialized functionality for analyzing music, planning ligh
 and translating those effects into actionable DMX commands.
 """
 
-from .context_builder import ContextBuilderAgent
 from .lighting_planner import LightingPlannerAgent
-from .effect_translator import EffectTranslatorAgent
+from .ui_agent import UIAgent
 
 __all__ = [
-    "ContextBuilderAgent",
-    "LightingPlannerAgent", 
-    "EffectTranslatorAgent"
+    'LightingPlannerAgent',
+    'UIAgent',
 ]
+

@@ -7,8 +7,6 @@ from ...models.app_state import app_state
 from ..utils.broadcast import broadcast_to_all
 from ..direct_commands import DirectCommandsParser
 from .action_executor import execute_confirmed_action
-from ...services.agents import ContextBuilderAgent, LightingPlannerAgent, EffectTranslatorAgent
-from ...services.agents.context_builder import PipelineState
 
 UI_CHAT_MODEL = "cogito:8b" #"deepseek-r1:8b"  # Default model for AI chat
 
@@ -324,153 +322,12 @@ async def _handle_agent_request(websocket: WebSocket, command: str) -> None:
     """
     Handle agent requests that involve the LLM.
     """
+    
 
-    agent_handlers = {
-        "fx": EffectTranslatorAgent,
-        "cb": ContextBuilderAgent,
-        "lp": LightingPlannerAgent
-    }
-    agent = command.strip().lstrip(":").split(" ")[0].lower()
-    prompt = " ".join(command.strip().lstrip(":").split(" ")[1:])
-
-    if agent not in agent_handlers:
-        await websocket.send_json({
-            "type": "chatResponse",
-            "response": f"Unknown agent '{agent}'. Available agents: {', '.join(agent_handlers.keys())}"
-        })
-        return
-
-    try:
-        # Call the appropriate agent handler and execute the prompt
-        agent_class = agent_handlers[agent]
-        agent_instance = agent_class()
-        
-        # Show processing message to the user
-        await websocket.send_json({
-            "type": "chatResponseStart"
-        })
-        
-        # Initialize result variable to avoid reference before assignment
-        result = None
-        
-        if agent == "cb":
-            # Create a pipeline state with empty segment for direct context building
-            # Ensure we have numerical values for start and end
-            start_time = 0.0
-            end_time = 0.0
-            
-            # Create state with prompt as description if provided
-            features = {}
-            if prompt.strip():
-                features["description"] = prompt
-                
-            segment = {"name": "Custom", "start": start_time, "end": end_time, "features": features}
-            state = PipelineState(segment=segment, context_summary="", actions=[], dmx=[])
-            
-            # Use the run method which is guaranteed to exist
-            result_state = agent_instance.run(state)
-            result = result_state.get("context_summary", "No context generated")
-                
-        elif agent == "lp":
-            # Generate lighting actions based on prompt
-            context = prompt
-            # Ensure we have numerical values for start and end
-            # Using explicit float() conversion to guarantee numeric types
-            start_time = float(0)
-            end_time = float(5)  # Use 5 seconds default duration
-            
-            # Build a proper segment dictionary with guaranteed numeric values
-            segment = {
-                "name": "Custom",
-                "start": start_time,
-                "end": end_time,
-                "features": {}
-            }
-            
-            # Use the run method with the prompt as context summary
-            state = PipelineState(
-                segment=segment,
-                context_summary=context,
-                actions=[],
-                dmx=[]
-            )
-            
-            try:
-                result_state = agent_instance.run(state)
-                result = result_state.get("actions", [])
-            except Exception as e:
-                print(f"Error in lighting planner: {e}")
-                # Create a simple action as fallback
-                result = [{
-                    "type": "custom",
-                    "description": f"Generated from: {prompt}",
-                    "start": start_time,
-                    "end": end_time,
-                    "duration": end_time - start_time,
-                    "intensity": 1.0,
-                    "color": "white"
-                }]
-            
-        elif agent == "fx":
-            # Generate DMX commands for the prompt
-            # Ensure we have numerical values for start, end and duration
-            start_time = 0.0
-            end_time = 5.0
-            duration = 5.0
-            
-            # Create a simple action for the prompt
-            actions = [{
-                "type": "custom", 
-                "description": prompt, 
-                "start": start_time, 
-                "end": end_time, 
-                "duration": duration
-            }]
-            
-            # Use the translate_actions method which we confirmed exists
-            # The method is defined to return List[str], not a dict
-            try:
-                result = agent_instance.translate_actions(actions)
-            except Exception as e:
-                print(f"Error translating actions: {e}")
-                # Fallback to using run
-                state = PipelineState(
-                    segment={"name": "Custom", "start": start_time, "end": end_time, "features": {}},
-                    context_summary="Custom effect",
-                    actions=actions,
-                    dmx=[]
-                )
-                result_state = agent_instance.run(state)
-                result = result_state.get("dmx", [])
-        
-        # Format the response for the frontend
-        if isinstance(result, dict) or isinstance(result, list):
-            import json
-            response = f"**{agent.capitalize()} Result**:\n```json\n{json.dumps(result, indent=2)}\n```"
-        else:
-            response = f"**{agent.capitalize()} Result**:\n{result}"
-        
-        # Send the response to the frontend
-        await websocket.send_json({
-            "type": "chatResponseEnd"
-        })
-        
-        await websocket.send_json({
-            "type": "chatResponse",
-            "response": response
-        })
-    except Exception as e:
-        print(f"❌ Error in _handle_agent_request: {e}")
-        
-        # End the response stream if it was started
-        await websocket.send_json({
-            "type": "chatResponseEnd"
-        })
-        
-        await websocket.send_json({
-            "type": "chatResponse",
-            "response": f"**Agent Request Error**: {str(e)}"
-        })
+    await websocket.send_json({
+        "type": "chatResponse",
+        "response": f"**Agent {command}**"
+    })
 
 
 async def _process_response_actions(response: str, websocket: WebSocket) -> None:

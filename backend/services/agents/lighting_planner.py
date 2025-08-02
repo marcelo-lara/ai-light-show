@@ -1,172 +1,319 @@
 """
 Lighting Planner Agent
 
-This agent proposes symbolic lighting actions based on context summaries.
+This agent analyzes musical segments and generates concise, natural language context summaries 
+for lighting design. The goal is to create a Lighting Plan with timed entries.
 """
-import json
-import re
-from typing import Dict, Any, List
-from typing_extensions import TypedDict
-from pathlib import Path
-from jinja2 import Environment, FileSystemLoader
+
+from typing import Dict, Any, Optional, List
+from ._agent_model import AgentModel
+from ..ollama import query_ollama
+from ..song_analysis_client import SongAnalysisClient
 from ...models.app_state import app_state
-from ..ollama.ollama_api import query_ollama
+import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-class PipelineState(TypedDict):
-    segment: Dict[str, Any]
-    context_summary: str
-    actions: list
-    dmx: list
-
-
-def save_node_output(node_name: str, data: Dict[str, Any]) -> None:
-    """Save node output to logs for debugging"""
-    logs_dir = app_state.logs_folder / "node_outputs"
-    logs_dir.mkdir(exist_ok=True)
-    output_file = logs_dir / f"{node_name}.json"
-    try:
-        data_dict = dict(data) if hasattr(data, 'keys') else data
-        with open(output_file, 'w') as f:
-            json.dump(data_dict, f, indent=2)
-        print(f"💾 Saved {node_name} output to {output_file}")
-    except Exception as e:
-        print(f"⚠️ Failed to save {node_name} output: {e}")
-
-
-class LightingPlannerAgent:
+class LightingPlannerAgent(AgentModel):
     """
-    Lighting Planner Agent
+    Lighting Planner Agent that analyzes musical segments and creates lighting plans.
     
-    Proposes symbolic lighting actions based on context summaries and musical segments.
-    Provides a simple interface for lighting planning.
+    This agent automatically uses the current song from app_state and fetches exact
+    beat times from the song analysis service for precise synchronization.
+    
+    The agent generates plan entries in the format:
+    #plan add at [time] "[label]" "[description]"
+    
+    Example output:
+    #plan add at 0.487 "Intro start" "half intensity blue chaser from left to right at 1b intervals"
+    #plan add at 1.234 "Intro build" "fade from blue to white from right to left every 1b intervals"
     """
-    
-    def __init__(self, model: str = "mixtral"):
-        self.model = model
-        # Setup Jinja2 environment
-        self.prompts_dir = Path(__file__).parent / "prompts"
-        self.jinja_env = Environment(
-            loader=FileSystemLoader(self.prompts_dir),
-            trim_blocks=True,
-            lstrip_blocks=True
-        )
-    
-    def run(self, state: PipelineState) -> PipelineState:
-        """Execute the lighting planning process for the pipeline"""
-        print("💡 Running Lighting Planner...")
+
+    def __init__(self, agent_name: str = "lighting_planner", model_name: str = "mixtral", agent_aliases: Optional[str] = "planner"):
+        super().__init__(agent_name, model_name, agent_aliases)
+
+    def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Run the lighting planner agent.
         
-        context_summary = state.get("context_summary", "")
-        segment = state.get("segment", {})
+        Automatically uses the current song from app_state for exact beat analysis.
         
-        start_time = segment.get("start", 0.0)
-        end_time = segment.get("end", 0.0)
-        duration = end_time - start_time
-        
-        # Build prompt using Jinja2 template
-        prompt = self._build_prompt(context_summary, segment)
-        
+        Args:
+            input_data: Dictionary containing:
+                - context_summary: Musical context analysis
+                - segment: Optional segment information with start, end, duration
+                - user_prompt: Optional user-provided prompt
+                - song: Optional song metadata (auto-populated from app_state)
+                - fixtures: Optional fixture information (auto-populated from app_state)
+                
+        Returns:
+            Dictionary with:
+                - lighting_plan: Generated lighting plan commands
+                - exact_beats: Beat times retrieved from song analysis
+                - status: Success/error status
+                - error: Error message if any
+        """
         try:
-            # Call model via Ollama
-            response = query_ollama(prompt, model=self.model)
+            self.state.status = "running"
+            self.state.progress = 10
             
-            # Extract and parse actions from response
-            actions = self._parse_actions(response, start_time, duration)
+            # Fetch exact beat times from current song
+            exact_beats = None
+            if app_state.current_song_file:
+                logger.info("Fetching exact beat times from song analysis...")
+                exact_beats = self._fetch_exact_beats(input_data.get('segment'))
+                if exact_beats:
+                    input_data['exact_beats'] = exact_beats
+                    logger.info(f"Retrieved {len(exact_beats)} exact beat times")
+                else:
+                    logger.warning("Could not retrieve exact beat times, proceeding without them")
+            else:
+                logger.warning("No current song loaded, proceeding without exact beats")
             
-            # Update state
-            result_state = state.copy()
-            result_state["actions"] = actions
+            self.state.progress = 30
             
-            # Save output for debugging
-            save_node_output("lighting_planner", {
-                "input": {
-                    "context_summary": context_summary,
-                    "segment": segment
-                },
-                "actions": actions,
-                "model_response": response
-            })
+            # Build the prompt using the Jinja2 template
+            prompt = self._build_prompt(input_data)
             
-            print(f"✅ Generated {len(actions)} lighting actions")
-            return result_state
+            self.state.progress = 50
+            
+            # Call the LLM
+            response = self._call_ollama(prompt)
+            
+            self.state.progress = 80
+            
+            # Parse the response
+            lighting_plan = self._parse_plan_response(response)
+            
+            self.state.progress = 100
+            self.state.status = "completed"
+            self.state.result = {
+                "lighting_plan": lighting_plan,
+                "raw_response": response,
+                "exact_beats": exact_beats
+            }
+            
+            return {
+                "lighting_plan": lighting_plan,
+                "raw_response": response,
+                "exact_beats": exact_beats,
+                "status": "success"
+            }
             
         except Exception as e:
-            print(f"❌ Lighting Planner failed: {e}")
-            result_state = state.copy()
-            result_state["actions"] = []
-            return result_state
-    
-    def _build_prompt(self, context_summary: str, segment: Dict[str, Any]) -> str:
-        """Build the prompt using Jinja2 template"""
-        # Get fixtures from app_state
-        from backend.models.app_state import app_state
-        
-        # Get current song from app_state
-        song = app_state.current_song if app_state.current_song else None
-        
-        # Prepare fixtures data for template
-        fixtures_data = []
-        if app_state.fixtures:
-            for fixture_id, fixture in app_state.fixtures.fixtures.items():
-                fixtures_data.append({
-                    'id': fixture_id,
-                    'type': getattr(fixture, 'type', 'Unknown'),
-                    'effects': getattr(fixture, 'effects', ['flash', 'fade'])
-                })
-        
-        # Calculate segment duration
-        start_time = segment.get("start", 0.0)
-        end_time = segment.get("end", 0.0)
-        duration = end_time - start_time
-        
-        # Add calculated duration to segment data
-        segment_with_duration = segment.copy()
-        segment_with_duration['duration'] = duration
-        
-        # Render template
-        template = self.jinja_env.get_template('lighting_planner.prompt.j2')
-        prompt = template.render(
-            song=song,
-            fixtures=fixtures_data,
-            context_summary=context_summary,
-            segment=segment_with_duration
-        )
-        
-        return prompt
-    
-    def _parse_actions(self, response: str, start_time: float, duration: float) -> List[Dict[str, Any]]:
-        """Parse lighting actions from LLM response"""
-        actions = []
-        
+            self.state.status = "error"
+            self.state.error = str(e)
+            return {
+                "lighting_plan": [],
+                "status": "error",
+                "error": str(e)
+            }
+
+    def _call_ollama(self, prompt: str) -> str:
+        """Call the Ollama API with the given prompt."""
         try:
-            # Try to parse JSON directly
-            if response.strip().startswith('['):
-                actions = json.loads(response.strip())
-            else:
-                # Look for JSON in response
-                json_match = re.search(r'\[[\s\S]*\]', response)
-                if json_match:
-                    actions = json.loads(json_match.group(0))
-                else:
-                    # Fallback: create basic actions
-                    actions = [
-                        {
-                            "type": "flash",
-                            "color": "white",
-                            "start": start_time,
-                            "duration": duration
-                        }
-                    ]
-        except json.JSONDecodeError:
-            print(f"⚠️ Failed to parse JSON from lighting planner: {response}")
-            # Fallback actions
-            actions = [
-                {
-                    "type": "fade",
-                    "color": "auto",
-                    "start": start_time,
-                    "duration": duration
-                }
-            ]
+            response = query_ollama(prompt, model=self.model_name)
+            return response
+        except Exception as e:
+            raise Exception(f"Failed to call Ollama API: {str(e)}")
+
+    def _fetch_exact_beats(self, segment: Optional[Dict[str, Any]] = None) -> Optional[List[float]]:
+        """
+        Fetch exact beat times from the song analysis service.
         
-        return actions
+        Uses the current song from app_state.current_song_file.
+        
+        Args:
+            segment: Optional segment information to filter beats
+            
+        Returns:
+            List of exact beat times in seconds, or None if failed
+        """
+        try:
+            # Use song name from app_state (always available)
+            song_name = app_state.current_song_file
+            if not song_name:
+                logger.error("No current song file in app_state")
+                return None
+                
+            logger.info(f"Extracting beats for current song: {song_name}")
+            
+            # Use synchronous wrapper for simplicity in this context
+            async def _fetch():
+                async with SongAnalysisClient() as client:
+                    start_time = segment.get('start') if segment else None
+                    end_time = segment.get('end') if segment else None
+                    
+                    result = await client.analyze_beats_rms_flux(
+                        song_name=song_name,
+                        force=False,  # Use cache if available
+                        start_time=start_time,
+                        end_time=end_time
+                    )
+                    
+                    if result.get('status') == 'ok' and 'beats' in result:
+                        return result['beats']
+                    else:
+                        logger.error(f"Beat analysis failed: {result.get('message', 'Unknown error')}")
+                        return None
+            
+            return asyncio.run(_fetch())
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch exact beats: {str(e)}")
+            return None
+
+    def _parse_plan_response(self, response: str) -> list:
+        """
+        Parse the LLM response to extract plan commands.
+        
+        Looks for lines starting with #plan add at and extracts:
+        - time: timestamp in seconds
+        - label: descriptive label
+        - description: effect description
+        """
+        plan_entries = []
+        lines = response.strip().split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            if line.startswith('#plan add at '):
+                try:
+                    # Parse: #plan add at 0.0 "Intro start" "half intensity blue chaser..."
+                    # Remove the #plan add at prefix
+                    remainder = line[13:].strip()
+                    
+                    # Find the first space to separate time from the rest
+                    space_idx = remainder.find(' ')
+                    if space_idx == -1:
+                        continue
+                        
+                    time_str = remainder[:space_idx]
+                    rest = remainder[space_idx + 1:].strip()
+                    
+                    # Parse time
+                    time = float(time_str)
+                    
+                    # Parse label and description (both in quotes)
+                    if rest.startswith('"'):
+                        # Find the closing quote for label
+                        end_quote = rest.find('"', 1)
+                        if end_quote == -1:
+                            continue
+                        label = rest[1:end_quote]
+                        
+                        # Find the description
+                        remainder = rest[end_quote + 1:].strip()
+                        if remainder.startswith('"') and remainder.endswith('"'):
+                            description = remainder[1:-1]
+                        else:
+                            continue
+                    else:
+                        continue
+                    
+                    plan_entries.append({
+                        "time": time,
+                        "label": label,
+                        "description": description
+                    })
+                    
+                except (ValueError, IndexError) as e:
+                    # Skip malformed lines
+                    continue
+        
+        return plan_entries
+
+    def create_plan_for_segment(self, segment_data: Dict[str, Any], context_summary: str) -> Dict[str, Any]:
+        """
+        Convenience method to create a lighting plan for a specific musical segment.
+        
+        Uses the current song from app_state for exact beat analysis.
+        
+        Args:
+            segment_data: Segment information (start, end, duration, etc.)
+            context_summary: Musical context analysis
+            
+        Returns:
+            Lighting plan result
+        """
+        input_data = {
+            "segment": segment_data,
+            "context_summary": context_summary
+        }
+        return self.run(input_data)
+
+    def create_plan_from_user_prompt(self, user_prompt: str, context_summary: str = "") -> Dict[str, Any]:
+        """
+        Convenience method to create a lighting plan from a user prompt.
+        
+        Uses the current song from app_state for exact beat analysis.
+        
+        Args:
+            user_prompt: User's lighting request
+            context_summary: Optional musical context
+            
+        Returns:
+            Lighting plan result
+        """
+        input_data = {
+            "user_prompt": user_prompt,
+            "context_summary": context_summary
+        }
+        return self.run(input_data)
+
+    def create_plan_for_current_song(self, context_summary: str = "",
+                                   segment: Optional[Dict[str, Any]] = None,
+                                   user_prompt: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Create a lighting plan for the currently loaded song using exact beat synchronization.
+        
+        This method automatically uses the current song from app_state and includes
+        song metadata and fixture information in the prompt.
+        
+        Args:
+            context_summary: Optional musical context (will use song info if empty)
+            segment: Optional segment information
+            user_prompt: Optional user prompt
+            
+        Returns:
+            Lighting plan result with exact beat synchronization
+            
+        Raises:
+            ValueError: If no song is currently loaded
+        """
+        if not app_state.current_song or not app_state.current_song_file:
+            raise ValueError("No song is currently loaded. Use app_state.current_song to set a song first.")
+        
+        # Use song metadata for context if not provided
+        if not context_summary and app_state.current_song:
+            song = app_state.current_song
+            context_summary = f"Song: {song.title or app_state.current_song_file}, BPM: {song.bpm or 'unknown'}, Duration: {song.duration or 'unknown'}s"
+        
+        # Prepare input data with all available information
+        input_data: Dict[str, Any] = {
+            "context_summary": context_summary,
+            "song": {
+                "title": app_state.current_song.title or app_state.current_song_file,
+                "bpm": app_state.current_song.bpm,
+                "duration": app_state.current_song.duration,
+                "beats": app_state.current_song.beats if hasattr(app_state.current_song, 'beats') else None
+            },
+            "fixtures": [
+                {
+                    "id": fixture.id,
+                    "type": fixture.fixture_type,
+                    "effects": list(fixture.action_handlers.keys()) if hasattr(fixture, 'action_handlers') else []
+                }
+                for fixture in app_state.fixtures.fixtures.values() if app_state.fixtures
+            ] if app_state.fixtures else []
+        }
+        
+        if segment:
+            input_data["segment"] = segment
+        if user_prompt:
+            input_data["user_prompt"] = user_prompt
+        
+        logger.info(f"Creating lighting plan for current song: {app_state.current_song_file}")
+        return self.run(input_data)

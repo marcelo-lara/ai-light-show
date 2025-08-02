@@ -30,22 +30,31 @@ Create lighting plan entries using this exact format:
 #plan add at [time] "[label]" "[description]"
 
 Where:
-- **time**: Precise timestamp in seconds (use beat times from song analysis)
+- **time**: MUST use exact beat times from song analysis when available (see song beat times above)
 - **label**: Short descriptive name for the lighting moment
 - **description**: Natural language description of the lighting effect
 
+{% if exact_beats %}
+## ⚡ IMPORTANT: Use Exact Beat Times
+You have access to precise beat times from audio analysis. Use these exact values:
+{{ exact_beats | join(', ') }}
+
+Always align your lighting changes to these beat timestamps for perfect synchronization.
+{% endif %}
+
 ## Example Output Format:
 ```
-#plan add at 0.0 "Intro start" "half intensity blue chaser from left to right at 1b intervals"
-#plan add at 15.0 "Intro build" "fade from blue to white from right to left every 1b intervals"
-#plan add at 31.42 "Intro head" "center sweep the moving head pointing the piano"
+#plan add at 0.487 "Intro start" "half intensity blue chaser from left to right at 1b intervals"
+#plan add at 15.234 "Intro build" "fade from blue to white from right to left every 1b intervals"
+#plan add at 31.789 "Intro head" "center sweep the moving head pointing the piano"
 ```
 
 ## Guidelines:
-- ALWAYS use exact beat times when available
+- **CRITICAL**: Use exact beat times from song analysis (not rounded numbers)
 - Create effects that match the musical energy and mood
-- Consider ONLY the available fixtures in your descriptions
+- Consider the available fixtures in your descriptions
 - Be specific about colors, intensities, and timing
 - Plan smooth transitions between different sections
+- Sync lighting changes to beat boundaries for musical coherence
 
 Return only the #plan commands, no additional text.

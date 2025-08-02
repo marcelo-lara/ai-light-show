@@ -60,7 +60,7 @@ POST /analyze
 Content-Type: application/json
 
 {
-  "song_path": "/path/to/song.mp3",
+  "song_name": "born_slippy",
   "force": false,              // Optional: force re-analysis even if cache exists
   "start_time": 0.0,           // Optional: start time in seconds for filtering
   "end_time": null             // Optional: end time in seconds for filtering
@@ -98,7 +98,7 @@ POST /analyze_song
 Content-Type: application/json
 
 {
-  "song_name": "song.mp3",
+  "song_name": "born_slippy",
   "reset_file": true,
   "debug": false
 }
