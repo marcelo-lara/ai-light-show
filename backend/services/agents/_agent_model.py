@@ -16,11 +16,12 @@ class AgentState:
 
 class AgentModel:
     """Base class for all agent models."""
-    def __init__(self, agent_name: str, model_name: str, agent_alisas: Optional[str] = None):
+    def __init__(self, agent_name: str, model_name: str, agent_alisas: Optional[str] = None, debug: bool = False):
         self.agent_name = agent_name
         self.model_name = model_name
         self.agent_alisas = agent_alisas or agent_alisas
         self.state = AgentState()
+        self.debug = debug
 
     def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Run the agent model on the input data."""
@@ -54,6 +55,15 @@ class AgentModel:
         """Call the Ollama API asynchronously with the given prompt."""
         from ..ollama import query_ollama_streaming
         
+        if self.debug:
+            """Save the prompt and context to logs for debugging"""
+            from ...models.app_state import app_state
+            log_file = Path(app_state.logs_folder) / f"{self.agent_name}_debug.log"
+            print(f"Debug log file: {log_file}")
+            app_state.logs_folder.mkdir(parents=True, exist_ok=True)
+            with open(log_file, "a") as f:
+                f.write(f"Prompt: {prompt}\nContext: {context}\n\n")
+
         return await query_ollama_streaming(
             prompt=prompt,
             model=self.model_name,

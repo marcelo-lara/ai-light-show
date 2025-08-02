@@ -14,8 +14,8 @@ class UIAgent(AgentModel):
     This is the main agent that replaces the ai_handler ollama implementation.
     """
 
-    def __init__(self, agent_name: str = "ui_agent", model_name: str = "gemma3n:e4b", agent_aliases: Optional[str] = "ui"):
-        super().__init__(agent_name, model_name, agent_aliases)
+    def __init__(self, agent_name: str = "ui_agent", model_name: str = "gemma3n:e4b", agent_aliases: Optional[str] = "ui", debug: bool = True):
+        super().__init__(agent_name, model_name, agent_aliases, debug)
 
     async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Run the UI agent asynchronously with streaming support."""
@@ -26,7 +26,6 @@ class UIAgent(AgentModel):
             # Extract user prompt and optional callback for streaming
             user_prompt = input_data.get("prompt", "")
             callback = input_data.get("callback")
-            websocket = input_data.get("websocket")
             conversation_history = input_data.get("conversation_history", [])
             
             if not user_prompt:
@@ -40,16 +39,15 @@ class UIAgent(AgentModel):
             
             # Call Ollama with streaming support
             response = await self._call_ollama_async(
-                prompt=user_prompt,
-                context=prompt_with_context,
+                prompt=prompt_with_context,  # Use the full prompt with context
+                context=None,  # No additional system context needed
                 callback=callback,
-                websocket=websocket,
                 conversation_history=conversation_history,
                 auto_execute_commands=True  # Enable auto-execution of action commands
             )
             
             # Process any action commands found in the response
-            await self._process_response_actions(response, websocket)
+            await self._process_response_actions(response)
             
             self.state.status = "completed"
             self.state.completed_at = datetime.now()
@@ -122,7 +120,7 @@ class UIAgent(AgentModel):
             "fixtures": fixtures
         }
 
-    async def _process_response_actions(self, response: str, websocket) -> None:
+    async def _process_response_actions(self, response: str) -> None:
         """
         Process the AI response to detect and save any action commands, 
         then broadcast the updated actions to the frontend.

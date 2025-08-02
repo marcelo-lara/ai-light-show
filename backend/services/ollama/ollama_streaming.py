@@ -71,6 +71,7 @@ async def query_ollama_streaming(
         # Add system context if provided
         if context:
             request_data["messages"].append({"role": "system", "content": context})
+            print(f"🤖 Using context: {context}")
         
         # Add conversation history if provided (properly implement chat history)
         if conversation_history:
