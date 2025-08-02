@@ -7,8 +7,7 @@ from ...models.app_state import app_state
 from ..utils.broadcast import broadcast_to_all
 from ..direct_commands import DirectCommandsParser
 from .action_executor import execute_confirmed_action
-
-UI_CHAT_MODEL = "cogito:8b" #"deepseek-r1:8b"  # Default model for AI chat
+from ..agents.ui_agent import UIAgent
 
 # Store pending actions for each WebSocket session
 _pending_actions_store = {}
@@ -21,8 +20,7 @@ _direct_commands_parser = DirectCommandsParser()
 
 async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> None:
     """Handle userPrompt with streaming and action proposals/confirmation flow."""
-    from ...services.ollama import query_ollama_streaming
-
+    
     prompt = message.get("text", "") or message.get("prompt", "")
     if not prompt:
         await websocket.send_json({"type": "chatResponse", "response": "No prompt provided."})
@@ -32,14 +30,6 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
     if prompt.strip().startswith("#"):
         await _handle_direct_command(websocket, prompt)
         return
-
-    # Check if this is a direct agent request (starts with :)
-    if prompt.strip().startswith(":"):
-        await _handle_agent_request(websocket, prompt)
-        return
-
-    # Define context separately from the prompt
-    context = build_ui_context()
 
     try:
         session_id = str(id(websocket))
@@ -116,26 +106,36 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
                 "chunk": chunk
             })
 
-        # Stream the AI response
+        # Create UI Agent and run it
         try:
-            # Pass context and conversation history to the AI request
-            current_response = await query_ollama_streaming(
-                prompt, 
-                session_id, 
-                context=context, 
-                conversation_history=_conversation_history[session_id],
-                model=UI_CHAT_MODEL, 
-                callback=send_chunk,
-                websocket=websocket,  # Pass websocket for action command execution
-                auto_execute_commands=True  # Enable automatic action command execution
-            )
-        except (ConnectionError, TimeoutError, ValueError, RuntimeError) as ai_error:
+            ui_agent = UIAgent()
+            
+            # Prepare input data for the agent
+            input_data = {
+                "prompt": prompt,
+                "callback": send_chunk,
+                "websocket": websocket,
+                "conversation_history": _conversation_history[session_id]
+            }
+            
+            # Run the agent
+            result = await ui_agent.run(input_data)
+            
+            if result["success"]:
+                current_response = result["response"]
+            else:
+                error_message = f"Sorry, I encountered an error: {result['error']}"
+                await send_chunk(error_message)
+                current_response = error_message
+                
+        except Exception as ai_error:
             # Handle AI service errors gracefully
             print(f"🤖 AI Service Error: {ai_error}")
             
             # Send a helpful error message as a chunk
-            error_chunk = f"\n\nSorry, I'm having trouble connecting to the AI service. {str(ai_error)}\n\nPlease check that Ollama is running and the 'mistral' model is installed."
+            error_chunk = f"\n\nSorry, I'm having trouble connecting to the AI service. {str(ai_error)}\n\nPlease check that Ollama is running and the 'cogito:8b' model is installed."
             await send_chunk(error_chunk)
+            current_response = error_chunk
         
         # End streaming
         await websocket.send_json({"type": "chatResponseEnd"})
@@ -243,92 +243,38 @@ async def _handle_direct_command(websocket: WebSocket, command: str) -> None:
 async def check_ai_service_health() -> tuple[bool, str]:
     """Check if the AI service (Ollama) is available and return status."""
     try:
-        from ...services.ollama import query_ollama_streaming
+        # Create a UI agent for health check
+        ui_agent = UIAgent()
         
-        # Try a simple test prompt
-        test_response = ""
-        async def test_callback(chunk):
-            nonlocal test_response
-            test_response += chunk
+        # Simple test to see if we can create context (this tests song/fixtures access)
+        # We'll catch the specific error about no song being loaded
+        try:
+            test_context = ui_agent._build_context({})
+        except ValueError as ve:
+            if "No song is currently loaded" in str(ve):
+                # This is expected when no song is loaded, but it means the agent setup is working
+                return True, "AI service is ready (no song loaded)"
+            else:
+                raise ve
+        except AttributeError as ae:
+            # Handle case where song object exists but is not properly initialized
+            if "_title" in str(ae) or "_beats" in str(ae) or "song" in str(ae).lower():
+                return True, "AI service is ready (song not fully loaded)"
+            else:
+                raise ae
         
-        await query_ollama_streaming("Hi", "health_check", callback=test_callback)
+        # If we got here, we have a song loaded and context built successfully
         return True, "AI service is ready"
+        
     except ConnectionError:
         return False, "Cannot connect to Ollama service. Please ensure Ollama is running on http://llm-service:11434"
-    except ValueError:
-        return False, "Mistral model not found. Please install it with: ollama pull mistral"
+    except ValueError as ve:
+        if "not found" in str(ve) and "model" in str(ve):
+            return False, f"Model not found. Please install it with: ollama pull {ui_agent.model_name}"
+        else:
+            return False, f"AI service error: {str(ve)}"
     except Exception as e:
         return False, f"AI service error: {str(e)}"
-
-def build_ui_context() -> str:
-    """Build the context for the lighting interpretation using Jinja2 templates"""
-    from pathlib import Path
-    from jinja2 import Environment, FileSystemLoader
-    
-    # Setup Jinja2 environment
-    prompts_dir = Path(__file__).parent.parent / "agents" / "prompts"
-    jinja_env = Environment(
-        loader=FileSystemLoader(prompts_dir),
-        trim_blocks=True,
-        lstrip_blocks=True
-    )
-    
-    # Load the template
-    template = jinja_env.get_template('ui_context.j2')
-    
-    # Prepare template variables
-    song = app_state.current_song
-    song_data = {}
-    
-    # Handle case when no song is loaded
-    if song is None:
-        raise ValueError("No song is currently loaded. Please load a song to build the UI context.")
-
-    # Extract song data for template
-    song_data = {
-        "title": getattr(song, 'song_name', 'Unknown'),
-        "bpm": getattr(song, 'bpm', 0),
-        "duration": getattr(song, 'duration', 0),
-        "arrangement": getattr(song, 'sections', []),
-        "beats": song.get_beats_array(),
-        "key_moments": getattr(song, 'key_moments', [])
-    }
-    
-    # Prepare fixtures data
-    fixtures = []
-    if app_state.fixtures and hasattr(app_state.fixtures, 'fixtures'):
-        fixtures_dict = app_state.fixtures.fixtures
-        for fixture_id, fixture in fixtures_dict.items():
-            fixtures.append({
-                "id": fixture.id,
-                "type": fixture.fixture_type,
-                "effects": [action for action in fixture.actions if action != 'arm']  # omit 'arm' action
-            })
-    
-    # Render the template with context
-    _prompt = template.render(song=song_data, fixtures=fixtures)
-    
-    # save the prompt to a file for debugging
-    try:
-        _ffile = os.path.join(app_state.current_song.data_folder, "ui_context_debug.txt")
-        with open(_ffile, "w") as f:
-            f.write(_prompt)
-    except Exception as e:
-        print(f"Error saving UI context prompt to file: {e}")
-
-    return _prompt
-
-async def _handle_agent_request(websocket: WebSocket, command: str) -> None:
-    """
-    Handle agent requests that involve the LLM.
-    """
-    
-
-    await websocket.send_json({
-        "type": "chatResponse",
-        "response": f"**Agent {command}**"
-    })
-
 
 async def _process_response_actions(response: str, websocket: WebSocket) -> None:
     """

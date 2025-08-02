@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Callable
 from datetime import datetime
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
@@ -26,10 +26,46 @@ class AgentModel:
         """Run the agent model on the input data."""
         raise NotImplementedError("AgentModel subclasses must implement the run method.")
 
-    def _call_ollama(self, prompt: str) -> str:
+    def _call_ollama(self, prompt: str, context: Optional[str] = None, callback: Optional[Callable] = None, **kwargs) -> str:
         """Call the Ollama API with the given prompt."""
+        # Import here to avoid circular imports
+        from ..ollama import query_ollama_streaming
+        import asyncio
+        
+        # Create a new event loop if none exists (for sync usage)
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        # Call the async streaming function
+        return loop.run_until_complete(
+            query_ollama_streaming(
+                prompt=prompt,
+                model=self.model_name,
+                context=context,
+                callback=callback,
+                **kwargs
+            )
+        )
+
+    async def _call_ollama_async(self, prompt: str, context: Optional[str] = None, callback: Optional[Callable] = None, **kwargs) -> str:
+        """Call the Ollama API asynchronously with the given prompt."""
+        from ..ollama import query_ollama_streaming
+        
+        return await query_ollama_streaming(
+            prompt=prompt,
+            model=self.model_name,
+            context=context,
+            callback=callback,
+            **kwargs
+        )
+
+    def _build_context(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Build the context for the agent model from the input data."""
         # This method should be implemented to interact with the Ollama API
-        raise NotImplementedError("AgentModel subclasses must implement the _call_ollama method.")
+        raise NotImplementedError("AgentModel subclasses must implement the _build_context method.")
 
     def _build_prompt(self, context: Dict[str, Any]) -> str:
         """Build a prompt for the agent model using Jinja2 templates from the prompts directory."""
