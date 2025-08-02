@@ -14,7 +14,7 @@ class UIAgent(AgentModel):
     This is the main agent that replaces the ai_handler ollama implementation.
     """
 
-    def __init__(self, agent_name: str = "ui_agent", model_name: str = "cgemma3n:e4b", agent_aliases: Optional[str] = "ui"):
+    def __init__(self, agent_name: str = "ui_agent", model_name: str = "gemma3n:e4b", agent_aliases: Optional[str] = "ui"):
         super().__init__(agent_name, model_name, agent_aliases)
 
     async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -47,6 +47,9 @@ class UIAgent(AgentModel):
                 conversation_history=conversation_history,
                 auto_execute_commands=True  # Enable auto-execution of action commands
             )
+            
+            # Process any action commands found in the response
+            await self._process_response_actions(response, websocket)
             
             self.state.status = "completed"
             self.state.completed_at = datetime.now()
@@ -118,3 +121,83 @@ class UIAgent(AgentModel):
             "song": song_data,
             "fixtures": fixtures
         }
+
+    async def _process_response_actions(self, response: str, websocket) -> None:
+        """
+        Process the AI response to detect and save any action commands, 
+        then broadcast the updated actions to the frontend.
+        
+        Args:
+            response (str): The complete AI response text
+            websocket: The WebSocket connection for sending updates
+        """
+        try:
+            # Extract action commands from the response (lines starting with #action or #)
+            action_lines = []
+            for line in response.split('\n'):
+                line = line.strip()
+                if line.startswith('#action') or (line.startswith('#') and any(word in line for word in ['flash', 'strobe', 'fade', 'seek', 'arm'])):
+                    action_lines.append(line)
+            
+            if not action_lines:
+                print("📝 No action commands found in AI response")
+                return
+            
+            print(f"🎭 Found {len(action_lines)} action commands in AI response")
+            
+            # Import here to avoid circular imports
+            from ..direct_commands import DirectCommandsParser
+            from ...models.app_state import app_state
+            from ..utils.broadcast import broadcast_to_all
+            
+            # Create direct commands parser
+            direct_commands_parser = DirectCommandsParser()
+            
+            # Process each action command
+            actions_added = 0
+            for action_line in action_lines:
+                try:
+                    # Parse and execute the action command
+                    success, message, additional_data = await direct_commands_parser.parse_command(action_line)
+                    if success:
+                        actions_added += 1
+                        print(f"✅ Action executed: {action_line}")
+                    else:
+                        print(f"❌ Action failed: {action_line} -> {message}")
+                except Exception as e:
+                    print(f"❌ Error processing action '{action_line}': {e}")
+            
+            # If actions were added successfully, broadcast the updated actions to frontend
+            if actions_added > 0 and app_state.current_song_file:
+                from pathlib import Path
+                from ...models.actions_sheet import ActionsSheet
+                
+                # Get current actions
+                song_name = Path(app_state.current_song_file).stem
+                actions_sheet = ActionsSheet(song_name)
+                actions_sheet.load_actions()
+                
+                # Log the actions update
+                action_count = len(actions_sheet.actions)
+                print(f"📊 Broadcasting actions update: {action_count} total actions for song '{song_name}' (added {actions_added} new)")
+                
+                # IMPORTANT: Render actions to canvas so they appear on the main canvas
+                try:
+                    # Automatically render actions to canvas after adding them
+                    render_success, render_message, render_data = await direct_commands_parser.parse_command("#render")
+                    if render_success:
+                        print(f"✅ Actions rendered to canvas: {render_message}")
+                    else:
+                        print(f"⚠️ Failed to render actions to canvas: {render_message}")
+                except Exception as render_error:
+                    print(f"❌ Error rendering actions to canvas: {render_error}")
+                
+                # Broadcast actions update to all clients
+                await broadcast_to_all({
+                    "type": "actionsUpdate",
+                    "actions": [action.to_dict() for action in actions_sheet.actions]
+                })
+
+            
+        except Exception as e:
+            print(f"❌ Error in _process_response_actions: {e}")

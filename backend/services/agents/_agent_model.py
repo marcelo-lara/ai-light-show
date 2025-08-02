@@ -77,3 +77,36 @@ class AgentModel:
         )
         template = jinja_env.get_template(f"{self.agent_name}.j2")
         return template.render(context)
+
+    async def health(self) -> tuple[bool, str]:
+        """Check if the agent and its underlying services are available and return status."""
+        try:
+            # Test that we can build context (this tests underlying dependencies)
+            # We'll catch expected errors that indicate the agent is working but dependencies are missing
+            try:
+                test_context = self._build_context({})
+            except ValueError as ve:
+                if "No song is currently loaded" in str(ve):
+                    # This is expected when no song is loaded, but it means the agent setup is working
+                    return True, f"Agent '{self.agent_name}' is ready (no song loaded)"
+                else:
+                    raise ve
+            except AttributeError as ae:
+                # Handle case where dependencies exist but are not properly initialized
+                if "_title" in str(ae) or "_beats" in str(ae) or "song" in str(ae).lower():
+                    return True, f"Agent '{self.agent_name}' is ready (dependencies not fully loaded)"
+                else:
+                    raise ae
+            
+            # If we got here, dependencies are loaded and context built successfully
+            return True, f"Agent '{self.agent_name}' is ready"
+            
+        except ConnectionError:
+            return False, f"Cannot connect to Ollama service. Please ensure Ollama is running on http://llm-service:11434"
+        except ValueError as ve:
+            if "not found" in str(ve) and "model" in str(ve):
+                return False, f"Model '{self.model_name}' not found. Please install it with: ollama pull {self.model_name}"
+            else:
+                return False, f"Agent '{self.agent_name}' error: {str(ve)}"
+        except Exception as e:
+            return False, f"Agent '{self.agent_name}' error: {str(e)}"

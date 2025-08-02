@@ -140,9 +140,6 @@ async def handle_user_prompt(websocket: WebSocket, message: Dict[str, Any]) -> N
         # End streaming
         await websocket.send_json({"type": "chatResponseEnd"})
         
-        # After streaming is complete, check for actions in the response and send to frontend
-        await _process_response_actions(current_response, websocket)
-        
         # Store the conversation in history
         _conversation_history[session_id].append({"role": "user", "content": prompt})
         _conversation_history[session_id].append({"role": "assistant", "content": current_response})
@@ -193,7 +190,7 @@ async def _handle_direct_command(websocket: WebSocket, command: str) -> None:
     """
     try:
         # Parse and execute the command (must await async)
-        success, message, additional_data = await _direct_commands_parser.parse_command(command, websocket=websocket)
+        success, message, additional_data = await _direct_commands_parser.parse_command(command)
         
         # Send the response to the user
         await websocket.send_json({
@@ -239,119 +236,3 @@ async def _handle_direct_command(websocket: WebSocket, command: str) -> None:
             "type": "chatResponse",
             "response": f"**Direct Command Error**: {str(e)}"
         })
-
-async def check_ai_service_health() -> tuple[bool, str]:
-    """Check if the AI service (Ollama) is available and return status."""
-    try:
-        # Create a UI agent for health check
-        ui_agent = UIAgent()
-        
-        # Simple test to see if we can create context (this tests song/fixtures access)
-        # We'll catch the specific error about no song being loaded
-        try:
-            test_context = ui_agent._build_context({})
-        except ValueError as ve:
-            if "No song is currently loaded" in str(ve):
-                # This is expected when no song is loaded, but it means the agent setup is working
-                return True, "AI service is ready (no song loaded)"
-            else:
-                raise ve
-        except AttributeError as ae:
-            # Handle case where song object exists but is not properly initialized
-            if "_title" in str(ae) or "_beats" in str(ae) or "song" in str(ae).lower():
-                return True, "AI service is ready (song not fully loaded)"
-            else:
-                raise ae
-        
-        # If we got here, we have a song loaded and context built successfully
-        return True, "AI service is ready"
-        
-    except ConnectionError:
-        return False, "Cannot connect to Ollama service. Please ensure Ollama is running on http://llm-service:11434"
-    except ValueError as ve:
-        if "not found" in str(ve) and "model" in str(ve):
-            return False, f"Model not found. Please install it with: ollama pull {ui_agent.model_name}"
-        else:
-            return False, f"AI service error: {str(ve)}"
-    except Exception as e:
-        return False, f"AI service error: {str(e)}"
-
-async def _process_response_actions(response: str, websocket: WebSocket) -> None:
-    """
-    Process the AI response to detect and save any action commands, 
-    then broadcast the updated actions to the frontend.
-    
-    Args:
-        response (str): The complete AI response text
-        websocket (WebSocket): The WebSocket connection for sending updates
-    """
-    try:
-        # Extract action commands from the response (lines starting with #action or #)
-        action_lines = []
-        for line in response.split('\n'):
-            line = line.strip()
-            if line.startswith('#action') or (line.startswith('#') and any(word in line for word in ['flash', 'strobe', 'fade', 'seek', 'arm'])):
-                action_lines.append(line)
-        
-        if not action_lines:
-            print("📝 No action commands found in AI response")
-            return
-        
-        print(f"🎭 Found {len(action_lines)} action commands in AI response")
-        
-        # Process each action command
-        actions_added = 0
-        for action_line in action_lines:
-            try:
-                # Parse and execute the action command
-                success, message, additional_data = await _direct_commands_parser.parse_command(action_line, websocket=websocket)
-                if success:
-                    actions_added += 1
-                    print(f"✅ Action executed: {action_line}")
-                else:
-                    print(f"❌ Action failed: {action_line} -> {message}")
-            except Exception as e:
-                print(f"❌ Error processing action '{action_line}': {e}")
-        
-        # If actions were added successfully, broadcast the updated actions to frontend
-        if actions_added > 0 and app_state.current_song_file:
-            from pathlib import Path
-            from ...models.actions_sheet import ActionsSheet
-            
-            # Get current actions
-            song_name = Path(app_state.current_song_file).stem
-            actions_sheet = ActionsSheet(song_name)
-            actions_sheet.load_actions()
-            
-            # Log the actions update
-            action_count = len(actions_sheet.actions)
-            print(f"📊 Broadcasting actions update: {action_count} total actions for song '{song_name}' (added {actions_added} new)")
-            
-            # IMPORTANT: Render actions to canvas so they appear on the main canvas
-            try:
-                # Automatically render actions to canvas after adding them
-                render_success, render_message, render_data = await _direct_commands_parser.parse_command("#render", websocket=websocket)
-                if render_success:
-                    print(f"✅ Actions rendered to canvas: {render_message}")
-                else:
-                    print(f"⚠️ Failed to render actions to canvas: {render_message}")
-            except Exception as render_error:
-                print(f"❌ Error rendering actions to canvas: {render_error}")
-            
-            # Broadcast actions update to all clients
-            await broadcast_to_all({
-                "type": "actionsUpdate",
-                "actions": [action.to_dict() for action in actions_sheet.actions]
-            })
-            
-            # Also broadcast DMX canvas update
-            from backend.dmx_controller import get_universe
-            current_universe = get_universe()
-            await broadcast_to_all({
-                "type": "dmxCanvasUpdated",
-                "universe": list(current_universe),
-                "message": f"DMX Canvas updated by AI actions ({actions_added} actions added)"
-            })
-        
-    except Exception as e:
-        print(f"❌ Error in _process_response_actions: {e}")

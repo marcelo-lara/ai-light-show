@@ -46,13 +46,12 @@ class DirectCommandsParser:
             DirectActionCommandHandler(),  # Keep this last as it's the fallback
         ]
     
-    async def parse_command(self, command_text: str, websocket=None) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+    async def parse_command(self, command_text: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """
         Parse a direct command and execute it. Async to allow calling async handlers.
         
         Args:
             command_text (str): The command text from the user (starts with #action)
-            websocket: WebSocket, required for #analyze
             
         Returns:
             Tuple[bool, str, Optional[Dict[str, Any]]]: 
@@ -68,7 +67,7 @@ class DirectCommandsParser:
         for handler in self.handlers:
             if handler.matches(command):
                 try:
-                    return await handler.handle(command, websocket)
+                    return await handler.handle(command)
                 except Exception as e:
                     return False, f"Error processing command '{command}': {str(e)}", None
         
