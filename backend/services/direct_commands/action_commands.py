@@ -93,11 +93,85 @@ class ClearCommandHandler(BaseCommandHandler):
             parts = command.split()
             
             if len(parts) < 2:
-                return False, "Invalid clear command. Usage: clear all, clear id <action_id>, clear group <group_id>", None
+                return False, "Invalid clear command. Usage: 'clear all', 'clear all plans', 'clear all actions', 'clear id <action_id>', 'clear group <group_id>'", None
                 
             clear_type = parts[1].lower()
             
-            if clear_type == "all":
+            # Handle "clear all" - clears both lighting plans AND actions
+            if clear_type == "all" and (len(parts) == 2 or (len(parts) > 2 and parts[2].lower() not in ["plans", "actions"])):
+                # Check if confirmation flag is present
+                confirmed = False
+                for part in parts:
+                    if part.lower() == "confirm" or part.lower() == "--confirm":
+                        confirmed = True
+                        break
+                
+                if not confirmed:
+                    return False, "For safety, clearing all plans and actions requires confirmation. Please use '#clear all confirm' to proceed.", None
+                
+                # Clear both actions and lighting plans
+                actions_count = len(actions_sheet)
+                plans_count = len(app_state.current_song.light_plan) if app_state.current_song else 0
+                
+                # Clear actions
+                actions_sheet.remove_all_actions()
+                actions_sheet.save_actions()
+                
+                # Clear lighting plans
+                if app_state.current_song:
+                    app_state.current_song.clear_light_plan()
+                    if hasattr(app_state.current_song, 'save'):
+                        app_state.current_song.save()
+                
+                # Broadcast updates
+                if websocket:
+                    from ...services.utils.broadcast import broadcast_to_all
+                    await broadcast_to_all({
+                        "type": "lightPlanUpdate",
+                        "light_plan": [],
+                        "song_name": app_state.current_song.song_name if app_state.current_song else ""
+                    })
+                
+                return True, f"Cleared all {actions_count} actions and {plans_count} lighting plans.", {
+                    "actions_updated": True,
+                    "plans_updated": True
+                }
+            
+            # Handle "clear all plans" - clears only lighting plans
+            elif clear_type == "all" and len(parts) >= 3 and parts[2].lower() == "plans":
+                # Check if confirmation flag is present
+                confirmed = False
+                for part in parts:
+                    if part.lower() == "confirm" or part.lower() == "--confirm":
+                        confirmed = True
+                        break
+                
+                if not confirmed:
+                    return False, "For safety, clearing all plans requires confirmation. Please use '#clear all plans confirm' to proceed.", None
+                
+                # Clear only lighting plans
+                plans_count = len(app_state.current_song.light_plan) if app_state.current_song else 0
+                
+                if app_state.current_song:
+                    app_state.current_song.clear_light_plan()
+                    if hasattr(app_state.current_song, 'save'):
+                        app_state.current_song.save()
+                
+                # Broadcast plan update
+                if websocket:
+                    from ...services.utils.broadcast import broadcast_to_all
+                    await broadcast_to_all({
+                        "type": "lightPlanUpdate", 
+                        "light_plan": [],
+                        "song_name": app_state.current_song.song_name if app_state.current_song else ""
+                    })
+                
+                return True, f"Cleared all {plans_count} lighting plans (actions preserved).", {
+                    "plans_updated": True
+                }
+            
+            # Handle "clear all actions" - clears only actions
+            elif clear_type == "all" and len(parts) >= 3 and parts[2].lower() == "actions":
                 # Check if confirmation flag is present
                 confirmed = False
                 for part in parts:
@@ -108,13 +182,12 @@ class ClearCommandHandler(BaseCommandHandler):
                 if not confirmed:
                     return False, "For safety, clearing all actions requires confirmation. Please use '#clear all actions confirm' to proceed.", None
                 
-                # Clear all actions (only if confirmed)
-                initial_count = len(actions_sheet)
+                # Clear only actions
+                actions_count = len(actions_sheet)
                 actions_sheet.remove_all_actions()
                 actions_sheet.save_actions()
                 
-                # Return success with action update data
-                return True, f"Cleared all {initial_count} actions.", {
+                return True, f"Cleared all {actions_count} actions (lighting plans preserved).", {
                     "actions_updated": True
                 }
                 
@@ -163,10 +236,10 @@ class ClearCommandHandler(BaseCommandHandler):
                 else:
                     return False, f"No actions found with group ID {group_id}.", None
             else:
-                return False, "Invalid clear command. Usage: clear all, clear id <action_id>, clear group <group_id>", None
+                return False, "Invalid clear command. Usage: 'clear all', 'clear all plans', 'clear all actions', 'clear id <action_id>', 'clear group <group_id>'", None
                 
         except Exception as e:
-            return False, f"Error clearing actions: {e}", None
+            return False, f"Error clearing: {e}", None
 
 
 class AddCommandHandler(BaseCommandHandler):

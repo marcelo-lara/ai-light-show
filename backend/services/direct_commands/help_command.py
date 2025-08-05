@@ -53,7 +53,9 @@ class HelpCommandHandler(BaseCommandHandler):
         # Action Management
         help_text.append("🎭 ACTION MANAGEMENT:")
         help_text.append("  #render                     - Render all actions to DMX canvas")
-        help_text.append("  #clear all                  - Clear all actions")
+        help_text.append("  #clear all                  - Clear all actions AND lighting plans")
+        help_text.append("  #clear all plans            - Clear all lighting plans only")
+        help_text.append("  #clear all actions          - Clear all actions only")
         help_text.append("  #clear id <action_id>       - Clear specific action by ID")
         help_text.append("  #clear group <group_id>     - Clear all actions in a group")
         help_text.append("")

@@ -32,7 +32,7 @@ class LightingPlannerAgent(AgentModel):
     #plan add at 1.234 "Intro build" "fade from blue to white from right to left every 1b intervals"
     """
 
-    def __init__(self, agent_name: str = "lighting_planner", model_name: str = "mixtral", agent_aliases: Optional[str] = "planner"):
+    def __init__(self, agent_name: str = "lighting_planner", model_name: str = "gemma3n:e4b", agent_aliases: Optional[str] = "planner"):
         super().__init__(agent_name, model_name, agent_aliases)
 
     async def run_async(self, input_data: Dict[str, Any], callback: Optional[Callable] = None) -> Dict[str, Any]:
@@ -61,23 +61,16 @@ class LightingPlannerAgent(AgentModel):
             self.state.status = "running"
             self.state.progress = 10
             
-            # Fetch exact beat times from current song
+            # Don't automatically fetch exact beats - let the agent request them as needed
+            # This prevents overloading the prompt with thousands of beat timestamps
+            logger.info("Skipping automatic beat fetching - agent will request specific ranges as needed")
             exact_beats = None
-            if app_state.current_song_file:
-                logger.info("Fetching exact beat times from song analysis...")
-                exact_beats = await self._fetch_exact_beats_async(input_data.get('segment'))
-                if exact_beats:
-                    input_data['exact_beats'] = exact_beats
-                    logger.info(f"Retrieved {len(exact_beats)} exact beat times")
-                else:
-                    logger.warning("Could not retrieve exact beat times, proceeding without them")
-            else:
-                logger.warning("No current song loaded, proceeding without exact beats")
             
             self.state.progress = 30
             
-            # Build the prompt using the Jinja2 template
-            prompt = self._build_prompt(input_data)
+            # Build the context and then the prompt using the Jinja2 template
+            context = self._build_context(input_data)
+            prompt = self._build_prompt(context)
             
             self.state.progress = 50
             
@@ -187,7 +180,8 @@ class LightingPlannerAgent(AgentModel):
                         logger.error(f"Beat analysis failed: {result.get('message', 'Unknown error')}")
                         return None
             
-            return asyncio.run(_fetch())
+            # This method is already async, so we can directly await _fetch()
+            return await _fetch()
             
         except Exception as e:
             logger.error(f"Failed to fetch exact beats: {str(e)}")
@@ -224,33 +218,47 @@ class LightingPlannerAgent(AgentModel):
                     # Parse time
                     time = float(time_str)
                     
-                    # Parse label and description (both in quotes)
+                    # Parse label and description with improved quote handling
+                    label = ""
+                    description = ""
+                    
                     if rest.startswith('"'):
                         # Find the closing quote for label
                         end_quote = rest.find('"', 1)
-                        if end_quote == -1:
-                            continue
-                        label = rest[1:end_quote]
-                        
-                        # Find the description
-                        remainder = rest[end_quote + 1:].strip()
-                        if remainder.startswith('"') and remainder.endswith('"'):
-                            description = remainder[1:-1]
+                        if end_quote != -1:
+                            label = rest[1:end_quote]
+                            
+                            # Find the description after the label
+                            remainder = rest[end_quote + 1:].strip()
+                            if remainder.startswith('"'):
+                                # Find closing quote for description (may be at end of line or missing)
+                                desc_end = remainder.rfind('"')
+                                if desc_end > 0:
+                                    description = remainder[1:desc_end]
+                                else:
+                                    # No closing quote found, take everything after the opening quote
+                                    description = remainder[1:]
                         else:
+                            # No closing quote for label, try to extract what we can
                             continue
                     else:
+                        # No proper quoting, skip this line
                         continue
                     
-                    plan_entries.append({
-                        "time": time,
-                        "label": label,
-                        "description": description
-                    })
+                    # Only add if we have both label and some description
+                    if label and description:
+                        plan_entries.append({
+                            "time": time,
+                            "label": label,
+                            "description": description
+                        })
+                        logger.debug(f"Parsed plan entry: {time}s - {label}: {description[:50]}...")
                     
                 except (ValueError, IndexError) as e:
-                    # Skip malformed lines
+                    logger.warning(f"Failed to parse plan line: {line} - {e}")
                     continue
         
+        logger.info(f"Successfully parsed {len(plan_entries)} plan entries from response")
         return plan_entries
 
     async def create_plan_for_segment_async(self, segment_data: Dict[str, Any], 
@@ -452,22 +460,54 @@ class LightingPlannerAgent(AgentModel):
         context = input_data.copy()
         
         # Add song information from app_state if not provided
-        if not context.get('song') and app_state.current_song:
-            context['song'] = {
-                'title': app_state.current_song.title or app_state.current_song_file,
-                'bpm': app_state.current_song.bpm,
-                'duration': app_state.current_song.duration
-            }
+        if not context.get('song'):
+            # Always provide song context, even if no song is loaded
+            try:
+                if app_state.current_song and hasattr(app_state.current_song, 'song_name') and app_state.current_song.song_name != '_not_loaded_':
+                    # Song is properly loaded
+                    context['song'] = {
+                        'title': getattr(app_state.current_song, 'title', getattr(app_state.current_song, 'song_name', 'Unknown Song')),
+                        'bpm': getattr(app_state.current_song, 'bpm', 120),
+                        'duration': getattr(app_state.current_song, 'duration', 0),
+                        'arrangement': getattr(app_state.current_song, 'arrangement', []),
+                        'key_moments': getattr(app_state.current_song, 'key_moments', [])
+                    }
+                    logger.debug(f"Using loaded song: {context['song']['title']}")
+                else:
+                    # No song loaded or placeholder song
+                    context['song'] = {
+                        'title': 'No Song Loaded',
+                        'bpm': 120,
+                        'duration': 0,
+                        'arrangement': [],
+                        'key_moments': []
+                    }
+                    logger.debug("Using fallback song context (no song loaded)")
+            except Exception as e:
+                logger.warning(f"Error accessing song properties: {e}")
+                # Ultimate fallback - always provide a valid song context
+                context['song'] = {
+                    'title': 'Song Access Error',
+                    'bpm': 120,
+                    'duration': 0,
+                    'arrangement': [],
+                    'key_moments': []
+                }
+                logger.debug("Using error fallback song context")
         
         # Add fixture information from app_state if not provided
         if not context.get('fixtures') and app_state.fixtures:
-            context['fixtures'] = [
-                {
-                    "id": fixture.id,
-                    "type": fixture.fixture_type,
-                    "effects": list(fixture.action_handlers.keys()) if hasattr(fixture, 'action_handlers') else []
-                }
-                for fixture in app_state.fixtures.fixtures.values()
-            ]
+            try:
+                context['fixtures'] = [
+                    {
+                        "id": fixture.id,
+                        "type": fixture.fixture_type,
+                        "effects": list(fixture.action_handlers.keys()) if hasattr(fixture, 'action_handlers') else []
+                    }
+                    for fixture in app_state.fixtures.fixtures.values()
+                ]
+            except Exception as e:
+                logger.warning(f"Could not access fixture properties: {e}")
+                context['fixtures'] = []
         
         return context

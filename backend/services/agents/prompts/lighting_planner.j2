@@ -20,27 +20,28 @@ Create a lighting plan for the given musical context. Analyze the music and gene
 {% endif %}
 
 {% if user_prompt %}
-## User Request
+## 🎯 USER REQUEST (PRIMARY FOCUS)
 {{ user_prompt }}
+
+**CRITICAL: Focus ONLY on what the user requested. If they ask for "intro", create lighting ONLY for the intro section, not the entire song.**
 {% endif %}
 
 ## Instructions
 
+**STEP 1: GET PRECISE TIMING DATA FIRST**
+Before creating any lighting plan, you MUST get exact beat times for your target section:
+- Use `#analyze beats <start> <end>` to get precise beat positions
+- Example: For intro planning, run `#analyze beats 0 30` first
+- Use the returned beat times in your plan - DO NOT guess or estimate times
+
+**STEP 2: CREATE LIGHTING PLAN**
 Create lighting plan entries using this exact format:
 #plan add at [time] "[label]" "[description]"
 
 Where:
-- **time**: MUST use exact beat times from song analysis when available (see song beat times above)
-- **label**: Short descriptive name for the lighting moment
+- **time**: MUST use exact beat times from step 1 (never round numbers like 10.000, 20.000)
+- **label**: Short descriptive name for the lighting moment  
 - **description**: Natural language description of the lighting effect
-
-{% if exact_beats %}
-## ⚡ IMPORTANT: Use Exact Beat Times
-You have access to precise beat times from audio analysis. Use these exact values:
-{{ exact_beats | join(', ') }}
-
-Always align your lighting changes to these beat timestamps for perfect synchronization.
-{% endif %}
 
 ## Example Output Format:
 ```
@@ -50,7 +51,9 @@ Always align your lighting changes to these beat timestamps for perfect synchron
 ```
 
 ## Guidelines:
-- **CRITICAL**: Use exact beat times from song analysis (not rounded numbers)
+- **CRITICAL**: ALWAYS run `#analyze beats` command first to get precise timing data
+- **FORBIDDEN**: Never use estimated times like 0.000, 10.000, 20.000, 30.000 (these are clearly guessed)
+- **REQUIRED**: Use exact beat times (e.g., 0.487, 15.234, 31.789) from beat analysis
 - Create effects that match the musical energy and mood
 - Consider the available fixtures in your descriptions
 - Be specific about colors, intensities, and timing

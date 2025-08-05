@@ -12,6 +12,7 @@ from ._agent_model import AgentModel
 from .lighting_planner import LightingPlannerAgent
 from .effect_translator import EffectTranslatorAgent
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -53,44 +54,69 @@ class UIAgent(AgentModel):
                 raise ValueError("No prompt provided in input_data")
             
             logger.info(f"🤖 UI Agent processing: {user_prompt}")
+            logger.debug(f"🔧 Callback type: {type(callback)}, has callback: {callback is not None}")
             
             # Step 1: Use LLM to analyze user intent and determine routing
-            routing_decision = await self._analyze_user_intent(user_prompt, callback)
-            
-            logger.info(f"🎯 Routing decision: {routing_decision}")
+            logger.debug("🔄 Step 1: Starting intent analysis...")
+            try:
+                routing_decision = await self._analyze_user_intent(user_prompt, callback)
+                logger.info(f"🎯 Routing decision received: {routing_decision}")
+            except Exception as e:
+                logger.error(f"❌ Intent analysis failed: {str(e)}", exc_info=True)
+                raise
             
             # Step 2: Route to appropriate handler based on LLM decision
-            if routing_decision["type"] == "direct_command":
-                response = await self._handle_direct_command(
-                    routing_decision["command"],
-                    user_prompt,
-                    callback
-                )
-            elif routing_decision["type"] == "lighting_plan":
-                response = await self._handle_lighting_plan_request(
-                    routing_decision,
-                    user_prompt,
-                    callback
-                )
-            elif routing_decision["type"] == "effect_translation":
-                response = await self._handle_effect_translation_request(
-                    routing_decision,
-                    user_prompt,
-                    callback
-                )
-            elif routing_decision["type"] == "conversation":
-                response = await self._handle_conversational_request(
-                    user_prompt,
-                    callback,
-                    conversation_history
-                )
-            else:
-                # Fallback to conversational if routing is unclear
-                response = await self._handle_conversational_request(
-                    user_prompt,
-                    callback,
-                    conversation_history
-                )
+            logger.debug(f"🔄 Step 2: Routing to handler for type: {routing_decision['type']}")
+            logger.info(f"🚀 About to execute handler for: {routing_decision['type']}")
+            
+            try:
+                if routing_decision["type"] == "direct_command":
+                    logger.debug("🎭 Routing to direct command handler")
+                    logger.info(f"🎭 Starting direct command handler with command: {routing_decision.get('parameters', {}).get('command', user_prompt)}")
+                    response = await self._handle_direct_command(
+                        routing_decision.get("parameters", {}).get("command", user_prompt),
+                        user_prompt,
+                        callback
+                    )
+                elif routing_decision["type"] == "lighting_plan":
+                    logger.debug("🎛️ Routing to lighting plan handler")
+                    logger.info("🎛️ Starting lighting plan handler")
+                    response = await self._handle_lighting_plan_request(
+                        routing_decision,
+                        user_prompt,
+                        callback
+                    )
+                elif routing_decision["type"] == "effect_translation":
+                    logger.debug("🎭 Routing to effect translation handler")
+                    logger.info("🎭 Starting effect translation handler")
+                    response = await self._handle_effect_translation_request(
+                        routing_decision,
+                        user_prompt,
+                        callback
+                    )
+                elif routing_decision["type"] == "conversation":
+                    logger.debug("💬 Routing to conversation handler")
+                    logger.info("💬 Starting conversation handler")
+                    response = await self._handle_conversational_request(
+                        user_prompt,
+                        callback,
+                        conversation_history
+                    )
+                else:
+                    # Fallback to conversational if routing is unclear
+                    logger.warning(f"⚠️ Unknown routing type '{routing_decision['type']}', falling back to conversation")
+                    logger.info("💬 Starting fallback conversation handler")
+                    response = await self._handle_conversational_request(
+                        user_prompt,
+                        callback,
+                        conversation_history
+                    )
+                
+                logger.info(f"✅ Handler completed successfully: {response.get('success', False)}")
+                
+            except Exception as e:
+                logger.error(f"❌ Handler execution failed: {str(e)}", exc_info=True)
+                raise
             
             self.state.status = "completed"
             self.state.completed_at = datetime.now()
@@ -109,7 +135,7 @@ class UIAgent(AgentModel):
             self.state.status = "error"
             self.state.error = str(e)
             self.state.completed_at = datetime.now()
-            logger.error(f"❌ UI Agent error: {str(e)}")
+            logger.error(f"❌ UI Agent error: {str(e)}", exc_info=True)
             
             return {
                 "success": False,
@@ -125,14 +151,14 @@ class UIAgent(AgentModel):
         """
         
         # Build routing analysis prompt
-        routing_prompt = f"""
-You are an intelligent router for a DMX lighting control system. Analyze the user's request and determine the best routing strategy.
+        routing_prompt = f"""You are an intelligent router for a DMX lighting control system. Analyze the user's request and determine the best routing strategy.
 
 User Request: "{user_prompt}"
 
 Available Routing Options:
 1. **direct_command** - For precise lighting actions that should be executed immediately
-   - Examples: "flash red lights", "strobe moving head", "fade to blue", "clear all actions"
+   - Examples: "flash red lights", "strobe moving head", "fade to blue", "clear all", "clear all actions", "clear all plans", "clear light plan"
+   - IMPORTANT: ALL "clear" commands are ALWAYS direct_command type
    - Returns specific command to execute
 
 2. **lighting_plan** - For creating structured lighting plans/sequences  
@@ -146,24 +172,62 @@ Available Routing Options:
 4. **conversation** - For general questions, help, or unclear requests
    - Examples: "what can you do?", "how does this work?", unclear requests
 
-Analyze the request and respond with ONLY a JSON object:
+ROUTING RULES:
+- If the request contains "clear" -> ALWAYS use "direct_command"
+- If the request is about immediate lighting actions -> use "direct_command"
+- If the request is about planning or sequences -> use "lighting_plan"
+- If the request needs effect translation -> use "effect_translation"
+- If unclear or general questions -> use "conversation"
+
+You MUST respond with ONLY a valid JSON object. Do not include any other text, explanations, or formatting.
+
 {{
-  "type": "direct_command|lighting_plan|effect_translation|conversation",
-  "confidence": 0.0-1.0,
-  "reasoning": "brief explanation of why this routing was chosen",
+  "type": "direct_command",
+  "confidence": 0.9,
+  "reasoning": "User wants immediate lighting action",
   "parameters": {{
-    "command": "for direct_command: the specific command to execute",
-    "context": "for lighting_plan: musical context needed", 
-    "effect_description": "for effect_translation: effect to translate",
-    "topic": "for conversation: general topic/question"
+    "command": "#clear all actions"
   }}
 }}
 
-JSON Response:"""
+OR
+
+{{
+  "type": "lighting_plan",
+  "confidence": 0.8,
+  "reasoning": "User wants structured lighting sequence",
+  "parameters": {{
+    "context": "energetic intro section"
+  }}
+}}
+
+OR
+
+{{
+  "type": "effect_translation",
+  "confidence": 0.7,
+  "reasoning": "User wants effect converted to actions",
+  "parameters": {{
+    "effect_description": "rainbow chase effect"
+  }}
+}}
+
+OR
+
+{{
+  "type": "conversation",
+  "confidence": 0.6,
+  "reasoning": "General question or help request",
+  "parameters": {{
+    "topic": "general help"
+  }}
+}}
+
+Respond with JSON only:"""
         
         try:
             if callback:
-                callback("🎯 Analyzing request intent...\n")
+                await callback("🎯 Analyzing request intent...\n")
             
             # Call LLM for routing decision
             routing_response = await self._call_ollama_async(
@@ -171,67 +235,190 @@ JSON Response:"""
                 callback=None  # Don't stream routing analysis
             )
             
-            # Parse JSON response
+            logger.info(f"✅ LLM routing response received: {len(routing_response)} chars")
+            logger.debug(f"🔍 Raw routing response: {repr(routing_response)}")
+            
+            # Clean and parse JSON response
             import json
-            routing_decision = json.loads(routing_response.strip())
+            cleaned_response = routing_response.strip()
+            logger.debug(f"🧹 Cleaned response: {repr(cleaned_response[:200])}")
+            
+            # Handle empty response
+            if not cleaned_response:
+                logger.warning("⚠️ Empty routing response from LLM")
+                return self._get_fallback_routing("conversation", "Empty LLM response")
+            
+            # Try to extract JSON if response contains extra text
+            if not cleaned_response.startswith('{'):
+                # Look for JSON block in the response
+                start_idx = cleaned_response.find('{')
+                end_idx = cleaned_response.rfind('}')
+                if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                    cleaned_response = cleaned_response[start_idx:end_idx + 1]
+                else:
+                    logger.warning(f"⚠️ No JSON found in routing response: {repr(cleaned_response[:100])}")
+                    return self._get_fallback_routing("conversation", "No JSON in response")
+            else:
+                # Check if there's extra text after the JSON
+                end_idx = cleaned_response.rfind('}')
+                if end_idx != -1 and end_idx < len(cleaned_response) - 1:
+                    # Trim everything after the last }
+                    cleaned_response = cleaned_response[:end_idx + 1]
+            
+            routing_decision = json.loads(cleaned_response)
+            
+            # Validate required fields
+            if "type" not in routing_decision:
+                logger.warning("⚠️ Missing 'type' field in routing decision")
+                return self._get_fallback_routing("conversation", "Missing type field")
+            
+            # Ensure parameters exist
+            if "parameters" not in routing_decision:
+                routing_decision["parameters"] = {}
             
             logger.info(f"🧠 Intent analysis: {routing_decision['type']} (confidence: {routing_decision.get('confidence', 0)})")
+            logger.debug(f"🎯 Returning routing decision: {routing_decision}")
             
             return routing_decision
             
         except (json.JSONDecodeError, KeyError) as e:
             logger.warning(f"⚠️ Failed to parse routing decision, defaulting to conversation: {e}")
-            return {
-                "type": "conversation",
-                "confidence": 0.3,
-                "reasoning": "Failed to parse routing decision",
-                "parameters": {"topic": "general"}
-            }
+            logger.debug(f"   Raw response was: {repr(routing_response if 'routing_response' in locals() else 'N/A')}")
+            return self._get_fallback_routing("conversation", f"JSON parse error: {str(e)}")
+    
+    def _get_fallback_routing(self, route_type: str, reason: str) -> Dict[str, Any]:
+        """Get a fallback routing decision when LLM routing fails."""
+        return {
+            "type": route_type,
+            "confidence": 0.1,
+            "reasoning": f"Fallback due to: {reason}",
+            "parameters": {"topic": "general"}
+        }
 
     async def _handle_direct_command(self, command: str, user_prompt: str, callback: Optional[Callable] = None) -> Dict[str, Any]:
         """Handle direct command execution."""
+        logger.info(f"🎭 Direct command handler started with command: '{command}'")
+        logger.debug(f"🎭 User prompt: '{user_prompt}'")
+        logger.debug(f"🎭 Has callback: {callback is not None}")
+        
         try:
             if callback:
-                callback("⚡ Executing direct command...\n")
+                logger.debug("🎭 Sending callback message...")
+                await callback("⚡ Executing direct command...\n")
+                logger.debug("🎭 Callback message sent")
             
             logger.info(f"🎭 Executing direct command: {command}")
+            logger.debug("🎭 About to import DirectCommandsParser")
             
             # Import here to avoid circular imports
             from ..direct_commands import DirectCommandsParser
+            logger.debug("🎭 DirectCommandsParser imported successfully")
             
             # Create direct commands parser and execute
+            logger.debug("🎭 Creating DirectCommandsParser instance")
             direct_commands_parser = DirectCommandsParser()
+            logger.debug("🎭 DirectCommandsParser instance created")
+            
+            # Check if this is a clear command that might need confirmation
+            if ("clear" in command.lower() and "all" in command.lower()) or \
+               ("clear" in command.lower() and ("plans" in command.lower() or "actions" in command.lower())):
+                logger.debug("🎭 Detected destructive clear command, checking for LLM-based confirmation")
+                confirmation_needed = await self._check_confirmation_intent(user_prompt, command)
+                if confirmation_needed:
+                    # Automatically add confirmation to the command
+                    if "confirm" not in command.lower():
+                        command += " confirm"
+                        logger.info(f"🎭 Added confirmation to command: {command}")
+            
+            logger.info(f"🎭 About to parse command: {command}")
             success, message, additional_data = await direct_commands_parser.parse_command(command)
+            logger.info(f"🎭 Command parsing result: success={success}, message='{message}'")
             
             if success:
+                logger.debug("🎭 Command successful, processing response actions")
                 # Process any response actions and broadcast updates
                 await self._process_response_actions(command)
                 
-                return {
+                result = {
                     "response": f"✅ Command executed successfully: {message}",
                     "actions": additional_data.get("actions", []) if additional_data else [],
                     "success": True
                 }
+                logger.info(f"🎭 Direct command completed successfully: {len(result.get('actions', []))} actions")
+                return result
             else:
-                return {
+                result = {
                     "response": f"❌ Command failed: {message}",
                     "actions": [],
                     "success": False
                 }
+                logger.warning(f"🎭 Direct command failed: {message}")
+                return result
                 
         except Exception as e:
-            logger.error(f"❌ Direct command error: {e}")
+            logger.error(f"❌ Direct command error: {e}", exc_info=True)
             return {
                 "response": f"❌ Error executing command: {str(e)}",
                 "actions": [],
                 "success": False
             }
+    
+    async def _check_confirmation_intent(self, user_prompt: str, command: str) -> bool:
+        """
+        Use LLM to determine if the user's intent is to confirm a potentially destructive action.
+        
+        Args:
+            user_prompt: The original user message
+            command: The parsed command that would be executed
+            
+        Returns:
+            bool: True if the user shows clear confirmation intent
+        """
+        confirmation_prompt = f"""You are analyzing a user's intent for a potentially destructive lighting control action.
+
+User's original message: "{user_prompt}"
+Parsed command: "{command}"
+
+The command would clear lighting data (actions, plans, or both), which is destructive and requires confirmation.
+
+Analyze if the user shows CLEAR INTENT to proceed with this destructive action. Look for:
+- Explicit confirmation words (yes, confirm, do it, go ahead, proceed, execute)
+- Strong intent language (clear all, delete everything, remove all, clear plans, clear actions)
+- Context suggesting they understand the consequences
+- Urgency or determination in their request
+
+DO NOT confirm if the message is:
+- Unclear or ambiguous
+- Just asking what would happen
+- Tentative or questioning
+- Missing strong confirmation language
+
+Respond with ONLY "CONFIRMED" or "NOT_CONFIRMED" - no other text.
+
+Analysis:"""
+        
+        try:
+            logger.debug("🔍 Checking confirmation intent with LLM")
+            response = await self._call_ollama_async(
+                prompt=confirmation_prompt,
+                callback=None  # Don't stream confirmation analysis
+            )
+            
+            confirmation_result = response.strip().upper()
+            is_confirmed = confirmation_result == "CONFIRMED"
+            
+            logger.info(f"🔍 LLM confirmation analysis: '{confirmation_result}' -> {is_confirmed}")
+            return is_confirmed
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Error in confirmation analysis, defaulting to NOT confirmed: {e}")
+            return False
 
     async def _handle_lighting_plan_request(self, routing_decision: Dict[str, Any], user_prompt: str, callback: Optional[Callable] = None) -> Dict[str, Any]:
         """Handle lighting plan creation requests."""
         try:
             if callback:
-                callback("🎛️ Creating lighting plan...\n")
+                await callback("🎛️ Creating lighting plan...\n")
             
             logger.info("🎛️ Routing to Lighting Planner Agent")
             
@@ -247,6 +434,39 @@ JSON Response:"""
             if plan_result["status"] == "success":
                 plan_count = len(plan_result["lighting_plan"])
                 
+                # Store the lighting plans in app_state for UI display
+                if plan_count > 0:
+                    try:
+                        from ...models.app_state import app_state
+                        from shared.models.light_plan_item import LightPlanItem
+                        
+                        if app_state.current_song:
+                            # Convert parsed plans to LightPlanItem objects and add to song
+                            existing_ids = [plan.id for plan in app_state.current_song.light_plan]
+                            next_id = max(existing_ids) + 1 if existing_ids else 1
+                            
+                            for plan_entry in plan_result["lighting_plan"]:
+                                light_plan_item = LightPlanItem(
+                                    id=next_id,
+                                    start=plan_entry["time"],
+                                    end=None,  # Plans don't have end times by default
+                                    name=plan_entry["label"],
+                                    description=plan_entry["description"]
+                                )
+                                app_state.current_song.light_plan.append(light_plan_item)
+                                next_id += 1
+                            
+                            # Save the song metadata with new plans
+                            if hasattr(app_state.current_song, 'save'):
+                                app_state.current_song.save()
+                            
+                            logger.info(f"Stored {plan_count} lighting plans in app_state")
+                            
+                            # Note: Broadcasting will happen automatically when the song is saved
+                                
+                    except Exception as e:
+                        logger.warning(f"Failed to store lighting plans in app_state: {e}")
+                
                 response_text = f"✅ Created lighting plan with {plan_count} entries.\n\n"
                 
                 # Show summary of plan entries
@@ -256,7 +476,7 @@ JSON Response:"""
                 if plan_count > 3:
                     response_text += f"... and {plan_count - 3} more entries\n"
                 
-                response_text += f"\nUse 'translate to actions' to convert this plan to executable lighting actions."
+                response_text += f"\nLighting plans have been saved and are now visible in the UI. Use 'translate to actions' to convert this plan to executable lighting actions."
                 
                 return {
                     "response": response_text,
@@ -283,7 +503,7 @@ JSON Response:"""
         """Handle effect translation requests."""
         try:
             if callback:
-                callback("🎭 Translating effects to actions...\n")
+                await callback("🎭 Translating effects to actions...\n")
             
             logger.info("🎭 Routing to Effect Translator Agent")
             
@@ -345,7 +565,7 @@ JSON Response:"""
         """Handle general conversational requests."""
         try:
             if callback:
-                callback("💬 Thinking about your question...\n")
+                await callback("💬 Thinking about your question...\n")
             
             logger.info("💬 Handling conversational request")
             

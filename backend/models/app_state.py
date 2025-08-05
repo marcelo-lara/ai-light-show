@@ -58,6 +58,13 @@ class AppState:
     # Cached services to avoid re-initialization
     _actions_parser_service: Optional[Any] = None
     _actions_service: Optional[Any] = None
+
+    @property
+    def song_name(self) -> str:
+        """Get the current song name without file extension."""
+        if self.current_song_file:
+            return Path(self.current_song_file).stem
+        return "No Song Loaded"    
     
     def __post_init__(self):
         """Initialize DMX Canvas singleton and fixtures."""

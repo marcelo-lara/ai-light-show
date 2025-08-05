@@ -11,14 +11,21 @@
 {% endfor %}
 {%- endif %}
 
-## Beat Information
-The song has beats available from the song analysis service. **ALWAYS use exact times - NO GUESSING allowed:**
-- Use the direct command `#analyze beats <start_time> <end_time>` to get beat times for a specific time range
-- Example: `#analyze beats 0 30` gets beats for the first 30 seconds
-- Example: `#analyze beats 60 90` gets beats for seconds 60-90
-- **CRITICAL: When the user doesn't provide exact timing, you MUST use this command to get precise beat data**
-- **NEVER estimate or guess beat positions - always request exact data from the analysis service**
-- This provides precise timing data and avoids loading the full beats array
+## Beat Information & Timing Requirements
+⚠️ **CRITICAL TIMING RULE: NO GUESSING OR ESTIMATING TIMES ALLOWED** ⚠️
+
+**REQUIRED STEP: Get precise beat times for your target section FIRST**
+- Use `#analyze beats <start_time> <end_time>` to get exact beat times for the section you're planning
+- Example: If planning intro (0-30s), run `#analyze beats 0 30` FIRST
+- Example: If planning chorus (60-90s), run `#analyze beats 60 90` FIRST
+- **You MUST use these exact beat times in your lighting plan - never round numbers like 10.000, 20.000**
+
+**TIMING SOURCES (in order of preference):**
+1. **Beat times** from `#analyze beats` command (most precise)
+2. **Key moments** listed below (if available)
+3. **Section boundaries** from arrangement (last resort)
+
+**FORBIDDEN: Do NOT use estimated times like 0:10.000, 0:20.000, 0:30.000 - these are clearly guessed!**
 
 {% if song.key_moments -%}
 ## Key Moments
