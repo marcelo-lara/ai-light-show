@@ -18,11 +18,12 @@ logger = logging.getLogger(__name__)
 
 class LightingPlannerAgent(AgentModel):
     """
-    Lighting Planner Agent that analyzes musical segments and creates lighting plans.
-    
-    This agent automatically uses the current song from app_state and fetches exact
-    beat times from the song analysis service for precise synchronization.
-    
+    Lighting Planner Agent that analyzes musical segments and creates lighting plan entries.
+
+    This agent uses the data from the song_analysis service to create lighting scenes for a given segment of the song OR create a light story segregating the song into planned sections (e.g. intro, verse, chorus, etc.).
+    The output of this agent is a list of lighting plan entries that stored for later use.
+    The agent MUST use precise time (from song arrangement or key moments) to create the plan entries.
+
     The agent generates plan entries in the format:
     #plan add at [time] "[label]" "[description]"
     
