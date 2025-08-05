@@ -10,8 +10,9 @@ The prompts are created using Jinja2 templates located on the `backend/services/
 
 ```
 backend/services/agents/
+├── ui_agent.py                # Routes user intentions to Lighting Planner or Effect Translator.
 ├── lighting_planner.py        # LightingPlannerAgent: lighting action planning
-└── effect_translator.py       # EffectTranslatorAgent: DMX command translation
+└── effect_translator.py       # EffectTranslatorAgent: translate LightPlan entries into Actions
 ```
 
 ## Agent Classes and LLM Instructions
@@ -21,6 +22,7 @@ backend/services/agents/
 
 **Purpose**: Analyzes musical segments and generates concise, natural language context summaries for lighting design. 
 The goal is to create a Lighting Plan.
+
 e.g.
 user: Create a plan for the intro
 agent: ""
@@ -54,4 +56,6 @@ agent: ""
 - All prompts should be explicit, concise, and focused on the agent's role.
 - Always return explicit commands to be interpreted at the response.
 - Use exact beat times retrieved from the /analyze endpoint from song_analysis (see song_analysis/README.md for details)
+- Do NOT send the entire beats array on the prompt; add instructions to the agent to request the times when needed.
+- Do NOT use logic to route user intentions: always use ui_agent LLM to infer intentions (or respond "I don't know")
 - All Agents must be child classes of AgentModel (`backend/services/agents/_agent_model.py`)
