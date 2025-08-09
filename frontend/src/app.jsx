@@ -270,7 +270,7 @@ function AppContent() {
             />
           </div>
           <div className="flex gap-2 overflow-y-auto">
-              <div className="main-left min-w-[300px] max-w-[450px]">
+              <div className="w-1/3">
                 <div className="bg-white/10 rounded-2xl p-6 mb-6">
                 {/* Song Metadata Components */}
                 {songData && (
@@ -290,7 +290,7 @@ function AppContent() {
                 </div>
 
               </div>
-              <div className="main-right">
+              <div className="w-1/3">
                 {/* Lighting Plan */}
                 {songData && (
                   <div className="bg-white/10 rounded-2xl p-6 mb-6">
@@ -304,7 +304,8 @@ function AppContent() {
                     />
                   </div>
                 )}
-
+              </div>
+              <div className="w-1/3">
                 {/* Actions Card: Display lighting actions from the backend */}
                 <ActionsCard wsActions={lightingActions} />
 

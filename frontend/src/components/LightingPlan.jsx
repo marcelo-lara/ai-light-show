@@ -101,7 +101,7 @@ export default function LightingPlan({
 
     return (
         <>
-            <h2 className="text-lg mb-2 font-semibold">Lighting Plan</h2>
+            <h2 className="text-lg mb-2 font-semibold">Plan</h2>
             <ul className="space-y-1 max-h-36 overflow-y-auto">
                 {lightPlan
                     .sort((a, b) => a.start - b.start)

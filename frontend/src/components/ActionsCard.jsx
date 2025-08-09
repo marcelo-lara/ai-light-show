@@ -12,7 +12,7 @@ export default function ActionsCard({ wsActions = [] }) {
   return (
     <div className="bg-white/10 rounded-2xl p-6 mb-6">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">⚡ Lighting Actions</h2>
+        <h2 className="text-xl font-semibold">⚡ Actions</h2>
         {lastUpdated && (
           <div className="text-xs text-gray-400">
             Updated: {lastUpdated.toLocaleTimeString()}
