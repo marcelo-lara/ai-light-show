@@ -104,7 +104,7 @@ export default function SongAnalysis({ songData, currentTime, setCurrentTime, an
           className="text-x2 font-bold cursor-pointer" 
           onClick={() => setIsCollapsed(!isCollapsed)}
         >
-          {isCollapsed ? '▼' : '▲'} 🤖 Song Analysis
+          {isCollapsed ? '⋁' : '⋀'} 🤖 Song Analysis
         </h2>
         <div>
           <div className="flex items-center space-x-6">
