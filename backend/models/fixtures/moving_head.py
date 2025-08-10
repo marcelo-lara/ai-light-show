@@ -27,8 +27,9 @@ class MovingHead(FixtureModel):
                 handler=self._handle_flash,
                 description="Triggers a flash effect.",
                 parameters=[
-                    ActionParameter(name="intensity", value=255, description="Flash intensity (0-255)"),
-                    ActionParameter(name="duration", value=0.5, description="Flash duration in seconds")
+                    ActionParameter(name="start_time", value=0.0, description="Start time for the flash effect in seconds"),
+                    ActionParameter(name="duration", value=1.0, description="Duration of the flash fade in seconds"),
+                    ActionParameter(name="intensity", value=1.0, description="Peak intensity of the flash as a percentage (0.0-1.0)")
                 ],
                 hidden=False
             ),
@@ -36,8 +37,10 @@ class MovingHead(FixtureModel):
                 name='seek',
                 handler=self._handle_seek,
                 parameters=[
-                    ActionParameter(name="target_position", value=(0, 0, 0), description="Target position (x, y, z)"),
-                    ActionParameter(name="duration", value=1.0, description="Movement duration in seconds")
+                    ActionParameter(name="start_time", value=0.0, description="Time to start the movement (seconds)"),
+                    ActionParameter(name="duration", value=1.0, description="Time to complete the movement (seconds)"),
+                    ActionParameter(name="pos_x", value=0, description="Target X position (pan) as 16-bit value (0-65535)"),
+                    ActionParameter(name="pos_y", value=0, description="Target Y position (tilt) as 16-bit value (0-65535)")
                 ],
                 description="Move the head from the actual position to the target position within a specified travel duration.",
                 hidden=False
@@ -47,9 +50,12 @@ class MovingHead(FixtureModel):
                 handler=self._handle_center_sweep,                
                 description="A smooth linear pan or tilt movement from point A to B with a dimmer curve that peaks in the middle. This effect is used to highlight a performer or object momentarily during a sweeping motion.",
                 parameters=[
-                    ActionParameter(name="subject_position", value=(32768, 16384), description="Position of the subject to highlight (x, y)"),
-                    ActionParameter(name="start_position", value=(0, 0), description="Starting position of the sweep (x, y)"),
-                    ActionParameter(name="duration", value=1.0, description="Duration of the sweep in seconds")
+                    ActionParameter(name="start_time", value=0.0, description="Start time for the sweep in seconds"),
+                    ActionParameter(name="duration", value=1.0, description="Duration of the sweep in seconds"),
+                    ActionParameter(name="subject_position_x", value=0, description="X position of the subject to highlight"),
+                    ActionParameter(name="subject_position_y", value=0, description="Y position of the subject to highlight"),
+                    ActionParameter(name="start_position_x", value=0, description="X position to start the sweep from"),
+                    ActionParameter(name="start_position_y", value=0, description="Y position to start the sweep from")
                 ],
                 hidden=False
             ),
@@ -58,8 +64,12 @@ class MovingHead(FixtureModel):
                 handler=self._handle_searchlight,
                 description="A dramatic, wide pan movement imitating old searchlights, sometimes with shutter flicker or strobe for intensity.",
                 parameters=[
-                    ActionParameter(name="speed", value=1.0, description="Movement speed (0-1)"),
-                    ActionParameter(name="duration", value=2.0, description="Duration of the searchlight effect in seconds")
+                    ActionParameter(name="start_time", value=0.0, description="Start time for the searchlight in seconds"),
+                    ActionParameter(name="duration", value=1.0, description="Duration of the searchlight in seconds"),
+                    ActionParameter(name="intensity", value=1.0, description="Intensity of the searchlight effect"),
+                    ActionParameter(name="radius", value=0, description="Radius of the circular movement"),
+                    ActionParameter(name="center_x", value=0, description="X center of the circular movement"),
+                    ActionParameter(name="center_y", value=0, description="Y center of the circular movement")
                 ],
                 hidden=False
             ),
@@ -68,8 +78,12 @@ class MovingHead(FixtureModel):
                 handler=self._handle_flyby,
                 description="A sweeping movement past a subject without stopping, similar to 'center sweep' but with constant dimmer.",
                 parameters=[
-                    ActionParameter(name="speed", value=1.0, description="Movement speed (0-1)"),
-                    ActionParameter(name="duration", value=2.0, description="Duration of the flyby effect in seconds")
+                    ActionParameter(name="start_time", value=0.0, description="Start time for the flyby in seconds"),
+                    ActionParameter(name="duration", value=1.0, description="Duration of the flyby in seconds"),
+                    ActionParameter(name="subject_position_x", value=0, description="X position of the subject to sweep past"),
+                    ActionParameter(name="subject_position_y", value=0, description="Y position of the subject to sweep past"),
+                    ActionParameter(name="start_position_x", value=0, description="X position to start the flyby from"),
+                    ActionParameter(name="start_position_y", value=0, description="Y position to start the flyby from")
                 ],
                 hidden=False
             ),
@@ -78,8 +92,10 @@ class MovingHead(FixtureModel):
                 handler=self._handle_strobe,
                 description="A rapid flashing effect, often used to create a sense of urgency or excitement.",
                 parameters=[
-                    ActionParameter(name="intensity", value=255, description="Strobe intensity (0-255)"),
-                    ActionParameter(name="duration", value=0.5, description="Strobe duration in seconds")
+                    ActionParameter(name="start_time", value=0.0, description="Start time for the strobe effect in seconds"),
+                    ActionParameter(name="duration", value=1.0, description="Duration of the strobe effect in seconds"),
+                    ActionParameter(name="intensity", value=1.0, description="Intensity of the strobe effect (0.0 to 1.0)"),
+                    ActionParameter(name="frequency", value=1.0, description="Frequency of the strobe effect in Hz")
                 ],
                 hidden=False
             ),
@@ -88,8 +104,12 @@ class MovingHead(FixtureModel):
                 handler=self._handle_strobe_burst,
                 description="A series of quick, intense flashes, often used to create a dramatic effect.",
                 parameters=[
-                    ActionParameter(name="intensity", value=255, description="Strobe intensity (0-255)"),
-                    ActionParameter(name="duration", value=0.5, description="Strobe duration in seconds"),
+                    ActionParameter(name="start_time", value=0.0, description="Start time for the strobe burst in seconds"),
+                    ActionParameter(name="duration", value=1.0, description="Duration of the strobe burst in seconds"),
+                    ActionParameter(name="start_intensity", value=0.0, description="Initial intensity of the strobe burst (0.0 to 1.0)"),
+                    ActionParameter(name="start_frequency", value=0.0, description="Initial frequency of the strobe burst in Hz"),
+                    ActionParameter(name="end_frequency", value=1.0, description="Final frequency of the strobe burst in Hz"),
+                    ActionParameter(name="end_intensity", value=1.0, description="Final intensity of the strobe burst (0.0 to 1.0)")
                 ],
                 hidden=False
             ),

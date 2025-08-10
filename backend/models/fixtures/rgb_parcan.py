@@ -27,9 +27,10 @@ class RgbParcan(FixtureModel):
                 handler=self._handle_flash,
                 description="Triggers a flash effect.",
                 parameters=[
-                    ActionParameter(name="intensity", value=1.0, description="Flash intensity (0-1)"),
-                    ActionParameter(name="duration", value=1.0, description="Flash duration in seconds"),
-                    ActionParameter(name="colors", value=['red', 'green', 'blue'], description="Colors to flash")
+                    ActionParameter(name="colors", value=['red', 'green', 'blue'], description="Colors to flash (list of channel names)"),
+                    ActionParameter(name="start_time", value=0.0, description="Start time for the flash effect in seconds"),
+                    ActionParameter(name="duration", value=1.0, description="Duration of the flash fade in seconds"),
+                    ActionParameter(name="intensity", value=1.0, description="Peak intensity of the flash as a percentage (0.0-1.0)")
                 ],
                 hidden=False
             )
