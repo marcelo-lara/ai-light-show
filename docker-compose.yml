@@ -44,6 +44,8 @@ services:
 
   llm-service:
     image: ollama/ollama
+    ports:
+      - "11434:11434"
     networks:
       - ailightshow
     volumes:
