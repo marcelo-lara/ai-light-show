@@ -1,4 +1,4 @@
-from .fixture_model import FixtureModel
+from .fixture_model import ActionParameter, ActionModel, FixtureModel
 from typing import Optional, Dict, Any
 from backend.services.dmx.dmx_canvas import DmxCanvas
 
@@ -14,9 +14,25 @@ class RgbParcan(FixtureModel):
             config (Optional[Dict[str, Any]]): Fixture configuration from fixtures.json.
         """
 
-        self.action_handlers = {
-            'arm': self._handle_arm,
-            'flash': self._handle_flash,
+        self._actions = {
+            'arm': ActionModel(
+                name='arm',
+                handler=self._handle_arm,
+                description="Enable/disable the fixture by setting arm channels.",
+                parameters=[],
+                hidden=True
+            ),
+            'flash': ActionModel(
+                name='flash',
+                handler=self._handle_flash,
+                description="Triggers a flash effect.",
+                parameters=[
+                    ActionParameter(name="intensity", value=1.0, description="Flash intensity (0-1)"),
+                    ActionParameter(name="duration", value=1.0, description="Flash duration in seconds"),
+                    ActionParameter(name="colors", value=['red', 'green', 'blue'], description="Colors to flash")
+                ],
+                hidden=False
+            )
         }
 
         super().__init__(id, name, 'parcan', 3, dmx_canvas, config)  # RGB Parcan uses 3 channels (R, G, B)

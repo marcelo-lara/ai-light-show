@@ -1,4 +1,4 @@
-from .fixture_model import FixtureModel
+from .fixture_model import FixtureModel, ActionModel, ActionParameter
 from typing import Optional, Dict, Any
 from backend.services.dmx.dmx_canvas import DmxCanvas
 
@@ -14,15 +14,85 @@ class MovingHead(FixtureModel):
             config (Optional[Dict[str, Any]]): Fixture configuration from fixtures.json.
         """
 
-        self.action_handlers = {
-            'arm': self._handle_arm,
-            'flash': self._handle_flash,
-            'seek': self._handle_seek,
-            'center_sweep': self._handle_center_sweep,
-            'searchlight': self._handle_searchlight,
-            'flyby': self._handle_flyby,
-            'strobe': self._handle_strobe,
-            'strobe_burst': self._handle_strobe_burst,
+        self._actions = {
+            'arm': ActionModel(
+                name='arm',
+                handler=self._handle_arm,
+                description="Enable/disable the fixture by setting arm channels.",
+                parameters=[],
+                hidden=True
+            ),
+            'flash': ActionModel(
+                name='flash',
+                handler=self._handle_flash,
+                description="Triggers a flash effect.",
+                parameters=[
+                    ActionParameter(name="intensity", value=255, description="Flash intensity (0-255)"),
+                    ActionParameter(name="duration", value=0.5, description="Flash duration in seconds")
+                ],
+                hidden=False
+            ),
+            'seek': ActionModel(
+                name='seek',
+                handler=self._handle_seek,
+                parameters=[
+                    ActionParameter(name="target_position", value=(0, 0, 0), description="Target position (x, y, z)"),
+                    ActionParameter(name="duration", value=1.0, description="Movement duration in seconds")
+                ],
+                description="Move the head from the actual position to the target position within a specified travel duration.",
+                hidden=False
+            ),
+            'center_sweep': ActionModel(
+                name='center_sweep',
+                handler=self._handle_center_sweep,                
+                description="A smooth linear pan or tilt movement from point A to B with a dimmer curve that peaks in the middle. This effect is used to highlight a performer or object momentarily during a sweeping motion.",
+                parameters=[
+                    ActionParameter(name="subject_position", value=(32768, 16384), description="Position of the subject to highlight (x, y)"),
+                    ActionParameter(name="start_position", value=(0, 0), description="Starting position of the sweep (x, y)"),
+                    ActionParameter(name="duration", value=1.0, description="Duration of the sweep in seconds")
+                ],
+                hidden=False
+            ),
+            'searchlight': ActionModel(
+                name='searchlight',
+                handler=self._handle_searchlight,
+                description="A dramatic, wide pan movement imitating old searchlights, sometimes with shutter flicker or strobe for intensity.",
+                parameters=[
+                    ActionParameter(name="speed", value=1.0, description="Movement speed (0-1)"),
+                    ActionParameter(name="duration", value=2.0, description="Duration of the searchlight effect in seconds")
+                ],
+                hidden=False
+            ),
+            'flyby': ActionModel(
+                name='flyby',
+                handler=self._handle_flyby,
+                description="A sweeping movement past a subject without stopping, similar to 'center sweep' but with constant dimmer.",
+                parameters=[
+                    ActionParameter(name="speed", value=1.0, description="Movement speed (0-1)"),
+                    ActionParameter(name="duration", value=2.0, description="Duration of the flyby effect in seconds")
+                ],
+                hidden=False
+            ),
+            'strobe': ActionModel(
+                name='strobe',
+                handler=self._handle_strobe,
+                description="A rapid flashing effect, often used to create a sense of urgency or excitement.",
+                parameters=[
+                    ActionParameter(name="intensity", value=255, description="Strobe intensity (0-255)"),
+                    ActionParameter(name="duration", value=0.5, description="Strobe duration in seconds")
+                ],
+                hidden=False
+            ),
+            'strobe_burst': ActionModel(
+                name='strobe_burst',
+                handler=self._handle_strobe_burst,
+                description="A series of quick, intense flashes, often used to create a dramatic effect.",
+                parameters=[
+                    ActionParameter(name="intensity", value=255, description="Strobe intensity (0-255)"),
+                    ActionParameter(name="duration", value=0.5, description="Strobe duration in seconds"),
+                ],
+                hidden=False
+            ),
         }
 
         super().__init__(id, name, 'moving_head', 12, dmx_canvas, config) # Moving Head uses 12 channels (e.g., pan, tilt, color, etc.)
@@ -413,7 +483,7 @@ class MovingHead(FixtureModel):
 
     def _handle_seek(self, start_time: float = 0.0, duration: float = 1.0, pos_x: int = 0, pos_y: int = 0, **kwargs) -> None:
         """
-        Handle the seek action for the Moving Head fixture.
+        Move the head from the actual position to the target position within a specified travel duration.
         Args:
             start_time (float): Time to start the movement (seconds).
             duration (float): Time to complete the movement (seconds).

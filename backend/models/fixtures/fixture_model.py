@@ -1,6 +1,23 @@
+from dataclasses import dataclass
 from typing import Optional, Dict, Any
 from backend.services.dmx.dmx_canvas import DmxCanvas
 from backend.models.position import Position
+
+@dataclass
+class ActionParameter:
+    name: str
+    value: Any
+    description: str
+
+@dataclass
+class ActionModel:
+    name: str
+    handler: Any #callable
+    description: str
+    parameters: list[ActionParameter]  # List of ActionParameter
+    hidden: bool
+    def __str__(self) -> str:
+        return self.name
 
 class FixtureModel:
     def __init__(self, id: str, name: str, fixture_type: str, channels: int, dmx_canvas: Optional[DmxCanvas] = None, config: Optional[Dict[str, Any]] = None):
@@ -20,10 +37,11 @@ class FixtureModel:
         self._channels = channels
         self._dmx_canvas = dmx_canvas 
         self._config = config or {}
-        # Initialize action_handlers if not already set by subclass
-        if not hasattr(self, 'action_handlers'):
-            self.action_handlers = {}  # Should be overridden by subclasses
-    
+
+        # Initialize actions dictionary if not already set by subclass
+        if not hasattr(self, '_actions'):
+            self._actions = {}  # Should be overridden by subclasses
+
     @property
     def id(self) -> str:
         """Get the fixture ID."""
@@ -76,11 +94,20 @@ class FixtureModel:
     @property
     def actions(self):
         """
-        Get the actions associated with the fixture (derived from handlers).
+        Get the actions associated with the fixture (derived from ActionModel objects).
         Returns:
             list: List of available action names.
         """
-        return list(self.action_handlers.keys())
+        return list(self._actions.keys())
+
+    @property
+    def action_models(self) -> Dict[str, 'ActionModel']:
+        """
+        Get the ActionModel objects associated with the fixture.
+        Returns:
+            dict: Dictionary of ActionModel objects keyed by action name.
+        """
+        return self._actions
     
     def render_action(self, action: str, parameters: Optional[Dict[str, Any]] = None) -> None:
         """
@@ -94,8 +121,9 @@ class FixtureModel:
         if self._dmx_canvas is None:
             raise ValueError("DMX canvas is not set for this fixture. Please set it before rendering actions.")
             
-        if action in self.action_handlers:
-            handler = self.action_handlers[action]
+        if action in self._actions:
+            action_model = self._actions[action]
+            handler = action_model.handler
             return handler(**parameters)
         else:
             raise ValueError(f"Action '{action}' is not available for fixture '{self.name}'. Available actions: {self.actions}")
@@ -195,6 +223,28 @@ class FixtureModel:
         self._dmx_canvas.paint_range(start_time, end_time, fade_fn)
         print(f"  🌈 {self.name}: Fading channel {channel_name} (DMX {dmx_channel + 1}) from {from_value} to {to_value} over {duration:.2f}s")
     
+    def get_actions(self) -> list:
+        actions = []
+        for action_name, action_model in self._actions.items():
+            if action_name != 'arm' and not action_model.hidden:
+                action_dict = {
+                    'name': action_name,
+                    'description': action_model.description,
+                    'params': []
+                }
+                
+                # Convert ActionParameter objects to dictionaries
+                for param in action_model.parameters:
+                    param_dict = {
+                        'name': param.name,
+                        'default': param.value,
+                        'description': param.description
+                    }
+                    action_dict['params'].append(param_dict)
+                
+                actions.append(action_dict)
+        return actions
+
     def to_dict(self) -> Dict[str, Any]:
         """
         Convert the fixture model to a JSON friendly dictionary representation.
@@ -218,20 +268,12 @@ class FixtureModel:
                 channels.append(channel)
 
         # List available actions (except 'arm') with parameters (only from definition not runtime)
-        actions = [{'name': action, 'params': []} for action, _ in self.action_handlers.items() if action != 'arm']
-        for action in actions:
-            params = [{'name': param, 'default': None} for param in self.action_handlers[action['name']].__code__.co_varnames[1:]]
-            if 'kwargs' in self.action_handlers[action['name']].__code__.co_varnames:
-                idx = self.action_handlers[action['name']].__code__.co_varnames.index('kwargs')
-                params = params[:idx - 1]
-            action['params'] = params
-
         return {
             'id': self._id,
             'name': self._name,
             'fixture_type': self._fixture_type,
             'channels': channels,
-            'actions': actions,
+            'actions': self.get_actions(),
             'config': self._config,
             'position': self.position.to_dict() if self.position else None
         }
