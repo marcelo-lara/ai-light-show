@@ -8,6 +8,8 @@ class ActionParameter:
     name: str
     value: Any
     description: str
+    def __str__(self) -> str:
+        return f"{self.name}: {self.value} | {self.description})"
 
 @dataclass
 class ActionModel:
@@ -17,7 +19,7 @@ class ActionModel:
     parameters: list[ActionParameter]  # List of ActionParameter
     hidden: bool
     def __str__(self) -> str:
-        return self.name
+        return f"{self.name} | {self.description}"
 
 class FixtureModel:
     def __init__(self, id: str, name: str, fixture_type: str, channels: int, dmx_canvas: Optional[DmxCanvas] = None, config: Optional[Dict[str, Any]] = None):

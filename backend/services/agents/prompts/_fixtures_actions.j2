@@ -1,0 +1,7 @@
+{% if actions_list -%}
+## Action Commands
+{%- for action_name, data in actions_list.items() %}
+- {{ action_name }}: {{ data.description }}
+  parameters: {% for param in data.parameters -%}[{{ param.name }}: {{ param.description }}] {% endfor -%}
+{% endfor -%}
+{%- endif %}
