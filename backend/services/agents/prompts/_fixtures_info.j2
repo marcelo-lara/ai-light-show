@@ -1,7 +1,9 @@
-{# Fixtures Information Template - Reusable across agents #}
 {% if fixtures -%}
 ## Fixtures Available
 {% for fixture in fixtures -%}
-- {{ fixture.id }} ({{ fixture.type }}): effects = {{ fixture.effects | join(', ') }}
-{% endfor %}
+- {{ fixture.name }} ({{ fixture.id }}) : 
+  Type: {{ fixture.fixture_type }}
+  Position: {{ fixture.position.x }}, {{ fixture.position.y }}; 
+  Actions: set_value, fade_channel, {{ fixture.action_list | join(', ') }}
+{% endfor -%}
 {%- endif %}

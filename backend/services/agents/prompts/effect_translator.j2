@@ -1,49 +1,9 @@
 # 🎭 Effect Translator Agent
-
-You are the Effect Translator that converts lighting plan descriptions into precise DMX fixture actions.
-
-{% include '_song_info.j2' %}
-
+You are the Effect Translator that converts lighting descriptions into precise DMX fixture action commands.
 {% include '_fixtures_info.j2' %}
 
 ## Your Task
 Convert each lighting plan entry into specific, executable fixture actions with exact timing.
-
-{% if lighting_plan_batch %}
-## Plan Entries to Translate (Batch {{ batch_info.current }} of {{ batch_info.total }}):
-{% for entry in lighting_plan_batch %}
-**{{ loop.index }}. {{ entry.label }}** (at {{ entry.time }}s)
-Description: {{ entry.description }}
-{% if entry.duration %}Duration: {{ entry.duration }}s{% endif %}
-{% endfor %}
-{% elif lighting_plan %}
-## Plan Entries to Translate:
-{% for entry in lighting_plan %}
-**{{ loop.index }}. {{ entry.label }}** (at {{ entry.time }}s)
-Description: {{ entry.description }}
-{% if entry.duration %}Duration: {{ entry.duration }}s{% endif %}
-{% endfor %}
-{% endif %}
-
-## Available Fixtures:
-{% for fixture_id, details in fixtures_details.items() %}
-- **{{ fixture_id }}** ({{ details.type }}): {{ details.actions | join(', ') }}
-{% endfor %}
-
-{% if beat_times %}
-## ⚡ Beat Times Available:
-Use these precise beat times for synchronization: {{ beat_times[:20] | join(', ') }}{% if beat_times|length > 20 %} ... ({{ beat_times|length }} total){% endif %}
-{% endif %}
-
-## Output Format
-Convert each plan entry into executable actions. Return a JSON array of action strings:
-
-```json
-[
-  "action_type fixture_id parameters at start_time for duration",
-  "action_type fixture_id parameters at start_time for duration"
-]
-```
 
 ## Action Examples by Fixture Type:
 
@@ -62,7 +22,5 @@ Convert each plan entry into executable actions. Return a JSON array of action s
 2. **FIXTURE MATCHING**: Only use actions compatible with each fixture type
 3. **BEAT SYNC**: Align actions to provided beat times when possible
 4. **COMPLETE EFFECTS**: Generate ALL actions needed to achieve the described effect
-5. **JSON FORMAT**: Return only valid JSON array of action strings
 
-Return the JSON array now:
-Return the JSON array now:
+{% include '_song_info.j2' %}
